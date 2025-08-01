@@ -1,8 +1,108 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@source "../**/*.{js,ts,jsx,tsx,html}";
+@source "../index.html";
+
+/* Explicitly include commonly used utility classes */
+@source inline("bg-white bg-gray-50 bg-gray-100 bg-gray-200 bg-gray-300 bg-gray-400 bg-gray-500 bg-gray-600 bg-gray-700 bg-gray-800 bg-gray-900");
+@source inline("text-white text-gray-50 text-gray-100 text-gray-200 text-gray-300 text-gray-400 text-gray-500 text-gray-600 text-gray-700 text-gray-800 text-gray-900");
+@source inline("from-gray-50 from-gray-100 from-gray-200 from-gray-300 from-gray-400 from-gray-500 from-gray-600 from-gray-700 from-gray-800 from-gray-900");
+@source inline("to-gray-50 to-gray-100 to-gray-200 to-gray-300 to-gray-400 to-gray-500 to-gray-600 to-gray-700 to-gray-800 to-gray-900");
+@source inline("border-gray-50 border-gray-100 border-gray-200 border-gray-300 border-gray-400 border-gray-500 border-gray-600 border-gray-700 border-gray-800 border-gray-900");
+@source inline("top-0 right-0 bottom-0 left-0 inset-0");
+@source inline("absolute relative fixed sticky");
+@source inline("flex grid block inline-block hidden");
+@source inline("w-full h-full min-h-screen");
+@source inline("p-4 p-6 m-4 m-6 px-4 py-4 mx-4 my-4");
+@source inline("rounded rounded-lg rounded-xl rounded-full");
+@source inline("shadow shadow-lg shadow-xl");
+@source inline("hover:bg-gray-100 hover:bg-gray-200 hover:text-gray-900");
+@source inline("dark:bg-gray-800 dark:bg-gray-900 dark:text-white dark:text-gray-100");
+
+/* Add @reference for missing utilities to ensure they're included */
+@utility bg-white { background-color: white; }
+@utility bottom-0 { bottom: 0; }
+
+@theme {
+  /* Brand Colors for KJ-Nomad */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  --color-primary-950: #082f49;
+
+  --color-secondary-50: #fdf4ff;
+  --color-secondary-100: #fae8ff;
+  --color-secondary-200: #f5d0fe;
+  --color-secondary-300: #f0abfc;
+  --color-secondary-400: #e879f9;
+  --color-secondary-500: #d946ef;
+  --color-secondary-600: #c026d3;
+  --color-secondary-700: #a21caf;
+  --color-secondary-800: #86198f;
+  --color-secondary-900: #701a75;
+  --color-secondary-950: #4a044e;
+
+  --color-accent-50: #fefce8;
+  --color-accent-100: #fef9c3;
+  --color-accent-200: #fef08a;
+  --color-accent-300: #fde047;
+  --color-accent-400: #facc15;
+  --color-accent-500: #eab308;
+  --color-accent-600: #ca8a04;
+  --color-accent-700: #a16207;
+  --color-accent-800: #854d0e;
+  --color-accent-900: #713f12;
+  --color-accent-950: #422006;
+
+  --color-dark-50: #f8fafc;
+  --color-dark-100: #f1f5f9;
+  --color-dark-200: #e2e8f0;
+  --color-dark-300: #cbd5e1;
+  --color-dark-400: #94a3b8;
+  --color-dark-500: #64748b;
+  --color-dark-600: #475569;
+  --color-dark-700: #334155;
+  --color-dark-800: #1e293b;
+  --color-dark-900: #0f172a;
+  --color-dark-950: #020617;
+
+  /* Font Families */
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-family-display: 'Inter', system-ui, sans-serif;
+
+  /* Custom Animations */
+  --animate-scroll: scroll 20s linear infinite;
+  --animate-fade-in: fadeIn 0.3s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-pulse-slow: pulse 3s ease-in-out infinite;
+
+  /* Box Shadows */
+  --shadow-glow: 0 0 20px rgba(14, 165, 233, 0.3);
+  --shadow-glow-lg: 0 0 40px rgba(14, 165, 233, 0.4);
+}
+
+@keyframes scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
 
 @layer base {
   html {
@@ -18,28 +118,92 @@
   }
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-dark-800;
+@utility btn-primary {
+  background-color: var(--color-primary-600);
+  color: white;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: colors 200ms;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  
+  &:hover {
+    background-color: var(--color-primary-700);
   }
   
-  .btn-secondary {
-    @apply bg-gray-100 hover:bg-gray-200 dark:bg-dark-700 dark:hover:bg-dark-600 text-gray-900 dark:text-gray-100 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-dark-800;
+  &:focus {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+}
+
+@utility btn-secondary {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: colors 200ms;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  
+  &:hover {
+    background-color: var(--color-gray-200);
   }
   
-  .btn-accent {
-    @apply bg-accent-500 hover:bg-accent-600 text-dark-900 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-2 dark:focus:ring-offset-dark-800;
+  &:focus {
+    outline: 2px solid var(--color-gray-500);
+    outline-offset: 2px;
+  }
+}
+
+@utility btn-accent {
+  background-color: var(--color-accent-500);
+  color: var(--color-dark-900);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: colors 200ms;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  
+  &:hover {
+    background-color: var(--color-accent-600);
   }
   
-  .input-primary {
-    @apply bg-white dark:bg-dark-800 border border-gray-300 dark:border-dark-600 text-gray-900 dark:text-gray-100 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors duration-200;
+  &:focus {
+    outline: 2px solid var(--color-accent-400);
+    outline-offset: 2px;
   }
+}
+
+@utility input-primary {
+  background-color: white;
+  border: 1px solid var(--color-gray-300);
+  color: var(--color-gray-900);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: colors 200ms;
   
-  .card {
-    @apply bg-white dark:bg-dark-800 rounded-xl shadow-lg border border-gray-200 dark:border-dark-700 p-6;
+  &:focus {
+    outline: 2px solid var(--color-primary-500);
+    border-color: transparent;
   }
-  
-  .glass {
-    @apply bg-white/80 dark:bg-dark-800/80 backdrop-blur-sm border border-white/20 dark:border-dark-700/50;
-  }
+}
+
+@utility card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-gray-200);
+  padding: 1.5rem;
+}
+
+@utility glass {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
