@@ -1,6 +1,6 @@
 // Common type definitions for KJ-Nomad client
 
-export interface MockWebSocket {
+export interface MockWebSocket extends Partial<WebSocket> {
   send: (data: string) => void;
   readyState?: number;
   close?: () => void;

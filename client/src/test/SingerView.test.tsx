@@ -19,8 +19,22 @@ describe('SingerView', () => {
             const query = new URLSearchParams(url.toString().split('?')[1]).get('q');
             const songs = query ? mockSongs.filter(s => s.artist.toLowerCase().includes(query.toLowerCase()) || s.title.toLowerCase().includes(query.toLowerCase())) : mockSongs;
             return Promise.resolve({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers(),
+                redirected: false,
+                type: 'basic',
+                url: url.toString(),
+                body: null,
+                bodyUsed: false,
+                arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+                blob: () => Promise.resolve(new Blob()),
+                formData: () => Promise.resolve(new FormData()),
                 json: () => Promise.resolve(songs),
-            }) as Response;
+                text: () => Promise.resolve(''),
+                clone: function() { return this; }
+            } as Response);
         }) as typeof fetch;
     });
 

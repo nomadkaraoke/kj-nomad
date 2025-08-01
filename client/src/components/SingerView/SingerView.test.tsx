@@ -14,8 +14,22 @@ const mockSongs = [
 
 global.fetch = vi.fn(() =>
   Promise.resolve({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: new Headers(),
+    redirected: false,
+    type: 'basic',
+    url: '',
+    body: null,
+    bodyUsed: false,
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    blob: () => Promise.resolve(new Blob()),
+    formData: () => Promise.resolve(new FormData()),
     json: () => Promise.resolve(mockSongs),
-  })
+    text: () => Promise.resolve(''),
+    clone: function() { return this; }
+  } as Response)
 ) as typeof fetch;
 
 describe('SingerView', () => {

@@ -8,7 +8,7 @@ interface Song {
 }
 
 interface SingerViewProps {
-    socket: WebSocket | null;
+    socket: WebSocket | { send: (data: string) => void } | null;
 }
 
 const SingerView: React.FC<SingerViewProps> = ({ socket }) => {

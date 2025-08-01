@@ -1,4 +1,4 @@
-import { useAppStore } from '../store/appStore';
+import { useAppStore, type QueueEntry } from '../store/appStore';
 
 class WebSocketService {
   private ws: WebSocket | null = null;
@@ -88,25 +88,31 @@ class WebSocketService {
     
     switch (type) {
       case 'queue_updated':
-        store.setQueue(payload);
+        store.setQueue(payload as QueueEntry[]);
         break;
         
       case 'play':
-        store.setNowPlaying({
-          songId: payload.songId,
-          fileName: payload.fileName,
-          isFiller: false,
-          singer: payload.singer,
-          startTime: Date.now()
-        });
+        if (payload && typeof payload === 'object') {
+          const playPayload = payload as { songId: string; fileName: string; singer?: string };
+          store.setNowPlaying({
+            songId: playPayload.songId,
+            fileName: playPayload.fileName,
+            isFiller: false,
+            singer: playPayload.singer,
+            startTime: Date.now()
+          });
+        }
         break;
         
       case 'play_filler_music':
-        store.setNowPlaying({
-          fileName: payload.fileName,
-          isFiller: true,
-          startTime: Date.now()
-        });
+        if (payload && typeof payload === 'object') {
+          const fillerPayload = payload as { fileName: string };
+          store.setNowPlaying({
+            fileName: fillerPayload.fileName,
+            isFiller: true,
+            startTime: Date.now()
+          });
+        }
         break;
         
       case 'pause':
@@ -114,7 +120,7 @@ class WebSocketService {
         break;
         
       case 'ticker_updated':
-        store.setTickerText(payload);
+        store.setTickerText(payload as string);
         break;
         
       default:

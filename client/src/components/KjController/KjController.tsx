@@ -13,7 +13,7 @@ interface QueueEntry {
 }
 
 interface KjControllerProps {
-  socket: WebSocket | null;
+  socket: WebSocket | { send: (data: string) => void } | null;
   queue: QueueEntry[];
 }
 
