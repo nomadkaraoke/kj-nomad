@@ -97,11 +97,19 @@ jobs:
     - name: Install frontend dependencies  
       run: cd client && npm ci
       
-    - name: Create test media files
+    - name: Install FFmpeg for test videos
+      run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      
+    - name: Setup test media files
+      run: bash scripts/setup-test-data.sh
+        
+    - name: Build frontend
+      run: cd client && npm run build
+      
+    - name: Copy frontend build to server
       run: |
-        mkdir -p server/media
-        echo "Test video file" > server/media/Test Artist - Test Song.mp4
-        echo "Test filler" > server/media/filler-background.mp4
+        mkdir -p server/public
+        cp -r client/dist/* server/public/
         
     - name: Start backend server
       run: cd server && npm start &

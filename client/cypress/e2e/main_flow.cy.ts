@@ -6,12 +6,13 @@ describe('KJ-Nomad Core User Flows', () => {
     // Wait for server to be ready and set up test environment
     cy.waitForServer()
     cy.setupTestMedia()
+    cy.clearQueue()
   })
 
   describe('Singer Song Request Flow', () => {
     it('allows a singer to successfully search for and request a song', () => {
       // Test Requirement 1: Singer successfully searching for and requesting a song
-      cy.visit('/#/singer')
+      cy.visit('/singer')
       
       // Verify singer interface loads
       cy.contains('Search for a song', { timeout: 10000 }).should('be.visible')
@@ -44,11 +45,11 @@ describe('KJ-Nomad Core User Flows', () => {
   describe('KJ Queue Management Flow', () => {
     it('allows KJ to see song requests and manage the queue', () => {
       // First, add a song to the queue
-      cy.visit('/#/singer')
+      cy.visit('/singer')
       cy.requestSong(Cypress.env('testSingerName'), 'Test')
       
       // Test Requirement 2: KJ seeing the request appear in the queue
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       
       // Verify queue interface loads
       cy.contains('Queue', { timeout: 10000 }).should('be.visible')
@@ -71,15 +72,15 @@ describe('KJ-Nomad Core User Flows', () => {
   describe('Player Video Playback Flow', () => {
     it('correctly plays the selected song in player view', () => {
       // Set up: Add and start a song
-      cy.visit('/#/singer')
+      cy.visit('/singer')
       cy.requestSong(Cypress.env('testSingerName'), 'Test')
       
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.waitForQueueUpdate(1)
       cy.playNextSong()
       
       // Test Requirement 3: Player view correctly playing the selected song
-      cy.visit('/#/player')
+      cy.visit('/player')
       
       // Verify video element exists and is configured correctly
       cy.get('video', { timeout: 15000 }).should('be.visible')
@@ -107,15 +108,15 @@ describe('KJ-Nomad Core User Flows', () => {
       const testMessage = `Test Message ${Date.now()}`
       
       // Update ticker from KJ interface
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.updateTicker(testMessage)
       
       // Verify ticker updates in player view
-      cy.visit('/#/player')
+      cy.visit('/player')
       cy.waitForTicker(testMessage)
       
       // Verify ticker updates in singer view
-      cy.visit('/#/singer')
+      cy.visit('/singer')
       cy.waitForTicker(testMessage)
     })
   })
@@ -126,12 +127,12 @@ describe('KJ-Nomad Core User Flows', () => {
       const singers = ['Singer One', 'Singer Two', 'Singer Three']
       
       singers.forEach((singer, index) => {
-        cy.visit('/#/singer')
+        cy.visit('/singer')
         cy.requestSong(singer, `Test ${index + 1}`)
       })
       
       // Verify all songs appear in KJ queue
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.waitForQueueUpdate(3)
       
       singers.forEach((singer) => {

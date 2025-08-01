@@ -1,6 +1,5 @@
 // Custom Cypress commands for KJ-Nomad E2E testing
-import './types';
-import './index.d.ts';
+/// <reference types="./index.d.ts" />
 
 // Wait for server to be ready
 Cypress.Commands.add('waitForServer', () => {
@@ -23,15 +22,14 @@ Cypress.Commands.add('setupTestMedia', () => {
 
 // Clear the song queue via API or direct manipulation
 Cypress.Commands.add('clearQueue', () => {
-  // We can clear queue by removing all items via WebSocket or API
-  cy.window().then((win) => {
-    const testWin = win as unknown as import('./types').TestWindow;
-    // If there's a global socket connection, use it to clear queue
-    if (testWin.testSocket) {
-      testWin.testSocket.send(JSON.stringify({
-        type: 'clear_queue'
-      }))
-    }
+  // Clear queue via API call since WebSocket may not be reliable for this
+  cy.request({
+    method: 'POST',
+    url: '/api/queue/clear',
+    failOnStatusCode: false
+  }).then(() => {
+    // Give the server a moment to clear the queue
+    cy.wait(500)
   })
 })
 

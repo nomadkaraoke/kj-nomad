@@ -35,6 +35,11 @@ const Player: React.FC<PlayerProps> = ({ nowPlaying, socket, tickerText }) => {
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%'}}>
       <video ref={videoRef} width="100%" height="100%" onEnded={onEnded}></video>
+      {nowPlaying && (
+        <div data-testid="now-playing" style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.8)', color: 'white', padding: '10px' }}>
+          Now Playing: {nowPlaying.fileName}
+        </div>
+      )}
       <Ticker text={tickerText} />
     </div>
   );

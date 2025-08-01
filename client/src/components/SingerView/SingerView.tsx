@@ -36,22 +36,24 @@ const SingerView: React.FC<SingerViewProps> = ({ socket }) => {
 
   return (
     <div>
-      <h2>Singer Request View</h2>
+      <h2>Search for a song</h2>
       <input
         type="text"
         placeholder="Your Name"
         value={singerName}
         onChange={(e) => setSingerName(e.target.value)}
+        data-testid="singer-name-input"
       />
       <input
         type="text"
         placeholder="Search for a song..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
+        data-testid="song-search-input"
       />
       <ul>
         {songs.map((song) => (
-          <li key={song.id}>
+          <li key={song.id} data-testid="song-result">
             {song.artist} - {song.title}
             <button onClick={() => requestSong(song.id)}>Request</button>
           </li>

@@ -40,7 +40,7 @@ describe('SingerView', () => {
 
   it('renders the component and displays the song list', async () => {
     render(<SingerView socket={mockSocket} />);
-    expect(screen.getByText('Singer Request View')).toBeInTheDocument();
+    expect(screen.getByText('Search for a song')).toBeInTheDocument();
     await waitFor(() => {
         expect(screen.getByText('a-ha - Take On Me')).toBeInTheDocument();
         expect(screen.getByText('Queen - Bohemian Rhapsody')).toBeInTheDocument();

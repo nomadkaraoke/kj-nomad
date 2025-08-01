@@ -13,62 +13,82 @@ mkdir -p "$TEST_MEDIA_DIR"
 
 echo "📁 Created test media directory: $TEST_MEDIA_DIR"
 
-# Create test video files (placeholder files for testing)
-# In a real setup, these would be actual karaoke video files
-
+# Create test video files (real video files for e2e testing)
 echo "🎵 Creating test karaoke video files..."
 
-# Test karaoke songs
-cat > "$TEST_MEDIA_DIR/Test Artist - Test Song.mp4" << 'EOF'
+# Check if ffmpeg is available for creating real test videos
+if command -v ffmpeg >/dev/null 2>&1; then
+  echo "📹 FFmpeg found, creating real test video files..."
+  ffmpeg -f lavfi -i testsrc=duration=5:size=320x240:rate=1 -c:v libx264 -t 5 "$TEST_MEDIA_DIR/Test Artist - Test Song.mp4" -y >/dev/null 2>&1
+  ffmpeg -f lavfi -i testsrc=duration=5:size=320x240:rate=1 -c:v libx264 -t 5 "$TEST_MEDIA_DIR/Taylor Swift - Shake It Off.mp4" -y >/dev/null 2>&1
+  ffmpeg -f lavfi -i testsrc=duration=5:size=320x240:rate=1 -c:v libx264 -t 5 "$TEST_MEDIA_DIR/Ed Sheeran - Perfect.mp4" -y >/dev/null 2>&1
+  ffmpeg -f lavfi -i testsrc=duration=5:size=320x240:rate=1 -c:v libx264 -t 5 "$TEST_MEDIA_DIR/Beatles - Hey Jude.mp4" -y >/dev/null 2>&1
+  ffmpeg -f lavfi -i testsrc=duration=5:size=320x240:rate=1 -c:v libx264 -t 5 "$TEST_MEDIA_DIR/Adele - Rolling in the Deep.mp4" -y >/dev/null 2>&1
+  ffmpeg -f lavfi -i testsrc=duration=3:size=320x240:rate=1 -c:v libx264 -t 3 "$TEST_MEDIA_DIR/filler-background.mp4" -y >/dev/null 2>&1
+  ffmpeg -f lavfi -i testsrc=duration=3:size=320x240:rate=1 -c:v libx264 -t 3 "$TEST_MEDIA_DIR/filler-jazz.mp4" -y >/dev/null 2>&1
+  ffmpeg -f lavfi -i testsrc=duration=3:size=320x240:rate=1 -c:v libx264 -t 3 "$TEST_MEDIA_DIR/filler-party.mp4" -y >/dev/null 2>&1
+  echo "✅ Real test videos created with FFmpeg"
+else
+  echo "⚠️  FFmpeg not found, creating placeholder files (tests may have issues with video playback)"
+  
+  # Test karaoke songs
+  cat > "$TEST_MEDIA_DIR/Test Artist - Test Song.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for Test Artist - Test Song.mp4
 In production, this would be an actual MP4 video file.
 EOF
 
-cat > "$TEST_MEDIA_DIR/Taylor Swift - Shake It Off.mp4" << 'EOF'
+  cat > "$TEST_MEDIA_DIR/Taylor Swift - Shake It Off.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for Taylor Swift - Shake It Off.mp4
 In production, this would be an actual MP4 video file.
 EOF
 
-cat > "$TEST_MEDIA_DIR/Ed Sheeran - Perfect.mp4" << 'EOF'
+  cat > "$TEST_MEDIA_DIR/Ed Sheeran - Perfect.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for Ed Sheeran - Perfect.mp4
 In production, this would be an actual MP4 video file.
 EOF
 
-cat > "$TEST_MEDIA_DIR/Beatles - Hey Jude.mp4" << 'EOF'
+  cat > "$TEST_MEDIA_DIR/Beatles - Hey Jude.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for Beatles - Hey Jude.mp4
 In production, this would be an actual MP4 video file.
 EOF
 
-cat > "$TEST_MEDIA_DIR/Adele - Rolling in the Deep.mp4" << 'EOF'
+  cat > "$TEST_MEDIA_DIR/Adele - Rolling in the Deep.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for Adele - Rolling in the Deep.mp4
 In production, this would be an actual MP4 video file.
 EOF
+fi
 
 echo "🎶 Creating test filler music files..."
 
-# Test filler music
-cat > "$TEST_MEDIA_DIR/filler-background.mp4" << 'EOF'
+# Test filler music (if not already created by ffmpeg)
+if [ ! -f "$TEST_MEDIA_DIR/filler-background.mp4" ]; then
+  cat > "$TEST_MEDIA_DIR/filler-background.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for filler-background.mp4
 In production, this would be an actual MP4 video file.
 EOF
+fi
 
-cat > "$TEST_MEDIA_DIR/filler-jazz.mp4" << 'EOF'
+if [ ! -f "$TEST_MEDIA_DIR/filler-jazz.mp4" ]; then
+  cat > "$TEST_MEDIA_DIR/filler-jazz.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for filler-jazz.mp4
 In production, this would be an actual MP4 video file.
 EOF
+fi
 
-cat > "$TEST_MEDIA_DIR/filler-party.mp4" << 'EOF'
+if [ ! -f "$TEST_MEDIA_DIR/filler-party.mp4" ]; then
+  cat > "$TEST_MEDIA_DIR/filler-party.mp4" << 'EOF'
 PLACEHOLDER_VIDEO_FILE
 This is a placeholder for filler-party.mp4
 In production, this would be an actual MP4 video file.
 EOF
+fi
 
 echo "📝 Creating test media README..."
 

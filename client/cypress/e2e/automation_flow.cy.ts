@@ -1,10 +1,17 @@
 // KJ-Nomad E2E Tests - Automation Features
 // Tests automated rotation and filler music as specified in ARCHITECTURE.md
 
+interface TestWindow extends Window {
+  socket?: {
+    send: (data: string) => void;
+  };
+}
+
 describe('KJ-Nomad Automation Features', () => {
   beforeEach(() => {
     cy.waitForServer()
     cy.setupTestMedia()
+    cy.clearQueue()
   })
 
   describe('Song Completion and Queue Progression', () => {
@@ -14,17 +21,17 @@ describe('KJ-Nomad Automation Features', () => {
       // Set up queue with multiple songs
       const singers = ['First Singer', 'Second Singer']
       singers.forEach((singer, index) => {
-        cy.visit('/#/singer')
+        cy.visit('/singer')
         cy.requestSong(singer, `Test Song ${index + 1}`)
       })
       
       // Start playing first song
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.waitForQueueUpdate(2)
       cy.playNextSong()
       
       // Go to player view
-      cy.visit('/#/player')
+      cy.visit('/player')
       cy.waitForVideoToPlay()
       
       // Simulate song ending by triggering the 'ended' event
@@ -40,7 +47,7 @@ describe('KJ-Nomad Automation Features', () => {
       })
       
       // Verify queue progression in controller
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.get('[data-testid="now-playing"], .now-playing')
         .should('contain.text', singers[1]) // Second singer should be playing
       
@@ -53,15 +60,15 @@ describe('KJ-Nomad Automation Features', () => {
       // Test Requirement 4: Automated rotation to filler music when no songs in queue
       
       // Ensure queue is empty
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.get('[data-testid="queue-item"]').should('not.exist')
       
       // Simulate ending the last song (or no song playing)
-      cy.visit('/#/player')
+      cy.visit('/player')
       
       // Manually trigger filler music (simulating automatic activation)
       cy.window().then((win) => {
-        const testWin = win as unknown as import('../support/types').TestWindow;
+        const testWin = win as TestWindow;
         // Send song_ended message when no queue items exist
         if (testWin.socket) {
           testWin.socket.send(JSON.stringify({
@@ -87,11 +94,11 @@ describe('KJ-Nomad Automation Features', () => {
     it('pauses when no songs or filler music are available', () => {
       // Test edge case: no content available at all
       
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       
       // Manually trigger scenario with no content
       cy.window().then((win) => {
-        const testWin = win as unknown as import('../support/types').TestWindow;
+        const testWin = win as TestWindow;
         if (testWin.socket) {
           // Simulate server response when no content is available
           testWin.socket.send(JSON.stringify({
@@ -101,7 +108,7 @@ describe('KJ-Nomad Automation Features', () => {
       })
       
       // Go to player and verify it's paused/stopped
-      cy.visit('/#/player')
+      cy.visit('/player')
       
       cy.get('video').should(($video) => {
         void expect($video.prop('paused')).to.be.true
@@ -114,7 +121,7 @@ describe('KJ-Nomad Automation Features', () => {
       // Test real-time synchronization across multiple views
       
       // Open multiple views (simulating multiple devices)
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       // Note: We'll verify from the singer interface
       
       // Add a song via singer interface
@@ -122,7 +129,7 @@ describe('KJ-Nomad Automation Features', () => {
       cy.requestSong('Real-time Test Singer', 'Test Song')
       
       // Verify controller updates immediately
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.waitForQueueUpdate(1)
       cy.get('[data-testid="queue-item"]')
         .should('contain.text', 'Real-time Test Singer')
@@ -130,7 +137,7 @@ describe('KJ-Nomad Automation Features', () => {
       // Start playing and verify player view updates
       cy.playNextSong()
       
-      cy.visit('/#/player')
+      cy.visit('/player')
       cy.get('[data-testid="now-playing"], .now-playing', { timeout: 5000 })
         .should('contain.text', 'Real-time Test Singer')
     })
@@ -156,7 +163,7 @@ describe('KJ-Nomad Automation Features', () => {
       // Restore network and verify recovery
       cy.intercept('POST', '/api/**').as('networkRestored')
       
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.get('[data-testid="queue-item"]')
         .should('have.length.at.least', 1)
     })
@@ -170,7 +177,7 @@ describe('KJ-Nomad Automation Features', () => {
       const rapidSingers = Array.from({ length: 5 }, (_, i) => `Rapid Singer ${i + 1}`)
       
       rapidSingers.forEach((singer, index) => {
-        cy.visit('/#/singer')
+        cy.visit('/singer')
         cy.get('input[placeholder*="Name"]').clear().type(singer)
         cy.searchForSong(`Test ${index + 1}`)
         cy.get('[data-testid="song-result"], .song-result')
@@ -184,7 +191,7 @@ describe('KJ-Nomad Automation Features', () => {
       })
       
       // Verify all songs were added successfully
-      cy.visit('/#/controller')
+      cy.visit('/controller')
       cy.waitForQueueUpdate(5)
       
       rapidSingers.forEach((singer) => {

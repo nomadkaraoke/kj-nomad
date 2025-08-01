@@ -54,12 +54,45 @@ console.log('Client path:', clientPath);
 console.log('Client path exists:', fs.existsSync(clientPath));
 // Enable static file serving
 app.use(express.static(clientPath));
+app.use(express.json());
+
+// Handle React Router client-side routing - serve index.html for all non-API routes
+app.get('*', (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).send('API endpoint not found');
+    }
+    
+    const indexPath = path.join(clientPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send('Frontend not built. Run "npm run build" in the client directory.');
+    }
+});
 
 // API endpoint to search songs
 app.get('/api/songs', (req, res) => {
     const query = req.query.q as string || '';
     const results = searchSongs(query);
     res.json(results);
+});
+
+// API endpoint to get current queue
+app.get('/api/queue', (req, res) => {
+    res.json(getQueue());
+});
+
+// API endpoint to clear queue (for testing)
+app.post('/api/queue/clear', (req, res) => {
+    // Import clearQueue function
+    const queue = getQueue();
+    // Clear the queue by removing all items
+    while (queue.length > 0) {
+        removeSongFromQueue(queue[0].song.id);
+    }
+    broadcast({ type: 'queue_updated', payload: getQueue() });
+    res.json({ success: true, message: 'Queue cleared' });
 });
 
 // Helper function to determine content type

@@ -42,7 +42,7 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue }) => {
       <h3>Queue</h3>
       <ul>
         {queue.map((entry, index) => (
-          <li key={index}>
+          <li key={index} data-testid="queue-item">
             {entry.song.artist} - {entry.song.title} ({entry.singerName})
           </li>
         ))}
@@ -52,8 +52,9 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue }) => {
         type="text"
         value={tickerText}
         onChange={(e) => setTickerText(e.target.value)}
+        data-testid="ticker-input"
       />
-      <button onClick={updateTicker}>Update Ticker</button>
+      <button onClick={updateTicker} data-testid="update-ticker-button">Update Ticker</button>
     </div>
   );
 };

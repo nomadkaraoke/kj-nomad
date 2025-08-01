@@ -84,6 +84,7 @@ const PlayerPage: React.FC = () => {
         onPause={() => setIsPlaying(false)}
         playsInline
         muted={isMuted}
+        data-testid="video"
       />
       
       {/* Overlay for when no video is playing */}
@@ -161,7 +162,7 @@ const PlayerPage: React.FC = () => {
       
       {/* Now Playing Info */}
       {nowPlaying && isVideoLoaded && nowPlaying.singer && (
-        <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-lg">
+        <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-lg" data-testid="now-playing">
           <div className="font-semibold text-lg">
             Now Singing: {nowPlaying.singer}
           </div>
