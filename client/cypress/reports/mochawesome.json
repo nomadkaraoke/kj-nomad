@@ -1,0 +1,296 @@
+{
+  "stats": {
+    "suites": 6,
+    "tests": 5,
+    "passes": 1,
+    "pending": 0,
+    "failures": 4,
+    "start": "2025-08-01T20:36:20.427Z",
+    "end": "2025-08-01T20:37:16.675Z",
+    "duration": 56248,
+    "testsRegistered": 5,
+    "passPercent": 20,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "5a5cf07e-8678-4a69-91e4-b9fb6759b6c2",
+      "title": "",
+      "fullFile": "cypress/e2e/main_flow.cy.ts",
+      "file": "cypress/e2e/main_flow.cy.ts",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "d5a3b502-c7be-4099-a5ff-2348da4213e6",
+          "title": "KJ-Nomad Core User Flows",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [],
+          "suites": [
+            {
+              "uuid": "0352efb9-a20c-448b-bc29-c874ac5ab8df",
+              "title": "Singer Song Request Flow",
+              "fullFile": "",
+              "file": "",
+              "beforeHooks": [],
+              "afterHooks": [],
+              "tests": [
+                {
+                  "title": "allows a singer to successfully search for and request a song",
+                  "fullTitle": "KJ-Nomad Core User Flows Singer Song Request Flow allows a singer to successfully search for and request a song",
+                  "timedOut": null,
+                  "duration": 3599,
+                  "state": "passed",
+                  "speed": "fast",
+                  "pass": true,
+                  "fail": false,
+                  "pending": false,
+                  "context": null,
+                  "code": "// Test Requirement 1: Singer successfully searching for and requesting a song\ncy.visit('/singer');\n// Verify singer interface loads\ncy.contains('Search for a song', { timeout: 10000 }).should('be.visible');\ncy.get('[data-testid=\"singer-name-input\"]').should('be.visible');\ncy.get('[data-testid=\"song-search-input\"]').should('be.visible');\n// Singer enters their name\nvar singerName = Cypress.env('testSingerName');\ncy.get('[data-testid=\"singer-name-input\"]').type(singerName);\n// Singer searches for a song\ncy.searchForSong('Test');\n// Verify search results appear\ncy.get('[data-testid=\"song-result\"], .song-result', { timeout: 10000 })\n    .should('have.length.at.least', 1);\n// Request the first song found\ncy.get('[data-testid=\"song-result\"], .song-result')\n    .first()\n    .within(function () {\n    cy.get('button').contains(/request|add/i).click();\n});\n// Verify success message\ncy.contains(/requested|added|success/i, { timeout: 5000 }).should('be.visible');",
+                  "err": {},
+                  "uuid": "b735db8f-82dc-442a-a6ea-ff1ae0eb8c4e",
+                  "parentUUID": "0352efb9-a20c-448b-bc29-c874ac5ab8df",
+                  "isHook": false,
+                  "skipped": false
+                }
+              ],
+              "suites": [],
+              "passes": [
+                "b735db8f-82dc-442a-a6ea-ff1ae0eb8c4e"
+              ],
+              "failures": [],
+              "pending": [],
+              "skipped": [],
+              "duration": 3599,
+              "root": false,
+              "rootEmpty": false,
+              "_timeout": 2000
+            },
+            {
+              "uuid": "f75ee312-f4b7-4d1e-86d9-5d59b480c830",
+              "title": "KJ Queue Management Flow",
+              "fullFile": "",
+              "file": "",
+              "beforeHooks": [],
+              "afterHooks": [],
+              "tests": [
+                {
+                  "title": "allows KJ to see song requests and manage the queue",
+                  "fullTitle": "KJ-Nomad Core User Flows KJ Queue Management Flow allows KJ to see song requests and manage the queue",
+                  "timedOut": null,
+                  "duration": 8748,
+                  "state": "failed",
+                  "speed": null,
+                  "pass": false,
+                  "fail": true,
+                  "pending": false,
+                  "context": null,
+                  "code": "// First, add a song to the queue\ncy.visit('/singer');\ncy.requestSong(Cypress.env('testSingerName'), 'Test');\n// Test Requirement 2: KJ seeing the request appear in the queue\ncy.visit('/controller');\n// Verify queue interface loads\ncy.contains('Queue', { timeout: 10000 }).should('be.visible');\n// Verify the requested song appears in queue\ncy.waitForQueueUpdate(1);\ncy.get('[data-testid=\"queue-item\"]')\n    .should('contain.text', Cypress.env('testSingerName'));\n// KJ should be able to play the song\ncy.playNextSong();\n// Verify queue updates after playing\ncy.get('[data-testid=\"now-playing\"]', { timeout: 5000 })\n    .should('be.visible')\n    .and('contain.text', Cypress.env('testSingerName'));",
+                  "err": {
+                    "message": "AssertionError: Timed out retrying after 5000ms: Expected to find element: `[data-testid=\"now-playing\"]`, but never found it.",
+                    "estack": "AssertionError: Timed out retrying after 5000ms: Expected to find element: `[data-testid=\"now-playing\"]`, but never found it.\n    at Context.eval (webpack://client/./cypress/e2e/main_flow.cy.ts:67:9)",
+                    "diff": null
+                  },
+                  "uuid": "0bc9dd79-a798-4db0-b4b7-6ffd9112c6e4",
+                  "parentUUID": "f75ee312-f4b7-4d1e-86d9-5d59b480c830",
+                  "isHook": false,
+                  "skipped": false
+                }
+              ],
+              "suites": [],
+              "passes": [],
+              "failures": [
+                "0bc9dd79-a798-4db0-b4b7-6ffd9112c6e4"
+              ],
+              "pending": [],
+              "skipped": [],
+              "duration": 8748,
+              "root": false,
+              "rootEmpty": false,
+              "_timeout": 2000
+            },
+            {
+              "uuid": "5093767c-dcb3-4cf1-90b4-0e5b3ebe34cd",
+              "title": "Player Video Playback Flow",
+              "fullFile": "",
+              "file": "",
+              "beforeHooks": [],
+              "afterHooks": [],
+              "tests": [
+                {
+                  "title": "correctly plays the selected song in player view",
+                  "fullTitle": "KJ-Nomad Core User Flows Player Video Playback Flow correctly plays the selected song in player view",
+                  "timedOut": null,
+                  "duration": 13984,
+                  "state": "failed",
+                  "speed": null,
+                  "pass": false,
+                  "fail": true,
+                  "pending": false,
+                  "context": null,
+                  "code": "// Set up: Add and start a song\ncy.visit('/singer');\ncy.requestSong(Cypress.env('testSingerName'), 'Test');\ncy.visit('/controller');\ncy.waitForQueueUpdate(1);\ncy.playNextSong();\n// Test Requirement 3: Player view correctly playing the selected song\ncy.visit('/player');\n// Verify video element exists and is configured correctly\ncy.get('video', { timeout: 15000 }).should('be.visible');\n// Verify video source is set correctly\ncy.get('video').should('have.attr', 'src').and('include', '/api/media/');\n// Wait for video to actually start playing\ncy.waitForVideoToPlay();\n// Verify video controls and state\ncy.get('video').should(function ($video) {\n    void expect($video.prop('currentTime')).to.be.greaterThan(0);\n    void expect($video.prop('paused')).to.be.false;\n});\n// Verify ticker is displayed\ncy.get('[data-testid=\"ticker\"], .ticker').should('be.visible');",
+                  "err": {
+                    "message": "AssertionError: Timed out retrying after 10000ms: expected '<video.player-video>' to have attribute 'src'",
+                    "estack": "AssertionError: Timed out retrying after 10000ms: expected '<video.player-video>' to have attribute 'src'\n    at Context.eval (webpack://client/./cypress/e2e/main_flow.cy.ts:89:22)",
+                    "diff": null
+                  },
+                  "uuid": "39faef97-13cb-4676-9da4-4f6e8b1a5d60",
+                  "parentUUID": "5093767c-dcb3-4cf1-90b4-0e5b3ebe34cd",
+                  "isHook": false,
+                  "skipped": false
+                }
+              ],
+              "suites": [],
+              "passes": [],
+              "failures": [
+                "39faef97-13cb-4676-9da4-4f6e8b1a5d60"
+              ],
+              "pending": [],
+              "skipped": [],
+              "duration": 13984,
+              "root": false,
+              "rootEmpty": false,
+              "_timeout": 2000
+            },
+            {
+              "uuid": "ba2cf0e4-8af6-4db8-8444-4ea7996facf3",
+              "title": "Ticker Real-time Updates",
+              "fullFile": "",
+              "file": "",
+              "beforeHooks": [],
+              "afterHooks": [],
+              "tests": [
+                {
+                  "title": "shows real-time updates to the scrolling ticker",
+                  "fullTitle": "KJ-Nomad Core User Flows Ticker Real-time Updates shows real-time updates to the scrolling ticker",
+                  "timedOut": null,
+                  "duration": 12657,
+                  "state": "failed",
+                  "speed": null,
+                  "pass": false,
+                  "fail": true,
+                  "pending": false,
+                  "context": null,
+                  "code": "// Test Requirement 5: Real-time updates to the scrolling ticker\nvar testMessage = \"Test Message \".concat(Date.now());\n// Update ticker from KJ interface\ncy.visit('/controller');\ncy.updateTicker(testMessage);\n// Verify ticker updates in player view\ncy.visit('/player');\ncy.waitForTicker(testMessage);\n// Verify ticker updates in singer view\ncy.visit('/singer');\ncy.waitForTicker(testMessage);",
+                  "err": {
+                    "message": "AssertionError: Timed out retrying after 10000ms: expected '[ <div.ticker-wrap.bottom.default>, 1 more... ]' to contain text 'Test Message 1754080608377', but the text was 'Welcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke System'",
+                    "estack": "AssertionError: Timed out retrying after 10000ms: expected '[ <div.ticker-wrap.bottom.default>, 1 more... ]' to contain text 'Test Message 1754080608377', but the text was 'Welcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke System'\n    at Context.eval (webpack://client/./cypress/support/commands.ts:110:5)\n    at wrapped (http://localhost:8080/__cypress/runner/cypress_runner.js:141524:43)",
+                    "diff": "- 'Welcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke SystemWelcome to KJ-Nomad! 🎤 Professional Karaoke System'\n+ 'Test Message 1754080608377'\n"
+                  },
+                  "uuid": "3b7f4126-2be8-47b0-bf06-012c99348224",
+                  "parentUUID": "ba2cf0e4-8af6-4db8-8444-4ea7996facf3",
+                  "isHook": false,
+                  "skipped": false
+                }
+              ],
+              "suites": [],
+              "passes": [],
+              "failures": [
+                "3b7f4126-2be8-47b0-bf06-012c99348224"
+              ],
+              "pending": [],
+              "skipped": [],
+              "duration": 12657,
+              "root": false,
+              "rootEmpty": false,
+              "_timeout": 2000
+            },
+            {
+              "uuid": "243463df-1a48-41d9-82d5-b47f32cb7252",
+              "title": "Multiple User Concurrent Flow",
+              "fullFile": "",
+              "file": "",
+              "beforeHooks": [],
+              "afterHooks": [],
+              "tests": [
+                {
+                  "title": "handles multiple singers requesting songs concurrently",
+                  "fullTitle": "KJ-Nomad Core User Flows Multiple User Concurrent Flow handles multiple singers requesting songs concurrently",
+                  "timedOut": null,
+                  "duration": 17129,
+                  "state": "failed",
+                  "speed": null,
+                  "pass": false,
+                  "fail": true,
+                  "pending": false,
+                  "context": null,
+                  "code": "// Add multiple songs to queue\nvar singers = ['Singer One', 'Singer Two', 'Singer Three'];\nsingers.forEach(function (singer, index) {\n    cy.visit('/singer');\n    cy.requestSong(singer, \"Test \".concat(index + 1));\n});\n// Verify all songs appear in KJ queue\ncy.visit('/controller');\ncy.waitForQueueUpdate(3);\nsingers.forEach(function (singer) {\n    cy.get('[data-testid=\"queue-item\"]')\n        .should('contain.text', singer);\n});\n// Play through songs and verify progression\ncy.playNextSong();\n// Verify first song is now playing\ncy.get('[data-testid=\"now-playing\"]')\n    .should('contain.text', singers[0]);\n// Verify queue reduced by one\ncy.waitForQueueUpdate(2);",
+                  "err": {
+                    "message": "AssertionError: Timed out retrying after 10000ms: Expected to find element: `[data-testid=\"now-playing\"]`, but never found it.",
+                    "estack": "AssertionError: Timed out retrying after 10000ms: Expected to find element: `[data-testid=\"now-playing\"]`, but never found it.\n    at Context.eval (webpack://client/./cypress/e2e/main_flow.cy.ts:148:9)",
+                    "diff": null
+                  },
+                  "uuid": "262c68b0-dd39-4492-9279-a37e49c4943e",
+                  "parentUUID": "243463df-1a48-41d9-82d5-b47f32cb7252",
+                  "isHook": false,
+                  "skipped": false
+                }
+              ],
+              "suites": [],
+              "passes": [],
+              "failures": [
+                "262c68b0-dd39-4492-9279-a37e49c4943e"
+              ],
+              "pending": [],
+              "skipped": [],
+              "duration": 17129,
+              "root": false,
+              "rootEmpty": false,
+              "_timeout": 2000
+            }
+          ],
+          "passes": [],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 0,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.2.0"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": false,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "7.1.3"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/reports",
+        "overwrite": false,
+        "html": false,
+        "json": true
+      },
+      "version": "6.2.0"
+    }
+  }
+}

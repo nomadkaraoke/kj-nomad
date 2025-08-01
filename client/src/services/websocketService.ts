@@ -96,6 +96,7 @@ class WebSocketService {
   
   private handleMessage(message: { type: string; payload?: unknown }) {
     const { type, payload } = message;
+    console.log('[WebSocketService] Received message:', { type, payload });
     const store = useAppStore.getState();
     
     switch (type) {
@@ -106,6 +107,7 @@ class WebSocketService {
       case 'play':
         if (payload && typeof payload === 'object') {
           const playPayload = payload as { songId: string; fileName: string; singer?: string };
+          console.log('[WebSocketService] Setting nowPlaying:', playPayload);
           store.setNowPlaying({
             songId: playPayload.songId,
             fileName: playPayload.fileName,
@@ -132,6 +134,7 @@ class WebSocketService {
         break;
         
       case 'ticker_updated':
+        console.log('[WebSocketService] Setting ticker text:', payload);
         store.setTickerText(payload as string);
         break;
         

@@ -11,6 +11,8 @@ module.exports = {
     responseTimeout: 10000,
     setupNodeEvents(on, config) {
       // implement node event listeners here
+      require('cypress-fail-fast/plugin')(on, config);
+      return config;
     },
     env: {
       // Environment variables for testing

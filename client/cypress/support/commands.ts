@@ -77,17 +77,34 @@ Cypress.Commands.add('waitForQueueUpdate', (expectedCount?: number) => {
 
 // Play next song as KJ
 Cypress.Commands.add('playNextSong', () => {
-  cy.get('button')
-    .contains(/play next|start this song|start/i, { timeout: 10000 })
-    .should('be.visible')
-    .click()
+  // First try the specific play-next-button, then fallback to text matching
+  cy.get('body').then(($body) => {
+    if ($body.find('[data-testid="play-next-button"]').length > 0) {
+      cy.get('[data-testid="play-next-button"]', { timeout: 10000 })
+        .should('be.visible')
+        .click()
+    } else {
+      cy.get('button')
+        .contains(/play next|start this song|start/i, { timeout: 10000 })
+        .should('be.visible')
+        .click()
+    }
+  })
+  
+  // Wait for WebSocket message to be sent and processed
+  cy.wait(2000)
 })
 
 // Wait for video to start playing
 Cypress.Commands.add('waitForVideoToPlay', () => {
-  cy.get('video', { timeout: 15000 })
+  // First wait for video to have a src attribute
+  cy.get('[data-testid="video"], video', { timeout: 15000 })
     .should('be.visible')
-    .and('have.prop', 'paused', false)
+    .and('have.attr', 'src')
+  
+  // Then wait for it to actually start playing
+  cy.get('[data-testid="video"], video')
+    .should('have.prop', 'paused', false)
     .and(($video) => {
       expect($video.prop('currentTime')).to.be.greaterThan(0)
     })
@@ -102,12 +119,26 @@ Cypress.Commands.add('updateTicker', (message: string) => {
   
   cy.get('[data-testid="update-ticker-button"]')
     .click()
+  
+  // Wait for WebSocket message to be sent and processed
+  cy.wait(1000)
 })
 
 // Wait for ticker to show specific text
 Cypress.Commands.add('waitForTicker', (text: string) => {
   cy.get('[data-testid="ticker"], .ticker', { timeout: 10000 })
     .should('contain.text', text)
+})
+
+// Wait for now-playing element to appear with specific singer
+Cypress.Commands.add('waitForNowPlaying', (singerName?: string) => {
+  cy.get('[data-testid="now-playing"]', { timeout: 10000 })
+    .should('be.visible')
+  
+  if (singerName) {
+    cy.get('[data-testid="now-playing"]')
+      .should('contain.text', singerName)
+  }
 })
 
 export {}

@@ -89,8 +89,14 @@ export const useAppStore = create<AppState>()(
       removeFromQueue: (songId) => set((state) => ({
         queue: state.queue.filter(entry => entry.song.id !== songId)
       })),
-      setNowPlaying: (nowPlaying) => set({ nowPlaying }),
-      setTickerText: (tickerText) => set({ tickerText }),
+      setNowPlaying: (nowPlaying) => {
+        console.log('[AppStore] Setting nowPlaying:', nowPlaying);
+        set({ nowPlaying });
+      },
+      setTickerText: (tickerText) => {
+        console.log('[AppStore] Setting tickerText:', tickerText);
+        set({ tickerText });
+      },
       setCurrentView: (currentView) => set({ currentView }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),

@@ -51,6 +51,11 @@ declare global {
        * Wait for ticker to show specific text
        */
       waitForTicker(text: string): Chainable<void>
+      
+      /**
+       * Wait for now-playing element to appear with optional singer name
+       */
+      waitForNowPlaying(singerName?: string): Chainable<void>
     }
   }
 }

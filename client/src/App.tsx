@@ -4,6 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/ui/Layout';
 import { Navigation } from './components/Navigation';
 import { websocketService } from './services/websocketService';
+import { useAppStore } from './store/appStore';
 
 // Import page components (we'll create these next)
 import HomePage from './pages/HomePage';
@@ -17,6 +18,9 @@ function App() {
   useEffect(() => {
     // Initialize WebSocket connection
     websocketService.connect();
+    
+    // Expose store for debugging
+    (window as any).__APP_STORE__ = useAppStore;
     
     // Cleanup on unmount
     return () => {

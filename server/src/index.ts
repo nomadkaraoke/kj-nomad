@@ -187,6 +187,7 @@ interface WebSocketMessage {
 }
 
 const broadcast = (data: WebSocketMessage) => {
+    console.log('[WebSocket] Broadcasting message:', data);
     wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
             client.send(JSON.stringify(data));
@@ -201,6 +202,7 @@ wss.on('connection', (ws) => {
     try {
         const data = JSON.parse(message.toString());
         const { type, payload } = data;
+        console.log('[WebSocket] Received message:', { type, payload });
 
         switch (type) {
         case 'request_song': {
@@ -218,10 +220,24 @@ wss.on('connection', (ws) => {
             removeSongFromQueue(payload.songId);
             broadcast({ type: 'queue_updated', payload: getQueue() });
             break;
+        case 'play': {
+            console.log('[WebSocket] Play message received:', payload);
+            // When KJ manually plays a song, broadcast to all clients
+            broadcast({ type: 'play', payload: { 
+                songId: payload.songId, 
+                fileName: payload.fileName,
+                singer: payload.singer
+            }});
+            break;
+        }
         case 'song_ended': {
             const nextSong = getNextSong();
             if (nextSong) {
-            broadcast({ type: 'play', payload: { songId: nextSong.song.id, fileName: nextSong.song.fileName } });
+            broadcast({ type: 'play', payload: { 
+                songId: nextSong.song.id, 
+                fileName: nextSong.song.fileName,
+                singer: nextSong.singerName
+            }});
             } else {
                 const nextFillerSong = getNextFillerSong();
                 if(nextFillerSong) {
@@ -233,6 +249,7 @@ wss.on('connection', (ws) => {
             break;
         }
         case 'ticker_updated':
+            console.log('[WebSocket] Ticker update:', payload);
             broadcast({ type: 'ticker_updated', payload });
             break;
         default:
