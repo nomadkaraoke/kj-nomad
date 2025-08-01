@@ -97,10 +97,19 @@ The project will be developed in phases.
 To ensure the long-term success and quality of KJ-Nomad, the following principles will be adhered to throughout development:
 
 *   **Code Quality:** All code will be written to be clean, readable, and maintainable. SOLID principles will be applied where appropriate to create a flexible and scalable architecture.
-*   **Testing:** A strong emphasis will be placed on testing.
-    *   **Unit Tests:** Business logic (e.g., the singer rotation algorithm, state management) will be thoroughly unit-tested using frameworks like Vitest.
-    *   **Component Tests:** React components will be tested using React Testing Library to ensure they behave correctly from a user's perspective.
-    *   **Integration Tests:** The communication between the client and server (especially WebSocket interactions) will be tested to ensure reliability.
+*   **Testing:** A strong emphasis will be placed on testing to ensure correctness and reliability at all levels.
+    *   **Unit Tests:** The goal is to achieve at least 80% test coverage for both frontend and backend business logic.
+        *   **Backend:** Logic in modules like `songQueue.ts` and `mediaLibrary.ts` will be tested using Vitest. `fs` and other external dependencies will be mocked to ensure tests are fast and reliable.
+        *   **Frontend:** React components will be tested using Vitest and React Testing Library to verify their behavior from a user's perspective. Hooks and utility functions will also have dedicated unit tests.
+    *   **Integration Tests:**
+        *   **Backend:** The API endpoints and WebSocket message handlers will be tested to ensure they behave correctly when integrated. This will involve using libraries like `supertest` for HTTP requests and a WebSocket client to test the real-time communication layer.
+    *   **End-to-End (E2E) Tests:** The application will be tested from a user's perspective using a browser automation framework like Cypress. These tests will cover critical user flows, such as:
+        1.  A singer successfully searching for and requesting a song.
+        2.  The KJ seeing the request appear in the queue and being able to start the song.
+        3.  The player view correctly playing the selected song.
+        4.  Automated rotation to the next song or filler music upon song completion.
+        5.  Real-time updates to the scrolling ticker.
+*   **Continuous Integration (CI):** While not implemented here, the test suite will be structured to be easily runnable in a CI environment (e.g., GitHub Actions) to automate testing on every code change in the future.
 *   **Modularity & Reusability:** The application will be broken down into small, single-responsibility modules and components. This applies to both the frontend (React components, custom hooks) and the backend (services, controllers).
 *   **TypeScript Throughout:** TypeScript will be used in both the client and server projects to leverage static typing for improved code clarity, early error detection, and better developer experience.
 *   **Scalable State Management:** The frontend will use a predictable and scalable state management solution, likely starting with React Context and `useReducer` and potentially moving to Zustand for more complex state to avoid prop-drilling and create a clear data flow.

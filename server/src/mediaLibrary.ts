@@ -1,6 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import Fuse from 'fuse.js';
+
+// ES Module equivalent for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface Song {
   id: string;
@@ -29,7 +34,7 @@ export const scanMediaLibrary = () => {
   try {
     const files = fs.readdirSync(mediaDir);
     songLibrary = files
-      .filter(file => file.endsWith('.mp4') || file.endsWith('.webm'))
+      .filter(file => !file.startsWith('filler-') && (file.endsWith('.mp4') || file.endsWith('.webm')))
       .map((file, index) => {
         const { artist, title } = parseFileName(file);
         return {

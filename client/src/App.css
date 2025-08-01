@@ -1,42 +1,120 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* App-specific styles using Tailwind utilities */
+
+.app-container {
+  @apply min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-dark-900 dark:to-dark-800;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.navbar {
+  @apply bg-white/90 dark:bg-dark-800/90 backdrop-blur-md border-b border-gray-200 dark:border-dark-700 sticky top-0 z-50;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.navbar-brand {
+  @apply text-xl font-bold text-primary-600 dark:text-primary-400;
+}
+
+.navbar-nav {
+  @apply flex space-x-1;
+}
+
+.nav-link {
+  @apply px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-700 transition-all duration-200;
+}
+
+.nav-link.active {
+  @apply text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20;
+}
+
+.content-area {
+  @apply container mx-auto px-4 py-8;
+}
+
+.hero-section {
+  @apply text-center py-16;
+}
+
+.hero-title {
+  @apply text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4;
+}
+
+.hero-subtitle {
+  @apply text-xl text-gray-600 dark:text-gray-300 mb-8;
+}
+
+.feature-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12;
+}
+
+.feature-card {
+  @apply p-6 rounded-xl bg-white dark:bg-dark-800 shadow-lg border border-gray-200 dark:border-dark-700 hover:shadow-xl transition-shadow duration-300;
+}
+
+.loading-spinner {
+  @apply inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600;
+}
+
+/* Player-specific styles */
+.player-container {
+  @apply relative w-full h-screen bg-black overflow-hidden;
+}
+
+.player-video {
+  @apply w-full h-full object-cover;
+}
+
+.player-overlay {
+  @apply absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none;
+}
+
+/* Queue styles */
+.queue-container {
+  @apply space-y-3;
+}
+
+.queue-item {
+  @apply flex items-center justify-between p-4 bg-white dark:bg-dark-700 rounded-lg border border-gray-200 dark:border-dark-600 hover:shadow-md transition-shadow duration-200;
+}
+
+.queue-item.now-playing {
+  @apply ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20;
+}
+
+.queue-item.next-up {
+  @apply ring-1 ring-accent-400 bg-accent-50 dark:bg-accent-900/20;
+}
+
+/* Mobile-optimized KJ controls */
+.kj-controls {
+  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-800 border-t border-gray-200 dark:border-dark-700 p-4;
+}
+
+.kj-button {
+  @apply w-full py-3 px-4 rounded-lg font-medium text-center transition-all duration-200 active:scale-95;
+}
+
+/* Search interface */
+.search-container {
+  @apply max-w-md mx-auto;
+}
+
+.search-input {
+  @apply w-full px-4 py-3 text-lg rounded-xl border-2 border-gray-300 dark:border-dark-600 focus:border-primary-500 dark:focus:border-primary-400 bg-white dark:bg-dark-700 text-gray-900 dark:text-gray-100;
+}
+
+.search-results {
+  @apply mt-4 space-y-2 max-h-96 overflow-y-auto;
+}
+
+.search-result-item {
+  @apply p-4 bg-white dark:bg-dark-700 rounded-lg border border-gray-200 dark:border-dark-600 hover:bg-gray-50 dark:hover:bg-dark-600 cursor-pointer transition-colors duration-200;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    @apply hidden;
   }
-  to {
-    transform: rotate(360deg);
+  
+  .mobile-full {
+    @apply w-full;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

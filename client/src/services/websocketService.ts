@@ -1,0 +1,160 @@
+import { useAppStore } from '../store/appStore';
+
+class WebSocketService {
+  private ws: WebSocket | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectInterval = 1000; // Start with 1 second
+  private maxReconnectInterval = 30000; // Max 30 seconds
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  
+  connect(url: string = 'ws://localhost:8080') {
+    try {
+      this.ws = new WebSocket(url);
+      
+      this.ws.onopen = () => {
+        console.log('WebSocket connected');
+        this.reconnectAttempts = 0;
+        this.reconnectInterval = 1000;
+        
+        // Update store
+        useAppStore.getState().setSocket(this.ws);
+        useAppStore.getState().setIsConnected(true);
+        useAppStore.getState().setConnectionError(null);
+        
+        // Request initial state
+        this.send({ type: 'get_queue' });
+      };
+      
+      this.ws.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
+        
+        // Update store
+        useAppStore.getState().setSocket(null);
+        useAppStore.getState().setIsConnected(false);
+        
+        // Attempt to reconnect if it wasn't a manual close
+        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.scheduleReconnect();
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          useAppStore.getState().setConnectionError('Failed to connect after multiple attempts');
+        }
+      };
+      
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        useAppStore.getState().setConnectionError('Connection error occurred');
+      };
+      
+      this.ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          this.handleMessage(message);
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
+        }
+      };
+      
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+      useAppStore.getState().setConnectionError('Failed to create connection');
+    }
+  }
+  
+  private scheduleReconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+    
+    this.reconnectAttempts++;
+    console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${this.reconnectInterval}ms`);
+    
+    useAppStore.getState().setConnectionError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    
+    this.reconnectTimer = setTimeout(() => {
+      this.connect();
+    }, this.reconnectInterval);
+    
+    // Exponential backoff with jitter
+    this.reconnectInterval = Math.min(
+      this.maxReconnectInterval,
+      this.reconnectInterval * 2 + Math.random() * 1000
+    );
+  }
+  
+  private handleMessage(message: any) {
+    const { type, payload } = message;
+    const store = useAppStore.getState();
+    
+    switch (type) {
+      case 'queue_updated':
+        store.setQueue(payload);
+        break;
+        
+      case 'play':
+        store.setNowPlaying({
+          songId: payload.songId,
+          fileName: payload.fileName,
+          isFiller: false,
+          singer: payload.singer,
+          startTime: Date.now()
+        });
+        break;
+        
+      case 'play_filler_music':
+        store.setNowPlaying({
+          fileName: payload.fileName,
+          isFiller: true,
+          startTime: Date.now()
+        });
+        break;
+        
+      case 'pause':
+        store.setNowPlaying(null);
+        break;
+        
+      case 'ticker_updated':
+        store.setTickerText(payload);
+        break;
+        
+      default:
+        console.log('Unhandled message type:', type, payload);
+    }
+  }
+  
+  send(data: any) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(data));
+      return true;
+    } else {
+      console.warn('WebSocket is not connected');
+      return false;
+    }
+  }
+  
+  disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    
+    if (this.ws) {
+      this.ws.close(1000, 'Manual disconnect');
+      this.ws = null;
+    }
+    
+    useAppStore.getState().setSocket(null);
+    useAppStore.getState().setIsConnected(false);
+  }
+  
+  getConnectionState() {
+    return this.ws?.readyState || WebSocket.CLOSED;
+  }
+  
+  isConnected() {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+}
+
+// Singleton instance
+export const websocketService = new WebSocketService();

@@ -1,40 +1,56 @@
+/* Modern scrolling ticker with smooth animations */
+
 .ticker-wrap {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  overflow: hidden;
-  height: 4rem;
-  background-color: rgba(0, 0, 0, 0.5);
-  padding-left: 100%;
-  box-sizing: content-box;
+  @apply fixed bottom-0 left-0 right-0 bg-dark-900/80 backdrop-blur-sm text-white py-3 overflow-hidden;
+  z-index: 1000;
 }
 
 .ticker {
-  display: inline-block;
-  height: 4rem;
-  line-height: 4rem;
-  white-space: nowrap;
-  padding-right: 100%;
-  box-sizing: content-box;
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
-  animation-name: ticker;
-  animation-duration: 30s;
+  @apply flex whitespace-nowrap;
+  animation: scroll 30s linear infinite;
 }
 
 .ticker-item {
-  display: inline-block;
-  padding: 0 2rem;
-  font-size: 2rem;
-  color: white;
+  @apply text-lg font-medium px-8 flex-shrink-0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-@keyframes ticker {
+.ticker-item::after {
+  content: "•";
+  @apply mx-8 text-primary-400;
+}
+
+.ticker-item:last-child::after {
+  content: "";
+}
+
+@keyframes scroll {
   0% {
-    transform: translate3d(0, 0, 0);
-    visibility: visible;
+    transform: translateX(100%);
   }
   100% {
-    transform: translate3d(-100%, 0, 0);
+    transform: translateX(-100%);
   }
+}
+
+/* Pause animation on hover for better readability */
+.ticker-wrap:hover .ticker {
+  animation-play-state: paused;
+}
+
+/* Alternative ticker styles for different contexts */
+.ticker-wrap.top {
+  @apply top-0 bottom-auto bg-primary-600/90;
+}
+
+.ticker-wrap.accent {
+  @apply bg-accent-500/90 text-dark-900;
+}
+
+.ticker-wrap.minimal {
+  @apply bg-white/10 dark:bg-dark-800/50 py-2;
+}
+
+.ticker-wrap.minimal .ticker-item {
+  @apply text-sm;
 }
