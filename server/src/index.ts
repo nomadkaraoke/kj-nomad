@@ -4,19 +4,24 @@ import { WebSocketServer } from 'ws';
 import fs from 'fs';
 import path from 'path';
 
-import { scanMediaLibrary, searchSongs } from './mediaLibrary';
+import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
+import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong } from './songQueue';
+import { scanFillerMusic, getNextFillerSong } from './fillerMusic';
 
-import { getSongById } from './mediaLibrary';
-import { addSongToQueue, getQueue, removeSongFromQueue } from './songQueue';
+import { Bonjour } from 'bonjour-service';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
+// Publish the server on the network
+const bonjour = new Bonjour();
+bonjour.publish({ name: 'KJ-Nomad Server', type: 'http', port: 8080 });
+
 
 // Scan the media library on startup
 scanMediaLibrary();
-
+scanFillerMusic();
 
 const PORT = process.env.PORT || 8080;
 
@@ -92,6 +97,26 @@ wss.on('connection', (ws) => {
         break;
       case 'get_queue':
         ws.send(JSON.stringify({ type: 'queue_updated', payload: getQueue() }));
+        break;
+      case 'remove_from_queue':
+        removeSongFromQueue(payload.songId);
+        broadcast({ type: 'queue_updated', payload: getQueue() });
+        break;
+      case 'song_ended':
+        const nextSong = getNextSong();
+        if (nextSong) {
+          broadcast({ type: 'play', payload: { songId: nextSong.song.id, fileName: nextSong.song.fileName } });
+        } else {
+            const nextFillerSong = getNextFillerSong();
+            if(nextFillerSong) {
+                broadcast({ type: 'play_filler_music', payload: { fileName: nextFillerSong.fileName } });
+            } else {
+                 broadcast({ type: 'pause' });
+            }
+        }
+        break;
+    case 'ticker_updated':
+        broadcast({ type: 'ticker_updated', payload: payload });
         break;
       default:
         // For playback controls, broadcast to all clients except the sender

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface Song {
     id: string;
@@ -18,12 +18,19 @@ interface KjControllerProps {
 }
 
 const KjController: React.FC<KjControllerProps> = ({ socket, queue }) => {
+  const [tickerText, setTickerText] = useState('');
+
   const playNextSong = () => {
     const nextSong = queue[0];
     if (socket && nextSong) {
       socket.send(JSON.stringify({ type: 'play', payload: { songId: nextSong.song.id, fileName: nextSong.song.fileName } }));
-      // Optimistically remove from queue
       socket.send(JSON.stringify({ type: 'remove_from_queue', payload: { songId: nextSong.song.id } }));
+    }
+  };
+
+  const updateTicker = () => {
+    if (socket) {
+      socket.send(JSON.stringify({ type: 'ticker_updated', payload: tickerText }));
     }
   };
 
@@ -40,6 +47,13 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue }) => {
           </li>
         ))}
       </ul>
+      <h3>Ticker</h3>
+      <input
+        type="text"
+        value={tickerText}
+        onChange={(e) => setTickerText(e.target.value)}
+      />
+      <button onClick={updateTicker}>Update Ticker</button>
     </div>
   );
 };

@@ -1,10 +1,13 @@
 import React, { useRef, useEffect } from 'react';
+import Ticker from './Ticker';
 
 interface PlayerProps {
-  nowPlaying: { songId: string } | null;
+  nowPlaying: { songId?: string, fileName: string, isFiller: boolean } | null;
+  socket: WebSocket | null;
+  tickerText: string;
 }
 
-const Player: React.FC<PlayerProps> = ({ nowPlaying }) => {
+const Player: React.FC<PlayerProps> = ({ nowPlaying, socket, tickerText }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -12,8 +15,6 @@ const Player: React.FC<PlayerProps> = ({ nowPlaying }) => {
     if (!video) return;
 
     if (nowPlaying) {
-        // This assumes a predictable mapping from songId to fileName
-        // A better approach would be to get the fileName from the song object
       video.src = `/api/media/${nowPlaying.fileName}`;
       video.play();
     } else {
@@ -21,10 +22,20 @@ const Player: React.FC<PlayerProps> = ({ nowPlaying }) => {
     }
   }, [nowPlaying]);
 
+  const onEnded = () => {
+    if(socket) {
+        if(nowPlaying?.isFiller) {
+            socket.send(JSON.stringify({ type: 'song_ended' }));
+        } else {
+            socket.send(JSON.stringify({ type: 'song_ended' }));
+        }
+    }
+  }
+
   return (
-    <div>
-      <h2>Player View</h2>
-      <video ref={videoRef} width="100%"></video>
+    <div style={{ position: 'relative', width: '100%', height: '100%'}}>
+      <video ref={videoRef} width="100%" height="100%" onEnded={onEnded}></video>
+      <Ticker text={tickerText} />
     </div>
   );
 };

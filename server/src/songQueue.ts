@@ -7,9 +7,15 @@ interface QueueEntry {
 
 let queue: QueueEntry[] = [];
 
+let nowPlaying: QueueEntry | null = null;
+
 export const getQueue = () => {
   return queue;
 };
+
+export const getNowPlaying = () => {
+  return nowPlaying;
+}
 
 export const addSongToQueue = (song: Song, singerName: string) => {
   queue.push({ song, singerName });
@@ -20,5 +26,6 @@ export const removeSongFromQueue = (songId: string) => {
 };
 
 export const getNextSong = (): QueueEntry | undefined => {
-  return queue.shift();
+  nowPlaying = queue.shift() || null;
+  return nowPlaying;
 };

@@ -21,6 +21,7 @@ const App = () => {
   const [route, setRoute] = useState(window.location.hash);
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [nowPlaying, setNowPlaying] = useState<any>(null);
+  const [tickerText, setTickerText] = useState('Welcome to KJ-Nomad!');
   const socket = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -40,10 +41,16 @@ const App = () => {
                 setQueue(message.payload);
                 break;
             case 'play':
-                setNowPlaying(message.payload);
+                setNowPlaying({ ...message.payload, isFiller: false });
+                break;
+            case 'play_filler_music':
+                setNowPlaying({ ...message.payload, isFiller: true });
                 break;
             case 'pause':
                 setNowPlaying(null);
+                break;
+            case 'ticker_updated':
+                setTickerText(message.payload);
                 break;
         }
     }
@@ -60,7 +67,7 @@ const App = () => {
   let CurrentView;
   switch (route) {
     case '#/player':
-      CurrentView = <Player nowPlaying={nowPlaying} />;
+      CurrentView = <Player nowPlaying={nowPlaying} socket={socket.current} tickerText={tickerText} />;
       break;
     case '#/controller':
       CurrentView = <KjController socket={socket.current} queue={queue} />;
