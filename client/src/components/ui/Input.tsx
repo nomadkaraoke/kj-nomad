@@ -51,7 +51,7 @@ export const Input: React.FC<InputProps> = ({
             'focus:outline-none focus:ring-2 focus:ring-offset-2',
             error 
               ? 'border-red-300 dark:border-red-600 focus:border-red-500 focus:ring-red-500' 
-              : 'border-gray-300 dark:border-dark-600 focus:border-primary-500 focus:ring-primary-500',
+              : 'border-gray-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500',
             leftIcon && 'pl-10',
             rightIcon && 'pr-10',
             className

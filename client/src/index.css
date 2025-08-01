@@ -1,41 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+/* Configure source detection for better content scanning */
 @source "../**/*.{js,ts,jsx,tsx,html}";
 @source "../index.html";
 
-/* Explicitly include commonly used utility classes */
-@source inline("bg-white bg-gray-50 bg-gray-100 bg-gray-200 bg-gray-300 bg-gray-400 bg-gray-500 bg-gray-600 bg-gray-700 bg-gray-800 bg-gray-900");
-@source inline("text-white text-gray-50 text-gray-100 text-gray-200 text-gray-300 text-gray-400 text-gray-500 text-gray-600 text-gray-700 text-gray-800 text-gray-900");
-@source inline("from-gray-50 from-gray-100 from-gray-200 from-gray-300 from-gray-400 from-gray-500 from-gray-600 from-gray-700 from-gray-800 from-gray-900");
-@source inline("to-gray-50 to-gray-100 to-gray-200 to-gray-300 to-gray-400 to-gray-500 to-gray-600 to-gray-700 to-gray-800 to-gray-900");
-@source inline("border-gray-50 border-gray-100 border-gray-200 border-gray-300 border-gray-400 border-gray-500 border-gray-600 border-gray-700 border-gray-800 border-gray-900");
-@source inline("top-0 right-0 bottom-0 left-0 inset-0");
-@source inline("absolute relative fixed sticky");
-@source inline("flex grid block inline-block hidden");
-@source inline("w-full h-full min-h-screen");
-@source inline("p-4 p-6 m-4 m-6 px-4 py-4 mx-4 my-4");
-@source inline("rounded rounded-lg rounded-xl rounded-full");
-@source inline("shadow shadow-lg shadow-xl");
-@source inline("hover:bg-gray-100 hover:bg-gray-200 hover:text-gray-900");
-@source inline("dark:bg-gray-800 dark:bg-gray-900 dark:text-white dark:text-gray-100");
-
-/* Add @reference for missing utilities to ensure they're included */
-@utility bg-white { background-color: white; }
-@utility bottom-0 { bottom: 0; }
-
 @theme {
   /* Brand Colors for KJ-Nomad */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #bae6fd;
-  --color-primary-300: #7dd3fc;
-  --color-primary-400: #38bdf8;
-  --color-primary-500: #0ea5e9;
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
-  --color-primary-800: #075985;
-  --color-primary-900: #0c4a6e;
+  --primary-50: #f0f9ff;
+  --primary-100: #e0f2fe;
+  --primary-200: #bae6fd;
+  --primary-300: #7dd3fc;
+  --primary-400: #38bdf8;
+  --primary-500: #0ea5e9;
+  --primary-600: #0284c7;
+  --primary-700: #0369a1;
+  --primary-800: #075985;
+  --primary-900: #0c4a6e;
   --color-primary-950: #082f49;
 
   --color-secondary-50: #fdf4ff;
@@ -62,6 +43,7 @@
   --color-accent-900: #713f12;
   --color-accent-950: #422006;
 
+  /* Dark color scale - keeping for compatibility */
   --color-dark-50: #f8fafc;
   --color-dark-100: #f1f5f9;
   --color-dark-200: #e2e8f0;
@@ -105,6 +87,8 @@
 }
 
 @layer base {
+  @reference "tailwindcss";
+  
   html {
     font-family: 'Inter', system-ui, sans-serif;
   }
@@ -119,7 +103,7 @@
 }
 
 @utility btn-primary {
-  background-color: var(--color-primary-600);
+  background-color: var(--color-blue-600);
   color: white;
   font-weight: 500;
   padding: 0.5rem 1rem;
@@ -129,11 +113,11 @@
   outline-offset: 2px;
   
   &:hover {
-    background-color: var(--color-primary-700);
+    background-color: var(--color-blue-700);
   }
   
   &:focus {
-    outline: 2px solid var(--color-primary-500);
+    outline: 2px solid var(--color-blue-500);
     outline-offset: 2px;
   }
 }
@@ -189,7 +173,7 @@
   transition: colors 200ms;
   
   &:focus {
-    outline: 2px solid var(--color-primary-500);
+    outline: 2px solid var(--color-blue-500);
     border-color: transparent;
   }
 }

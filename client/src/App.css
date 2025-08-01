@@ -1,15 +1,16 @@
 /* App-specific styles using Tailwind utilities */
+@reference "tailwindcss";
 
 .app-container {
-  @apply min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-dark-900 dark:to-dark-800;
+  @apply min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800;
 }
 
 .navbar {
-  @apply bg-white/90 dark:bg-dark-800/90 backdrop-blur-md border-b border-gray-200 dark:border-dark-700 sticky top-0 z-50;
+  @apply bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50;
 }
 
 .navbar-brand {
-  @apply text-xl font-bold text-primary-600 dark:text-primary-400;
+  @apply text-xl font-bold text-blue-600 dark:text-blue-400;
 }
 
 .navbar-nav {
@@ -17,11 +18,11 @@
 }
 
 .nav-link {
-  @apply px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-700 transition-all duration-200;
+  @apply px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200;
 }
 
 .nav-link.active {
-  @apply text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20;
+  @apply text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20;
 }
 
 .content-area {
@@ -45,11 +46,11 @@
 }
 
 .feature-card {
-  @apply p-6 rounded-xl bg-white dark:bg-dark-800 shadow-lg border border-gray-200 dark:border-dark-700 hover:shadow-xl transition-shadow duration-300;
+  @apply p-6 rounded-xl bg-white dark:bg-slate-800 shadow-lg border border-gray-200 dark:border-slate-700 hover:shadow-xl transition-shadow duration-300;
 }
 
 .loading-spinner {
-  @apply inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600;
+  @apply inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600;
 }
 
 /* Player-specific styles */
@@ -71,20 +72,20 @@
 }
 
 .queue-item {
-  @apply flex items-center justify-between p-4 bg-white dark:bg-dark-700 rounded-lg border border-gray-200 dark:border-dark-600 hover:shadow-md transition-shadow duration-200;
+  @apply flex items-center justify-between p-4 bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 hover:shadow-md transition-shadow duration-200;
 }
 
 .queue-item.now-playing {
-  @apply ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20;
+  @apply ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20;
 }
 
 .queue-item.next-up {
-  @apply ring-1 ring-accent-400 bg-accent-50 dark:bg-accent-900/20;
+  @apply ring-1 ring-yellow-400 bg-yellow-50 dark:bg-yellow-900/20;
 }
 
 /* Mobile-optimized KJ controls */
 .kj-controls {
-  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-800 border-t border-gray-200 dark:border-dark-700 p-4;
+  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 p-4;
 }
 
 .kj-button {
@@ -97,7 +98,7 @@
 }
 
 .search-input {
-  @apply w-full px-4 py-3 text-lg rounded-xl border-2 border-gray-300 dark:border-dark-600 focus:border-primary-500 dark:focus:border-primary-400 bg-white dark:bg-dark-700 text-gray-900 dark:text-gray-100;
+  @apply w-full px-4 py-3 text-lg rounded-xl border-2 border-gray-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100;
 }
 
 .search-results {
@@ -105,7 +106,7 @@
 }
 
 .search-result-item {
-  @apply p-4 bg-white dark:bg-dark-700 rounded-lg border border-gray-200 dark:border-dark-600 hover:bg-gray-50 dark:hover:bg-dark-600 cursor-pointer transition-colors duration-200;
+  @apply p-4 bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 cursor-pointer transition-colors duration-200;
 }
 
 /* Responsive utilities */

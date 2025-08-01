@@ -123,7 +123,7 @@ const ControllerPage: React.FC = () => {
       
       {/* Now Playing */}
       {nowPlaying && (
-        <Card variant="elevated" className={currentlyPlaying ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'bg-accent-50 dark:bg-accent-900/20'} data-testid="now-playing">
+        <Card variant="elevated" className={currentlyPlaying ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20'} data-testid="now-playing">
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
@@ -131,7 +131,7 @@ const ControllerPage: React.FC = () => {
                   {currentlyPlaying ? 'Now Singing' : 'Filler Music'}
                 </h3>
                 {nowPlaying.singer && (
-                  <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {nowPlaying.singer}
                   </p>
                 )}
@@ -142,8 +142,8 @@ const ControllerPage: React.FC = () => {
               <div className="text-right">
                 <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                   currentlyPlaying 
-                    ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-800 dark:text-primary-200'
-                    : 'bg-accent-100 dark:bg-accent-900/50 text-accent-800 dark:text-accent-200'
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
+                    : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200'
                 }`}>
                   {currentlyPlaying ? 'Live' : 'Filler'}
                 </div>
@@ -181,7 +181,7 @@ const ControllerPage: React.FC = () => {
                   data-testid="queue-item"
                   className={`p-4 rounded-lg border transition-all duration-200 ${
                     index === 0 
-                      ? 'border-accent-300 dark:border-accent-600 bg-accent-50 dark:bg-accent-900/20' 
+                      ? 'border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' 
                       : 'border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 hover:bg-gray-50 dark:hover:bg-dark-600'
                   }`}
                 >
@@ -190,7 +190,7 @@ const ControllerPage: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                           index === 0
-                            ? 'bg-accent-500 text-white'
+                            ? 'bg-yellow-500 text-white'
                             : 'bg-gray-200 dark:bg-dark-600 text-gray-600 dark:text-gray-300'
                         }`}>
                           {index + 1}
@@ -240,7 +240,7 @@ const ControllerPage: React.FC = () => {
                   </div>
                   
                   {index === 0 && (
-                    <div className="mt-3 pt-3 border-t border-accent-200 dark:border-accent-700">
+                    <div className="mt-3 pt-3 border-t border-yellow-200 dark:border-yellow-700">
                       <Button
                         onClick={playNext}
                         variant="primary"

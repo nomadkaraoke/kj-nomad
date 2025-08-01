@@ -88,7 +88,7 @@ const PlayerPage: React.FC = () => {
       
       {/* Overlay for when no video is playing */}
       {!nowPlaying && (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-900 to-dark-900 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="mb-8">
               <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
@@ -120,7 +120,7 @@ const PlayerPage: React.FC = () => {
                             {entry.song.artist} - {entry.song.title}
                           </div>
                         </div>
-                        <div className="text-2xl font-bold text-accent-400">
+                        <div className="text-2xl font-bold text-yellow-400">
                           #{index + 1}
                         </div>
                       </div>
@@ -175,7 +175,7 @@ const PlayerPage: React.FC = () => {
       
       {/* Filler Music Indicator */}
       {nowPlaying?.isFiller && (
-        <div className="absolute top-4 right-4 bg-accent-500/80 backdrop-blur-sm text-dark-900 px-4 py-2 rounded-lg font-semibold">
+        <div className="absolute top-4 right-4 bg-yellow-500/80 backdrop-blur-sm text-slate-900 px-4 py-2 rounded-lg font-semibold">
           Intermission Music
         </div>
       )}

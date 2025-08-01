@@ -50,7 +50,7 @@ export const Navigation: React.FC = () => {
         <div className="flex items-center justify-between py-4">
           {/* Brand */}
           <div className="flex items-center space-x-4">
-            <Link to="/" className="flex items-center space-x-2 text-2xl font-bold text-primary-600 dark:text-primary-400">
+            <Link to="/" className="flex items-center space-x-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
               <MicrophoneIcon className="h-8 w-8" />
               <span>KJ-Nomad</span>
             </Link>
@@ -86,8 +86,8 @@ export const Navigation: React.FC = () => {
                   className={clsx(
                     'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-dark-700'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                   )}
                   title={item.description}
                 >

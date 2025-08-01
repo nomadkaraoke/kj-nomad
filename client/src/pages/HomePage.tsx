@@ -80,7 +80,7 @@ const HomePage: React.FC = () => {
       {/* Hero Section */}
       <div className="text-center py-16">
         <div className="flex justify-center items-center space-x-3 mb-6">
-          <MicrophoneIcon className="h-16 w-16 text-primary-600 dark:text-primary-400" />
+          <MicrophoneIcon className="h-16 w-16 text-blue-600 dark:text-blue-400" />
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white">
             KJ-Nomad
           </h1>
@@ -119,14 +119,14 @@ const HomePage: React.FC = () => {
                 <Link to={action.to} className="block p-4">
                   <div className="flex justify-center mb-4">
                     <div className={`p-3 rounded-full ${
-                      action.color === 'primary' ? 'bg-primary-100 dark:bg-primary-900/30' :
+                      action.color === 'primary' ? 'bg-blue-100 dark:bg-blue-900/30' :
                       action.color === 'secondary' ? 'bg-gray-100 dark:bg-dark-700' :
-                      'bg-accent-100 dark:bg-accent-900/30'
+                      'bg-yellow-100 dark:bg-yellow-900/30'
                     }`}>
                       <Icon className={`h-8 w-8 ${
-                        action.color === 'primary' ? 'text-primary-600 dark:text-primary-400' :
+                        action.color === 'primary' ? 'text-blue-600 dark:text-blue-400' :
                         action.color === 'secondary' ? 'text-gray-600 dark:text-gray-400' :
-                        'text-accent-600 dark:text-accent-400'
+                        'text-yellow-600 dark:text-yellow-400'
                       }`} />
                     </div>
                   </div>
@@ -155,8 +155,8 @@ const HomePage: React.FC = () => {
             return (
               <Card key={feature.title} className="text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-full">
-                    <Icon className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                  <Icon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
