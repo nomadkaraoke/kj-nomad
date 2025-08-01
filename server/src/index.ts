@@ -50,7 +50,10 @@ const PORT = process.env.PORT || 8080;
 
 // Serve static files from the React client
 const clientPath = path.join(__dirname, '../../client/dist');
-app.use(express.static(clientPath));
+console.log('Client path:', clientPath);
+console.log('Client path exists:', fs.existsSync(clientPath));
+// Temporarily comment out static file serving to isolate path-to-regexp issue
+// app.use(express.static(clientPath));
 
 // API endpoint to search songs
 app.get('/api/songs', (req, res) => {
@@ -167,9 +170,10 @@ wss.on('connection', (ws) => {
 });
 
 // All remaining requests return the React app, so it can handle routing.
-app.get('*', (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
-});
+// Temporarily comment out catch-all route to isolate path-to-regexp issue
+// app.get('*', (req, res) => {
+//     res.sendFile(path.join(clientPath, 'index.html'));
+// });
 
 server.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
