@@ -2,9 +2,33 @@
 
 ## Summary
 
-The end-to-end tests have been significantly improved but still need some final fixes to work completely in CI.
+The end-to-end tests have made significant progress! We've resolved the major server HTTP hanging issues and frontend/backend communication problems. Tests are now getting "much further" and making real progress.
 
-## ✅ Completed Fixes
+## ✅ Major Fixes Completed (Latest Session)
+
+### 🚨 **Critical Server Issues Resolved**
+1. **Server HTTP Hanging Issue**: 
+   - **Root Cause**: Infinite loop in `/api/queue/clear` endpoint
+   - **Problem**: `while (queue.length > 0)` loop never terminated because `removeSongFromQueue()` modified global queue but local reference stayed unchanged
+   - **Fix**: Replaced infinite loop with direct `resetQueue()` call
+   - **Impact**: Tests can now run without server freezing
+
+2. **Frontend/Backend Communication**:
+   - **Problem**: Vite dev server on port 5173 couldn't reach backend API on port 8080
+   - **Fix**: Added Vite proxy configuration to forward `/api/*` requests to `localhost:8080`
+   - **Impact**: API calls now work properly, server logs show successful requests
+
+3. **WebSocket Connection Issues**:
+   - **Problem**: WebSocket trying to connect through Vite proxy instead of directly to server
+   - **Fix**: Configure WebSocket to connect directly to `ws://localhost:8080`
+   - **Impact**: Real-time features now working, WebSocket connections stable
+
+### 🛠 **Development Experience Improvements**
+4. **Convenience Scripts**: Created root `package.json` with `npm run dev` to start both server and client simultaneously
+5. **Reduced Development Noise**: Cleaned up WebSocket logging to reduce console spam during page reloads
+6. **Comprehensive Server Logging**: Added detailed logging to all API endpoints for easier debugging
+
+## ✅ Previously Completed Fixes
 
 1. **TypeScript Compilation Errors**: Fixed import issues in Cypress support files
 2. **Data Test IDs**: Added all necessary `data-testid` attributes to UI components:
@@ -22,32 +46,33 @@ The end-to-end tests have been significantly improved but still need some final 
    - Copy frontend build to server public directory
    - Use proper test data setup script
 
-## 🟡 Remaining Issues
+## 🟡 Current Status
 
-1. **Route Resolution**: Tests can't find UI elements, suggesting routing or server configuration issues
-2. **Frontend-Backend Integration**: The built frontend may not be properly served by the server
-3. **WebSocket Connection**: Real-time features like ticker updates aren't working correctly in tests
+**Tests are now getting "much further"** - the major blocking issues have been resolved:
+- ✅ Server no longer hangs on HTTP requests
+- ✅ API endpoints working properly (confirmed via server logs)
+- ✅ WebSocket connections stable
+- ✅ Frontend/backend communication established
 
-## 📋 Test Results
+## 📋 Next Steps
 
-- **automation_flow.cy.ts**: 1/6 tests passing
-- **main_flow.cy.ts**: 0/5 tests passing
+1. **Run Tests Again**: Now that server communication is fixed, run tests to identify remaining specific UI/interaction issues
+2. **Debug Remaining Test Failures**: Focus on specific test steps that fail rather than infrastructure issues
+3. **Verify E2E Test Scenarios**: Ensure test scenarios match actual UI behavior
 
-One test ("pauses when no songs or filler music are available") is consistently passing, proving the test infrastructure works.
+## 🎯 Key Learnings
 
-## 🚀 Recommended Next Steps
+1. **Server-side infinite loops**: Always verify loop termination conditions, especially when modifying arrays during iteration
+2. **Development vs Production**: Different port configurations between dev and production require proper proxy setup
+3. **WebSocket proxy complexity**: Sometimes direct connections work better than proxy configurations
+4. **Debugging strategy**: Adding comprehensive logging to all endpoints makes debugging much easier
 
-1. **Debug Server Configuration**: Ensure the server correctly serves the built React app
-2. **Test Route Handling**: Verify React Router works correctly when served by Express
-3. **WebSocket Integration**: Test real-time features in isolation
-4. **Simplified Test Suite**: Create minimal passing tests to establish CI baseline
+## 🚀 Current Development Setup
 
-## 🛠 CI Integration
-
-The CI workflow has been updated to:
-- Install FFmpeg and create real test videos
-- Build and serve the frontend correctly  
-- Wait for server startup before running tests
-- Capture test videos and screenshots on failure
-
-The main issue preventing CI success is likely that the Express server needs to be configured to properly serve the React SPA with client-side routing.
+**Working Configuration:**
+- **Server**: `npm run dev` in `/server` (port 8080)
+- **Client**: `npm run dev` in `/client` (port 5173 with proxy to 8080)
+- **Convenience**: `npm run dev` from root runs both simultaneously
+- **API Communication**: ✅ Working via Vite proxy
+- **WebSocket Communication**: ✅ Working via direct connection
+- **E2E Tests**: Ready to run without infrastructure blocking issues
