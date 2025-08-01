@@ -17,7 +17,7 @@ const Ticker: React.FC<TickerProps> = ({
   }
 
   return (
-    <div className={`ticker-wrap ${position} ${variant}`}>
+    <div className={`ticker-wrap ${position} ${variant}`} data-testid="ticker">
       <div className="ticker">
         <div className="ticker-item">{text}</div>
         {/* Duplicate for seamless loop */}

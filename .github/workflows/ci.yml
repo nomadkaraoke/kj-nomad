@@ -1,0 +1,358 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Backend Testing
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './server/package-lock.json'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests with coverage
+      run: npm test -- --run
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ./server/coverage
+        flags: backend
+        name: backend-coverage
+        
+  # Frontend Testing  
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './client/package-lock.json'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test -- --run
+      
+    - name: Build frontend
+      run: npm run build
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: client-build
+        path: ./client/dist/
+        retention-days: 30
+
+  # End-to-End Testing
+  e2e-test:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './client/package-lock.json'
+        
+    - name: Install backend dependencies
+      run: cd server && npm ci
+      
+    - name: Install frontend dependencies  
+      run: cd client && npm ci
+      
+    - name: Create test media files
+      run: |
+        mkdir -p server/media
+        echo "Test video file" > server/media/Test Artist - Test Song.mp4
+        echo "Test filler" > server/media/filler-background.mp4
+        
+    - name: Start backend server
+      run: cd server && npm start &
+      env:
+        NODE_ENV: test
+        
+    - name: Wait for server to start
+      run: npx wait-on http://localhost:8080 --timeout 30000
+      
+    - name: Build frontend
+      run: cd client && npm run build
+      
+    - name: Run Cypress E2E tests
+      run: cd client && npm run cypress:run
+      
+    - name: Upload E2E videos on failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: e2e-videos
+        path: ./client/cypress/videos/
+        retention-days: 7
+
+  # Code Quality Checks
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install backend dependencies
+      run: cd server && npm ci
+      
+    - name: Install frontend dependencies
+      run: cd client && npm ci
+      
+    - name: Lint backend
+      run: cd server && npm run lint
+      continue-on-error: true
+      
+    - name: Type check backend
+      run: cd server && npm run type-check
+      
+    - name: Lint frontend
+      run: cd client && npm run lint
+      continue-on-error: true
+      
+    - name: Type check frontend
+      run: cd client && npm run type-check
+
+  # Security Audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Audit backend dependencies
+      run: cd server && npm audit --audit-level=moderate
+      continue-on-error: true
+      
+    - name: Audit frontend dependencies
+      run: cd client && npm audit --audit-level=moderate
+      continue-on-error: true
+
+  # Build Release Package
+  build-release:
+    name: Build Release Package
+    runs-on: ${{ matrix.os }}
+    needs: [backend-test, frontend-test, e2e-test]
+    if: github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install backend dependencies
+      run: cd server && npm ci
+      
+    - name: Install frontend dependencies
+      run: cd client && npm ci
+      
+    - name: Build frontend
+      run: cd client && npm run build
+      
+    - name: Copy frontend build to server
+      run: |
+        mkdir -p server/public
+        cp -r client/dist/* server/public/
+        
+    - name: Build backend
+      run: cd server && npm run build
+      
+    - name: Create executable with pkg
+      run: cd server && npm run package
+      
+    - name: Create release archive (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        mkdir -p release
+        cp server/dist/kj-nomad release/
+        cp -r server/media release/ || mkdir release/media
+        cp README.md TROUBLESHOOTING.md release/
+        tar -czf kj-nomad-${{ matrix.os }}.tar.gz -C release .
+        
+    - name: Create release archive (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir release
+        copy server\dist\kj-nomad.exe release\
+        xcopy server\media release\media\ /E /I 2>nul || mkdir release\media
+        copy README.md release\
+        copy TROUBLESHOOTING.md release\
+        powershell Compress-Archive -Path release\* -DestinationPath kj-nomad-windows.zip
+        
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: kj-nomad-${{ matrix.os }}
+        path: kj-nomad-*
+        retention-days: 90
+
+  # Create GitHub Release
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-release]
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release]')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Get version from package.json
+      id: package-version
+      run: echo "version=$(node -p "require('./server/package.json').version")" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.package-version.outputs.version }}
+        release_name: KJ-Nomad v${{ steps.package-version.outputs.version }}
+        body: |
+          ## What's New in v${{ steps.package-version.outputs.version }}
+          
+          ### 🎉 Features
+          - Professional karaoke hosting software
+          - Multi-screen synchronization
+          - Mobile KJ control interface
+          - Offline-first operation
+          
+          ### 📦 Downloads
+          - **Windows**: Download `kj-nomad-windows.zip`
+          - **macOS**: Download `kj-nomad-macos.tar.gz`
+          - **Linux**: Download `kj-nomad-ubuntu.tar.gz`
+          
+          ### 🚀 Quick Start
+          1. Download the appropriate package for your OS
+          2. Extract to your preferred location
+          3. Add your karaoke videos to the `media/` folder
+          4. Run the executable
+          5. Open http://localhost:8080 in your browser
+          
+          See the [README](README.md) for full setup instructions.
+        draft: false
+        prerelease: false
+        
+    - name: Upload Windows Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./kj-nomad-windows-latest/kj-nomad-windows.zip
+        asset_name: kj-nomad-windows.zip
+        asset_content_type: application/zip
+        
+    - name: Upload macOS Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./kj-nomad-macos-latest/kj-nomad-macos-latest.tar.gz
+        asset_name: kj-nomad-macos.tar.gz
+        asset_content_type: application/gzip
+        
+    - name: Upload Linux Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./kj-nomad-ubuntu-latest/kj-nomad-ubuntu-latest.tar.gz
+        asset_name: kj-nomad-linux.tar.gz
+        asset_content_type: application/gzip
+
+  # Deploy Documentation
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install frontend dependencies
+      run: cd client && npm ci
+      
+    - name: Build documentation site
+      run: cd client && npm run build
+      
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./client/dist
+        cname: kj-nomad.nomadkaraoke.com

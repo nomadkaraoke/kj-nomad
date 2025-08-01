@@ -23,9 +23,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary.js';
-import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong } from './songQueue.js';
-import { scanFillerMusic, getNextFillerSong } from './fillerMusic.js';
+import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
+import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong } from './songQueue';
+import { scanFillerMusic, getNextFillerSong } from './fillerMusic';
 
 // import { Bonjour } from 'bonjour-service';
 

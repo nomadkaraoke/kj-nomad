@@ -33,8 +33,14 @@ export const scanFillerMusic = () => {
   }
 };
 
-export const getNextFillerSong = (): FillerSong | undefined => {
-  if (fillerPlaylist.length === 0) return undefined;
+export const getNextFillerSong = (): FillerSong | null => {
+  if (fillerPlaylist.length === 0) return null;
   nowPlayingIndex = (nowPlayingIndex + 1) % fillerPlaylist.length;
   return fillerPlaylist[nowPlayingIndex];
+};
+
+// Helper function for testing
+export const resetFillerMusic = () => {
+  fillerPlaylist = [];
+  nowPlayingIndex = -1;
 };

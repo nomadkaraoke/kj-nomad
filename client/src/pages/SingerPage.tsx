@@ -221,6 +221,7 @@ const SingerPage: React.FC = () => {
             placeholder="Enter your name..."
             hint="This will be displayed when you sing"
             leftIcon={<UserIcon className="h-5 w-5" />}
+            data-testid="singer-name-input"
           />
         </CardContent>
       </Card>
@@ -244,6 +245,7 @@ const SingerPage: React.FC = () => {
                 hint="Start typing to see available songs"
                 leftIcon={<MagnifyingGlassIcon className="h-5 w-5" />}
                 disabled={!isConnected || !singerName.trim()}
+                data-testid="song-search-input"
               />
               
               {/* Search Results */}
@@ -267,6 +269,7 @@ const SingerPage: React.FC = () => {
                   {songs.map((song) => (
                     <div
                       key={song.id}
+                      data-testid="song-result"
                       className="p-4 border border-gray-200 dark:border-dark-600 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-700 transition-colors"
                     >
                       <div className="flex items-center justify-between">
@@ -283,6 +286,7 @@ const SingerPage: React.FC = () => {
                           variant="primary"
                           size="sm"
                           disabled={!singerName.trim() || !isConnected}
+                          data-testid="request-song-button"
                         >
                           Request
                         </Button>

@@ -1,4 +1,4 @@
-import { Song } from './mediaLibrary.js';
+import { Song } from './mediaLibrary';
 
 interface QueueEntry {
   song: Song;
@@ -25,7 +25,13 @@ export const removeSongFromQueue = (songId: string) => {
   queue = queue.filter(entry => entry.song.id !== songId);
 };
 
-export const getNextSong = (): QueueEntry | undefined => {
+export const getNextSong = (): QueueEntry | null => {
   nowPlaying = queue.shift() || null;
   return nowPlaying;
+};
+
+// Helper function for testing
+export const resetQueue = () => {
+  queue = [];
+  nowPlaying = null;
 };

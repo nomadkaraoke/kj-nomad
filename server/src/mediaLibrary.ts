@@ -57,7 +57,7 @@ export const scanMediaLibrary = () => {
 };
 
 export const searchSongs = (query: string): Song[] => {
-  if (!query) {
+  if (!query || !query.trim()) {
     return songLibrary;
   }
   return fuse.search(query).map(result => result.item);
@@ -65,4 +65,9 @@ export const searchSongs = (query: string): Song[] => {
 
 export const getSongById = (id: string): Song | undefined => {
   return songLibrary.find(song => song.id === id);
-}
+};
+
+// Helper function for testing
+export const resetMediaLibrary = () => {
+  songLibrary = [];
+};

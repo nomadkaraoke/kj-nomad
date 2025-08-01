@@ -6,11 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest --config ./vitest.config.ts",
     "test:ui": "vitest --ui --config ./vitest.config.ts",
-    "cypress:open": "cypress open"
+    "type-check": "tsc --noEmit",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

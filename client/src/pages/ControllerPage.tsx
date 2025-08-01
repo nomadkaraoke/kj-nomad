@@ -80,6 +80,7 @@ const ControllerPage: React.FC = () => {
               variant="primary"
               size="lg"
               className="flex flex-col items-center space-y-1 h-20"
+              data-testid="play-next-button"
             >
               <PlayIcon className="h-6 w-6" />
               <span className="text-xs">Play Next</span>
@@ -122,7 +123,7 @@ const ControllerPage: React.FC = () => {
       
       {/* Now Playing */}
       {nowPlaying && (
-        <Card variant="elevated" className={currentlyPlaying ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'bg-accent-50 dark:bg-accent-900/20'}>
+        <Card variant="elevated" className={currentlyPlaying ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'bg-accent-50 dark:bg-accent-900/20'} data-testid="now-playing">
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
@@ -177,6 +178,7 @@ const ControllerPage: React.FC = () => {
               {queue.map((entry, index) => (
                 <div
                   key={`${entry.song.id}-${entry.timestamp}`}
+                  data-testid="queue-item"
                   className={`p-4 rounded-lg border transition-all duration-200 ${
                     index === 0 
                       ? 'border-accent-300 dark:border-accent-600 bg-accent-50 dark:bg-accent-900/20' 
@@ -271,12 +273,14 @@ const ControllerPage: React.FC = () => {
               onChange={(e) => setNewTickerText(e.target.value)}
               placeholder="Enter ticker message..."
               hint="This message will scroll across the bottom of the player screen"
+              data-testid="ticker-input"
             />
             <Button
               onClick={handleUpdateTicker}
               disabled={!isConnected || newTickerText === tickerText}
               variant="primary"
               className="w-full"
+              data-testid="update-ticker-button"
             >
               Update Ticker
             </Button>

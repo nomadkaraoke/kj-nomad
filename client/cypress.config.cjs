@@ -1,8 +1,22 @@
 module.exports = {
   e2e: {
-    baseUrl: 'http://localhost:5173',
+    baseUrl: 'http://localhost:8080',
+    supportFile: 'cypress/support/e2e.ts',
+    video: true,
+    screenshotOnRunFailure: true,
+    viewportWidth: 1280,
+    viewportHeight: 720,
+    defaultCommandTimeout: 10000,
+    requestTimeout: 10000,
+    responseTimeout: 10000,
     setupNodeEvents(on, config) {
       // implement node event listeners here
+    },
+    env: {
+      // Environment variables for testing
+      testSingerName: 'Cypress Test Singer',
+      testArtist: 'Test Artist',
+      testSong: 'Test Song',
     },
   },
 };
