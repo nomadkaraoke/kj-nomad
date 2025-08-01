@@ -7,7 +7,7 @@ import Fuse from 'fuse.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-interface Song {
+export interface Song {
   id: string;
   artist: string;
   title: string;

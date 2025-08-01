@@ -209,7 +209,7 @@ describe('fillerMusic', () => {
       scanFillerMusic();
 
       // Get several songs to see what was included
-      const songs = [];
+      const songs: Array<{ id: string; fileName: string }> = [];
       for (let i = 0; i < 10; i++) {
         const song = getNextFillerSong();
         if (song && !songs.some(s => s.fileName === song.fileName)) {

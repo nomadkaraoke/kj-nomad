@@ -24,14 +24,14 @@ describe('mediaLibrary', () => {
   });
 
   it('should scan the media library and create a song list', () => {
-    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles);
+    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles as any);
     scanMediaLibrary();
     // Should be 2 songs, ignoring the filler and txt file
     expect(searchSongs('')).toHaveLength(2);
   });
 
   it('should search for songs using fuzzy search', () => {
-    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles);
+    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles as any);
     scanMediaLibrary();
     const results = searchSongs('aha');
     expect(results).toHaveLength(1);
@@ -39,14 +39,14 @@ describe('mediaLibrary', () => {
   });
 
   it('should return all songs when the search query is empty', () => {
-    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles);
+    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles as any);
     scanMediaLibrary();
     const results = searchSongs('');
     expect(results).toHaveLength(2);
   });
 
   it('should get a song by its ID', () => {
-    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles);
+    vi.mocked(fs.readdirSync).mockReturnValue(mockFiles as any);
     scanMediaLibrary();
     const song = getSongById('0'); // 'a-ha - Take On Me.mp4' should be the first song
     expect(song?.artist).toBe('a-ha');
