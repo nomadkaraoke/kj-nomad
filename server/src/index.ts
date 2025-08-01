@@ -62,6 +62,23 @@ app.get('/api/songs', (req, res) => {
     res.json(results);
 });
 
+// Helper function to determine content type
+function getContentType(fileName: string): string {
+  const ext = fileName.toLowerCase().split('.').pop();
+  switch (ext) {
+    case 'mp4':
+      return 'video/mp4';
+    case 'webm':
+      return 'video/webm';
+    case 'avi':
+      return 'video/x-msvideo';
+    case 'mov':
+      return 'video/quicktime';
+    default:
+      return 'video/mp4'; // Default fallback
+  }
+}
+
 // API endpoint to stream video files
 app.get('/api/media/:fileName', (req, res) => {
     const fileName = req.params.fileName;
@@ -72,26 +89,37 @@ app.get('/api/media/:fileName', (req, res) => {
         const fileSize = stat.size;
         const range = req.headers.range;
 
-        if (range) {
+        if (range && range.startsWith('bytes=')) {
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
-            const chunksize = (end - start) + 1;
-            const file = fs.createReadStream(mediaPath, { start, end });
-            const head = {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': 'video/mp4',
-            };
+            // Validate parsed range values
+            if (!isNaN(start) && !isNaN(end) && start >= 0 && end >= start && end < fileSize) {
+                const chunksize = (end - start) + 1;
+                const file = fs.createReadStream(mediaPath, { start, end });
+                const head = {
+                    'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': getContentType(fileName),
+                };
 
-            res.writeHead(206, head);
-            file.pipe(res);
+                res.writeHead(206, head);
+                file.pipe(res);
+            } else {
+                // Invalid range, fall back to full content
+                const head = {
+                    'Content-Length': fileSize,
+                    'Content-Type': getContentType(fileName),
+                };
+                res.writeHead(200, head);
+                fs.createReadStream(mediaPath).pipe(res);
+            }
         } else {
             const head = {
                 'Content-Length': fileSize,
-                'Content-Type': 'video/mp4',
+                'Content-Type': getContentType(fileName),
             };
             res.writeHead(200, head);
             fs.createReadStream(mediaPath).pipe(res);
@@ -103,7 +131,13 @@ app.get('/api/media/:fileName', (req, res) => {
 });
 
 
-const broadcast = (data: any) => {
+// Types for WebSocket messages  
+interface WebSocketMessage {
+    type: string;
+    payload?: unknown;
+}
+
+const broadcast = (data: WebSocketMessage) => {
     wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
             client.send(JSON.stringify(data));
@@ -120,13 +154,14 @@ wss.on('connection', (ws) => {
         const { type, payload } = data;
 
         switch (type) {
-        case 'request_song':
+        case 'request_song': {
             const song = getSongById(payload.songId);
             if (song) {
             addSongToQueue(song, payload.singerName);
             broadcast({ type: 'queue_updated', payload: getQueue() });
             }
             break;
+        }
         case 'get_queue':
             ws.send(JSON.stringify({ type: 'queue_updated', payload: getQueue() }));
             break;
@@ -134,7 +169,7 @@ wss.on('connection', (ws) => {
             removeSongFromQueue(payload.songId);
             broadcast({ type: 'queue_updated', payload: getQueue() });
             break;
-        case 'song_ended':
+        case 'song_ended': {
             const nextSong = getNextSong();
             if (nextSong) {
             broadcast({ type: 'play', payload: { songId: nextSong.song.id, fileName: nextSong.song.fileName } });
@@ -147,8 +182,9 @@ wss.on('connection', (ws) => {
                 }
             }
             break;
+        }
         case 'ticker_updated':
-            broadcast({ type: 'ticker_updated', payload: payload });
+            broadcast({ type: 'ticker_updated', payload });
             break;
         default:
             // For playback controls, broadcast to all clients except the sender

@@ -86,6 +86,7 @@ describe('fillerMusic', () => {
 
       expect(song1).not.toBeNull();
       expect(song2).not.toBeNull();
+      expect(song3).not.toBeNull();
       // We have 2 filler files, so we should get valid songs
     });
 

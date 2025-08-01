@@ -91,8 +91,14 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'KJ-Nomad server is running' });
 });
 
+// Types for WebSocket messages
+interface WebSocketMessage {
+    type: string;
+    payload?: unknown;
+}
+
 // WebSocket broadcast function
-const broadcast = (data: any) => {
+const broadcast = (data: WebSocketMessage) => {
     wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
             client.send(JSON.stringify(data));
@@ -114,7 +120,7 @@ wss.on('connection', (ws) => {
         console.log('Received message:', type, payload);
 
         switch (type) {
-        case 'request_song':
+        case 'request_song': {
             const song = getSongById(payload.songId);
             if (song) {
                 addSongToQueue(song, payload.singerName);
@@ -122,10 +128,11 @@ wss.on('connection', (ws) => {
                 broadcast({ type: 'queue_updated', payload: getQueue() });
             }
             break;
+        }
         case 'get_queue':
             ws.send(JSON.stringify({ type: 'queue_updated', payload: getQueue() }));
             break;
-        case 'play_next':
+        case 'play_next': {
             const nextSong = getNextSong();
             if (nextSong) {
                 console.log(`Playing: ${nextSong.song.title} by ${nextSong.singerName}`);
@@ -154,11 +161,12 @@ wss.on('connection', (ws) => {
                 }
             }
             break;
+        }
         case 'remove_from_queue':
             removeSongFromQueue(payload.songId);
             broadcast({ type: 'queue_updated', payload: getQueue() });
             break;
-        case 'song_ended':
+        case 'song_ended': {
             // Auto-play next song
             const autoNextSong = getNextSong();
             if (autoNextSong) {
@@ -187,6 +195,7 @@ wss.on('connection', (ws) => {
                 }
             }
             break;
+        }
         case 'update_ticker':
             broadcast({ type: 'ticker_updated', payload: { text: payload.text } });
             break;
