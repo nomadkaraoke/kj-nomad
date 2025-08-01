@@ -92,8 +92,8 @@ describe('KJ-Nomad Core User Flows', () => {
       
       // Verify video controls and state
       cy.get('video').should(($video) => {
-        expect($video.prop('currentTime')).to.be.greaterThan(0)
-        expect($video.prop('paused')).to.be.false
+        void expect($video.prop('currentTime')).to.be.greaterThan(0)
+        void expect($video.prop('paused')).to.be.false
       })
       
       // Verify ticker is displayed

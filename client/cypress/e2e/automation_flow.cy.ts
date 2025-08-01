@@ -61,9 +61,10 @@ describe('KJ-Nomad Automation Features', () => {
       
       // Manually trigger filler music (simulating automatic activation)
       cy.window().then((win) => {
+        const testWin = win as unknown as import('../support/types').TestWindow;
         // Send song_ended message when no queue items exist
-        if ((win as any).socket) {
-          (win as any).socket.send(JSON.stringify({
+        if (testWin.socket) {
+          testWin.socket.send(JSON.stringify({
             type: 'song_ended'
           }))
         }
@@ -90,9 +91,10 @@ describe('KJ-Nomad Automation Features', () => {
       
       // Manually trigger scenario with no content
       cy.window().then((win) => {
-        if ((win as any).socket) {
+        const testWin = win as unknown as import('../support/types').TestWindow;
+        if (testWin.socket) {
           // Simulate server response when no content is available
-          (win as any).socket.send(JSON.stringify({
+          testWin.socket.send(JSON.stringify({
             type: 'pause'
           }))
         }
@@ -102,7 +104,7 @@ describe('KJ-Nomad Automation Features', () => {
       cy.visit('/#/player')
       
       cy.get('video').should(($video) => {
-        expect($video.prop('paused')).to.be.true
+        void expect($video.prop('paused')).to.be.true
       })
     })
   })
@@ -113,7 +115,7 @@ describe('KJ-Nomad Automation Features', () => {
       
       // Open multiple views (simulating multiple devices)
       cy.visit('/#/controller')
-      const controllerWindow = cy.window()
+      // Note: We'll verify from the singer interface
       
       // Add a song via singer interface
       cy.visit('/#/singer')

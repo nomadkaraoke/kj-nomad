@@ -2,10 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SingerView from '../components/SingerView/SingerView';
+import type { MockWebSocket } from '../types/common';
 
-const mockSocket = {
+const mockSocket: MockWebSocket = {
   send: vi.fn(),
-} as any;
+};
 
 const mockSongs = [
   { id: '1', artist: 'a-ha', title: 'Take On Me', fileName: 'a-ha - Take On Me.mp4' },
@@ -19,8 +20,8 @@ describe('SingerView', () => {
             const songs = query ? mockSongs.filter(s => s.artist.toLowerCase().includes(query.toLowerCase()) || s.title.toLowerCase().includes(query.toLowerCase())) : mockSongs;
             return Promise.resolve({
                 json: () => Promise.resolve(songs),
-            })
-        }) as any;
+            }) as Response;
+        }) as typeof fetch;
     });
 
   it('renders the component and displays the song list', async () => {

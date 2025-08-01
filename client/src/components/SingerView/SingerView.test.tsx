@@ -1,10 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import SingerView from './SingerView';
+import type { MockWebSocket } from '../../types/common';
 
-const mockSocket = {
+const mockSocket: MockWebSocket = {
   send: vi.fn(),
-} as any;
+};
 
 const mockSongs = [
   { id: '1', artist: 'a-ha', title: 'Take On Me', fileName: 'a-ha - Take On Me.mp4' },
@@ -15,7 +16,7 @@ global.fetch = vi.fn(() =>
   Promise.resolve({
     json: () => Promise.resolve(mockSongs),
   })
-) as any;
+) as typeof fetch;
 
 describe('SingerView', () => {
   it('renders the component and displays the song list', async () => {

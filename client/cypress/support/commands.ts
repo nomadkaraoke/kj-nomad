@@ -1,60 +1,6 @@
 // Custom Cypress commands for KJ-Nomad E2E testing
-
-declare global {
-  namespace Cypress {
-    interface Chainable {
-      /**
-       * Wait for KJ-Nomad server to be ready
-       */
-      waitForServer(): Chainable<void>
-      
-      /**
-       * Set up test media files for testing
-       */
-      setupTestMedia(): Chainable<void>
-      
-      /**
-       * Clear the song queue
-       */
-      clearQueue(): Chainable<void>
-      
-      /**
-       * Search for a song in the singer interface
-       */
-      searchForSong(query: string): Chainable<void>
-      
-      /**
-       * Request a song as a singer
-       */
-      requestSong(singerName: string, songQuery: string): Chainable<void>
-      
-      /**
-       * Wait for queue to update with specific song
-       */
-      waitForQueueUpdate(expectedCount?: number): Chainable<void>
-      
-      /**
-       * Play the next song as KJ
-       */
-      playNextSong(): Chainable<void>
-      
-      /**
-       * Wait for video to start playing
-       */
-      waitForVideoToPlay(): Chainable<void>
-      
-      /**
-       * Update ticker message
-       */
-      updateTicker(message: string): Chainable<void>
-      
-      /**
-       * Wait for ticker to show specific text
-       */
-      waitForTicker(text: string): Chainable<void>
-    }
-  }
-}
+import './types';
+import './index.d.ts';
 
 // Wait for server to be ready
 Cypress.Commands.add('waitForServer', () => {
@@ -79,9 +25,10 @@ Cypress.Commands.add('setupTestMedia', () => {
 Cypress.Commands.add('clearQueue', () => {
   // We can clear queue by removing all items via WebSocket or API
   cy.window().then((win) => {
+    const testWin = win as unknown as import('./types').TestWindow;
     // If there's a global socket connection, use it to clear queue
-    if ((win as any).testSocket) {
-      (win as any).testSocket.send(JSON.stringify({
+    if (testWin.testSocket) {
+      testWin.testSocket.send(JSON.stringify({
         type: 'clear_queue'
       }))
     }

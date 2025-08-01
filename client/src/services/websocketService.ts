@@ -82,7 +82,7 @@ class WebSocketService {
     );
   }
   
-  private handleMessage(message: any) {
+  private handleMessage(message: { type: string; payload?: unknown }) {
     const { type, payload } = message;
     const store = useAppStore.getState();
     
@@ -122,7 +122,7 @@ class WebSocketService {
     }
   }
   
-  send(data: any) {
+  send(data: { type: string; payload?: unknown }) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data));
       return true;

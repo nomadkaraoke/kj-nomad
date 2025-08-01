@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import KjController from '../components/KjController/KjController';
+import type { MockWebSocket } from '../types/common';
 
-const mockSocket = {
+const mockSocket: MockWebSocket = {
   send: vi.fn(),
-} as any;
+};
 
 const mockQueue = [
   { song: { id: '1', artist: 'a-ha', title: 'Take On Me', fileName: 'a-ha - Take On Me.mp4' }, singerName: 'Alice' },
