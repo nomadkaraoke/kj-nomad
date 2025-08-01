@@ -48,7 +48,7 @@ describe('KJ-Nomad Automation Features', () => {
       
       // Verify queue progression in controller
       cy.visit('/controller')
-      cy.get('[data-testid="now-playing"], .now-playing')
+      cy.get('[data-testid="now-playing"]')
         .should('contain.text', singers[1]) // Second singer should be playing
       
       cy.waitForQueueUpdate(0) // Queue should be empty now
@@ -154,11 +154,11 @@ describe('KJ-Nomad Automation Features', () => {
       cy.intercept('POST', '/api/**', { forceNetworkError: true }).as('networkError')
       
       // Try to request another song (should handle error gracefully)
-      cy.get('input[placeholder*="Name"]').clear().type('Another Singer')
+              cy.get('[data-testid="singer-name-input"]').clear().type('Another Singer')
       cy.searchForSong('Another Test')
       
       // Interface should remain functional
-      cy.get('input[placeholder*="Search"]').should('be.visible')
+      cy.get('[data-testid="song-search-input"]').should('be.visible')
       
       // Restore network and verify recovery
       cy.intercept('POST', '/api/**').as('networkRestored')
@@ -178,7 +178,7 @@ describe('KJ-Nomad Automation Features', () => {
       
       rapidSingers.forEach((singer, index) => {
         cy.visit('/singer')
-        cy.get('input[placeholder*="Name"]').clear().type(singer)
+        cy.get('[data-testid="singer-name-input"]').clear().type(singer)
         cy.searchForSong(`Test ${index + 1}`)
         cy.get('[data-testid="song-result"], .song-result')
           .first()

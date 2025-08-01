@@ -78,7 +78,7 @@ Cypress.Commands.add('waitForQueueUpdate', (expectedCount?: number) => {
 // Play next song as KJ
 Cypress.Commands.add('playNextSong', () => {
   cy.get('button')
-    .contains(/play next|start/i, { timeout: 10000 })
+    .contains(/play next|start this song|start/i, { timeout: 10000 })
     .should('be.visible')
     .click()
 })

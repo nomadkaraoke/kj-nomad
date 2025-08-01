@@ -16,12 +16,12 @@ describe('KJ-Nomad Core User Flows', () => {
       
       // Verify singer interface loads
       cy.contains('Search for a song', { timeout: 10000 }).should('be.visible')
-      cy.get('input[placeholder*="Name"]').should('be.visible')
-      cy.get('input[placeholder*="Search"]').should('be.visible')
+      cy.get('[data-testid="singer-name-input"]').should('be.visible')
+      cy.get('[data-testid="song-search-input"]').should('be.visible')
       
       // Singer enters their name
       const singerName = Cypress.env('testSingerName')
-      cy.get('input[placeholder*="Name"]').type(singerName)
+      cy.get('[data-testid="singer-name-input"]').type(singerName)
       
       // Singer searches for a song
       cy.searchForSong('Test')
@@ -63,7 +63,7 @@ describe('KJ-Nomad Core User Flows', () => {
       cy.playNextSong()
       
       // Verify queue updates after playing
-      cy.get('[data-testid="now-playing"], .now-playing', { timeout: 5000 })
+      cy.get('[data-testid="now-playing"]', { timeout: 5000 })
         .should('be.visible')
         .and('contain.text', Cypress.env('testSingerName'))
     })
@@ -144,7 +144,7 @@ describe('KJ-Nomad Core User Flows', () => {
       cy.playNextSong()
       
       // Verify first song is now playing
-      cy.get('[data-testid="now-playing"], .now-playing')
+      cy.get('[data-testid="now-playing"]')
         .should('contain.text', singers[0])
       
       // Verify queue reduced by one

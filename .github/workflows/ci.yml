@@ -106,21 +106,19 @@ jobs:
     - name: Build frontend
       run: cd client && npm run build
       
-    - name: Copy frontend build to server
+    - name: Copy frontend build to server for serving
       run: |
         mkdir -p server/public
         cp -r client/dist/* server/public/
         
-    - name: Start backend server
+    - name: Start backend server in background
       run: cd server && npm start &
       env:
         NODE_ENV: test
+        PORT: 8080
         
     - name: Wait for server to start
-      run: npx wait-on http://localhost:8080 --timeout 30000
-      
-    - name: Build frontend
-      run: cd client && npm run build
+      run: npx wait-on http://localhost:8080 --timeout 60000
       
     - name: Run Cypress E2E tests
       run: cd client && npm run cypress:run

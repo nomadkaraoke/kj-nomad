@@ -27,14 +27,17 @@ class WebSocketService {
       };
       
       this.ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
+        // Only log unexpected disconnections, not normal page reloads
+        if (event.code !== 1001 && event.code !== 1000) {
+          console.log('WebSocket disconnected:', event.code, event.reason);
+        }
         
         // Update store
         useAppStore.getState().setSocket(null);
         useAppStore.getState().setIsConnected(false);
         
-        // Attempt to reconnect if it wasn't a manual close
-        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+        // Don't reconnect on page unload (1001) or normal close (1000)
+        if (event.code !== 1000 && event.code !== 1001 && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
         } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
           useAppStore.getState().setConnectionError('Failed to connect after multiple attempts');
@@ -42,7 +45,10 @@ class WebSocketService {
       };
       
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        // Only log errors that aren't connection-related during page loads
+        if (this.ws?.readyState !== WebSocket.CONNECTING) {
+          console.error('WebSocket error:', error);
+        }
         useAppStore.getState().setConnectionError('Connection error occurred');
       };
       
@@ -56,7 +62,10 @@ class WebSocketService {
       };
       
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+      // Only log connection errors if this is not a reconnection attempt
+      if (this.reconnectAttempts === 0) {
+        console.error('Failed to create WebSocket connection:', error);
+      }
       useAppStore.getState().setConnectionError('Failed to create connection');
     }
   }
@@ -67,7 +76,10 @@ class WebSocketService {
     }
     
     this.reconnectAttempts++;
-    console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${this.reconnectInterval}ms`);
+    // Only log after first reconnection attempt to reduce noise
+    if (this.reconnectAttempts > 1) {
+      console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${this.reconnectInterval}ms`);
+    }
     
     useAppStore.getState().setConnectionError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
     

@@ -24,7 +24,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
-import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong } from './songQueue';
+import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong, resetQueue } from './songQueue';
 import { scanFillerMusic, getNextFillerSong } from './fillerMusic';
 
 // import { Bonjour } from 'bonjour-service';
@@ -49,30 +49,26 @@ scanFillerMusic();
 const PORT = process.env.PORT || 8080;
 
 // Serve static files from the React client
-const clientPath = path.join(__dirname, '../../client/dist');
-console.log('Client path:', clientPath);
-console.log('Client path exists:', fs.existsSync(clientPath));
+// Try production path first (when frontend is copied to server/public), then development path
+const productionClientPath = path.join(__dirname, '../public');
+const developmentClientPath = path.join(__dirname, '../../client/dist');
+const clientPath = fs.existsSync(productionClientPath) ? productionClientPath : developmentClientPath;
+console.log('Production client path:', productionClientPath, '(exists:', fs.existsSync(productionClientPath), ')');
+console.log('Development client path:', developmentClientPath, '(exists:', fs.existsSync(developmentClientPath), ')');
+console.log('Using client path:', clientPath);
 // Enable static file serving
 app.use(express.static(clientPath));
 app.use(express.json());
 
-// Handle React Router client-side routing - serve index.html for all non-API routes
-app.get('*', (req, res) => {
-    // Don't serve index.html for API routes
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).send('API endpoint not found');
-    }
-    
-    const indexPath = path.join(clientPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        res.status(404).send('Frontend not built. Run "npm run build" in the client directory.');
-    }
+// TEMP: Simple test endpoint
+app.get('/api/test', (req, res) => {
+    console.log('[API] GET /api/test - Debug endpoint hit');
+    res.json({ message: 'Server is working!', timestamp: new Date().toISOString() });
 });
 
 // API endpoint to search songs
 app.get('/api/songs', (req, res) => {
+    console.log('[API] GET /api/songs - Search songs endpoint hit, query:', req.query.q);
     const query = req.query.q as string || '';
     const results = searchSongs(query);
     res.json(results);
@@ -80,17 +76,16 @@ app.get('/api/songs', (req, res) => {
 
 // API endpoint to get current queue
 app.get('/api/queue', (req, res) => {
+    console.log('[API] GET /api/queue - Get queue endpoint hit');
     res.json(getQueue());
 });
 
 // API endpoint to clear queue (for testing)
 app.post('/api/queue/clear', (req, res) => {
-    // Import clearQueue function
-    const queue = getQueue();
-    // Clear the queue by removing all items
-    while (queue.length > 0) {
-        removeSongFromQueue(queue[0].song.id);
-    }
+    console.log('[API] POST /api/queue/clear - Clear queue endpoint hit');
+    // Use the proper reset function instead of the infinite loop
+    resetQueue();
+    console.log('[API] POST /api/queue/clear - Queue cleared successfully');
     broadcast({ type: 'queue_updated', payload: getQueue() });
     res.json({ success: true, message: 'Queue cleared' });
 });
@@ -114,6 +109,7 @@ function getContentType(fileName: string): string {
 
 // API endpoint to stream video files
 app.get('/api/media/:fileName', (req, res) => {
+    console.log('[API] GET /api/media/:fileName - Media streaming endpoint hit, file:', req.params.fileName);
     const fileName = req.params.fileName;
     const mediaPath = path.join(__dirname, '../media', fileName);
 
@@ -163,6 +159,26 @@ app.get('/api/media/:fileName', (req, res) => {
     }
 });
 
+// Handle React Router client-side routing - serve index.html for specific routes
+app.get('/', (req, res) => {
+    console.log('[ROUTE] GET / - Root route hit, serving index.html');
+    res.sendFile(path.join(clientPath, 'index.html'));
+});
+
+app.get('/singer', (req, res) => {
+    console.log('[ROUTE] GET /singer - Singer route hit, serving index.html');
+    res.sendFile(path.join(clientPath, 'index.html'));
+});
+
+app.get('/controller', (req, res) => {
+    console.log('[ROUTE] GET /controller - Controller route hit, serving index.html');
+    res.sendFile(path.join(clientPath, 'index.html'));
+});
+
+app.get('/player', (req, res) => {
+    console.log('[ROUTE] GET /player - Player route hit, serving index.html');
+    res.sendFile(path.join(clientPath, 'index.html'));
+});
 
 // Types for WebSocket messages  
 interface WebSocketMessage {
@@ -236,24 +252,6 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log('Client disconnected');
   });
-});
-
-// Serve the React app for the root route
-app.get('/', (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
-});
-
-// Serve the React app for common routes
-app.get('/controller', (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
-});
-
-app.get('/player', (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
-});
-
-app.get('/singer', (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 server.listen(PORT, () => {
