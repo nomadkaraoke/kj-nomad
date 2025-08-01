@@ -140,7 +140,13 @@ describe('API Integration Tests', () => {
         }
       });
       
-      return mockStream;
+      // Add ReadStream properties to satisfy TypeScript
+      (mockStream as any).close = vi.fn();
+      (mockStream as any).bytesRead = 0;
+      (mockStream as any).path = path;
+      (mockStream as any).pending = false;
+      
+      return mockStream as any;
     });
     
     app = createTestApp();
