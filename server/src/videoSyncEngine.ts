@@ -113,7 +113,11 @@ export class VideoSyncEngine {
     };
 
     if (client.ws.readyState === client.ws.OPEN) {
-      client.ws.send(JSON.stringify(pingMessage));
+      try {
+        client.ws.send(JSON.stringify(pingMessage));
+      } catch (error) {
+        console.error(`[VideoSync] Failed to send clock sync ping to ${client.name}:`, error);
+      }
     }
   }
 
@@ -203,8 +207,12 @@ export class VideoSyncEngine {
 
     for (const client of playerClients) {
       if (client.ws.readyState === client.ws.OPEN) {
-        client.ws.send(JSON.stringify(preloadCommand));
-        client.isReady = false;
+        try {
+          client.ws.send(JSON.stringify(preloadCommand));
+          client.isReady = false;
+        } catch (error) {
+          console.error(`[VideoSync] Failed to send preload command to ${client.name}:`, error);
+        }
       }
     }
 
@@ -222,7 +230,11 @@ export class VideoSyncEngine {
           scheduledTime: adjustedTime
         };
 
-        client.ws.send(JSON.stringify(clientSyncCommand));
+        try {
+          client.ws.send(JSON.stringify(clientSyncCommand));
+        } catch (error) {
+          console.error(`[VideoSync] Failed to send sync command to ${client.name}:`, error);
+        }
       }
     }
 
@@ -257,10 +269,14 @@ export class VideoSyncEngine {
     for (const client of playerClients) {
       if (client.ws.readyState === client.ws.OPEN) {
         const adjustedTime = scheduledTime + client.clockOffset - client.averageLatency;
-        client.ws.send(JSON.stringify({
-          ...pauseCommand,
-          scheduledTime: adjustedTime
-        }));
+        try {
+          client.ws.send(JSON.stringify({
+            ...pauseCommand,
+            scheduledTime: adjustedTime
+          }));
+        } catch (error) {
+          console.error(`[VideoSync] Failed to send pause command to ${client.name}:`, error);
+        }
       }
     }
 
@@ -357,7 +373,13 @@ export class VideoSyncEngine {
     };
 
     for (const client of playerClients) {
-      client.ws.send(JSON.stringify(syncCheckCommand));
+      if (client.ws.readyState === client.ws.OPEN) {
+        try {
+          client.ws.send(JSON.stringify(syncCheckCommand));
+        } catch (error) {
+          console.error(`[VideoSync] Failed to send sync check command to ${client.name}:`, error);
+        }
+      }
     }
   }
 
