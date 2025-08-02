@@ -12,7 +12,7 @@ class_name = "SessionRelay"
 # Durable Objects migrations
 [[migrations]]
 tag = "v1"
-new_classes = ["SessionRelay"]
+new_sqlite_classes = ["SessionRelay"]
 
 # Workers KV for session storage
 [[kv_namespaces]]
