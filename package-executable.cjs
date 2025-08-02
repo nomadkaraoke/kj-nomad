@@ -147,7 +147,7 @@ function createPkgConfig() {
     name: 'kj-nomad',
     version: APP_VERSION,
     description: 'Professional Karaoke Hosting System',
-    main: 'server/dist/index.js',
+    bin: 'server/dist/index.js',
     scripts: {},
     pkg: {
       targets: Object.keys(PLATFORMS).map(platform => `node18-${platform.replace('-', '-')}`),
@@ -193,7 +193,7 @@ function packageExecutables() {
     try {
       const pkgCommand = [
         'pkg',
-        mainScript,
+        'pkg.json',
         '--target', `node18-${platform}`,
         '--output', outputPath,
         '--compress', 'Brotli'

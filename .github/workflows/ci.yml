@@ -225,7 +225,7 @@ jobs:
       run: cd server && npm run build
       
     - name: Create executable with pkg
-      run: cd server && npm run package
+      run: npm run package
       
     - name: Create release archive (Unix)
       if: matrix.os != 'windows-latest'

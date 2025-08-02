@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
+  "bin": "dist/index.js",
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
@@ -17,7 +18,10 @@
   },
   "pkg": {
     "scripts": "dist/**/*.js",
-    "assets": "media/**/*",
+    "assets": [
+      "media/**/*",
+      "public/**/*"
+    ],
     "targets": [
       "node18-linux-x64",
       "node18-macos-x64",

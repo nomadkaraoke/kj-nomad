@@ -2,7 +2,7 @@
   "name": "kj-nomad",
   "version": "1.0.0",
   "description": "Professional Karaoke Hosting System",
-  "main": "server/dist/index.js",
+  "bin": "server/dist/index.js",
   "scripts": {},
   "pkg": {
     "targets": [

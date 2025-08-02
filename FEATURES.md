@@ -132,7 +132,7 @@ KJ-Nomad supports two distinct deployment modes:
 
 ## 🧪 **Test Coverage Summary**
 
-### Backend Tests (434 total tests) - Comprehensive Coverage Achieved ✅
+### Backend Tests (455 total tests) - Comprehensive Coverage Achieved ✅
 - **✅ Song Queue**: 47 tests covering all queue operations and state management
 - **✅ Media Library**: 20 tests covering scanning, searching, and file management
 - **✅ Filler Music**: 14 tests covering background music management and rotation
