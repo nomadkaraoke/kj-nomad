@@ -62,21 +62,6 @@ describe('KJ-Nomad Core User Flows', () => {
       // KJ should be able to play the song
       cy.playNextSong()
       
-      // Debug: Check store state
-      cy.window().then((win) => {
-        // @ts-ignore - accessing global store for debugging
-        const store = win.__APP_STORE__;
-        console.log('Store state after playNext:', store?.getState());
-      });
-      
-      // Wait a bit for WebSocket messages
-      cy.wait(3000);
-      
-      // Debug: Check DOM state
-      cy.get('body').then(() => {
-        cy.log('Checking for now-playing element...');
-      });
-      
       // Verify queue updates after playing
       cy.waitForNowPlaying(Cypress.env('testSingerName'))
     })

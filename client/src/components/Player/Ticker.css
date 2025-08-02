@@ -2,8 +2,9 @@
 @reference "tailwindcss";
 
 .ticker-wrap {
-  @apply fixed bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-sm text-white py-3 overflow-hidden;
+  @apply absolute bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-sm text-white py-3 overflow-hidden;
   z-index: 1000;
+  height: 3rem; /* Match the space we reserved in player-video */
 }
 
 .ticker {

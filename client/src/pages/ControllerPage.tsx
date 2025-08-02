@@ -4,17 +4,20 @@ import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAppStore } from '../store/appStore';
+import SessionHistory from '../components/SessionHistory/SessionHistory';
 import { 
   PlayIcon, 
   PauseIcon,
   ForwardIcon,
   QueueListIcon,
-  SpeakerWaveIcon,
   Cog6ToothIcon,
   PlusIcon,
   TrashIcon,
   ArrowUpIcon,
-  ArrowDownIcon
+  ArrowDownIcon,
+  ArrowPathIcon,
+  ClockIcon,
+  StopIcon
 } from '@heroicons/react/24/outline';
 
 const ControllerPage: React.FC = () => {
@@ -23,11 +26,18 @@ const ControllerPage: React.FC = () => {
     nowPlaying, 
     tickerText, 
     isConnected,
+    sessionState,
+    sessionHistory,
+    playbackState,
     playNext,
     pausePlayback,
+    resumePlayback,
+    stopPlayback,
+    restartSong,
     skipSong,
     updateTicker,
-    removeFromQueue
+    removeFromQueue,
+    setShowHistory
   } = useAppStore();
   
   const [newTickerText, setNewTickerText] = useState(tickerText);
@@ -73,7 +83,7 @@ const ControllerPage: React.FC = () => {
           </h2>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <Button
               onClick={playNext}
               disabled={!isConnected || queue.length === 0}
@@ -87,20 +97,31 @@ const ControllerPage: React.FC = () => {
             </Button>
             
             <Button
-              onClick={pausePlayback}
+              onClick={playbackState === 'paused' ? resumePlayback : pausePlayback}
               disabled={!isConnected || !nowPlaying}
               variant="secondary"
               size="lg"
               className="flex flex-col items-center space-y-1 h-20"
             >
               <PauseIcon className="h-6 w-6" />
-              <span className="text-xs">Pause</span>
+              <span className="text-xs">{playbackState === 'paused' ? 'Resume' : 'Pause'}</span>
+            </Button>
+            
+            <Button
+              onClick={restartSong}
+              disabled={!isConnected || !nowPlaying}
+              variant="accent"
+              size="lg"
+              className="flex flex-col items-center space-y-1 h-20"
+            >
+              <ArrowPathIcon className="h-6 w-6" />
+              <span className="text-xs">Restart</span>
             </Button>
             
             <Button
               onClick={skipSong}
               disabled={!isConnected || !nowPlaying}
-              variant="accent"
+              variant="ghost"
               size="lg"
               className="flex flex-col items-center space-y-1 h-20"
             >
@@ -109,13 +130,30 @@ const ControllerPage: React.FC = () => {
             </Button>
             
             <Button
+              onClick={stopPlayback}
+              disabled={!isConnected || !nowPlaying}
+              variant="ghost"
+              size="lg"
+              className="flex flex-col items-center space-y-1 h-20 text-red-600 hover:text-red-700"
+            >
+              <StopIcon className="h-6 w-6" />
+              <span className="text-xs">Stop</span>
+            </Button>
+            
+            <Button
+              onClick={() => setShowHistory(true)}
+              disabled={!isConnected}
               variant="ghost"
               size="lg"
               className="flex flex-col items-center space-y-1 h-20"
-              disabled={!isConnected}
             >
-              <SpeakerWaveIcon className="h-6 w-6" />
-              <span className="text-xs">Volume</span>
+              <ClockIcon className="h-6 w-6" />
+              <span className="text-xs">History</span>
+              {sessionHistory.length > 0 && (
+                <span className="text-xs bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                  {sessionHistory.length}
+                </span>
+              )}
             </Button>
           </div>
         </CardContent>
@@ -177,7 +215,7 @@ const ControllerPage: React.FC = () => {
             <div className="space-y-3">
               {queue.map((entry, index) => (
                 <div
-                  key={`${entry.song.id}-${entry.timestamp}`}
+                  key={`${entry.song.id}-${entry.queuedAt}`}
                   data-testid="queue-item"
                   className={`p-4 rounded-lg border transition-all duration-200 ${
                     index === 0 
@@ -287,6 +325,46 @@ const ControllerPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Session Info */}
+      {sessionState && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl font-semibold">Session Info</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {sessionState.totalSongsPlayed}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Songs Played</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {sessionState.queueLength}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">In Queue</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {sessionHistory.length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">History</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                  {new Date(sessionState.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Session Started</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Session History Modal */}
+      <SessionHistory />
     </Container>
   );
 };

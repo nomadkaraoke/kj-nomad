@@ -16,7 +16,10 @@ const Player: React.FC<PlayerProps> = ({ nowPlaying, socket, tickerText }) => {
 
     if (nowPlaying) {
       video.src = `/api/media/${nowPlaying.fileName}`;
-      video.play();
+      video.muted = true; // Start muted to allow autoplay
+      video.play().catch((err) => {
+        console.error('Failed to play video:', err);
+      });
     } else {
       video.pause();
     }

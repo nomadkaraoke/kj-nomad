@@ -55,11 +55,13 @@
 
 /* Player-specific styles */
 .player-container {
-  @apply relative w-full h-screen bg-black overflow-hidden;
+  @apply relative w-full bg-black overflow-hidden;
+  height: calc(100vh - 4rem); /* Account for navigation bar height */
 }
 
 .player-video {
-  @apply w-full h-full object-cover;
+  @apply w-full object-contain;
+  height: calc(100% - 3rem); /* Leave space for ticker at bottom */
 }
 
 .player-overlay {

@@ -1,4 +1,4 @@
-import { useAppStore, type QueueEntry } from '../store/appStore';
+import { useAppStore, type QueueEntry, type SessionState, type PlayedSong } from '../store/appStore';
 
 class WebSocketService {
   private ws: WebSocket | null = null;
@@ -23,7 +23,8 @@ class WebSocketService {
         useAppStore.getState().setConnectionError(null);
         
         // Request initial state
-        this.send({ type: 'get_queue' });
+        this.send({ type: 'get_session_state' });
+        this.send({ type: 'get_history' });
       };
       
       this.ws.onclose = (event) => {
@@ -104,9 +105,38 @@ class WebSocketService {
         store.setQueue(payload as QueueEntry[]);
         break;
         
+      case 'session_state_updated':
+        if (payload && typeof payload === 'object') {
+          const sessionState = payload as SessionState;
+          console.log('[WebSocketService] Setting session state:', sessionState);
+          store.setSessionState(sessionState);
+          store.setPlaybackState(sessionState.playbackState);
+          
+          // Update nowPlaying from session state
+          if (sessionState.nowPlaying) {
+            store.setNowPlaying({
+              songId: sessionState.nowPlaying.song.id,
+              fileName: sessionState.nowPlaying.song.fileName,
+              isFiller: false,
+              singer: sessionState.nowPlaying.singerName,
+              startTime: sessionState.currentSongStartTime
+            });
+          } else {
+            store.setNowPlaying(null);
+          }
+        }
+        break;
+        
+      case 'history_updated':
+        if (payload && Array.isArray(payload)) {
+          console.log('[WebSocketService] Setting session history:', payload);
+          store.setSessionHistory(payload as PlayedSong[]);
+        }
+        break;
+        
       case 'play':
         if (payload && typeof payload === 'object') {
-          const playPayload = payload as { songId: string; fileName: string; singer?: string };
+          const playPayload = payload as { songId: string; fileName: string; singer?: string; restart?: boolean; replay?: boolean };
           console.log('[WebSocketService] Setting nowPlaying:', playPayload);
           store.setNowPlaying({
             songId: playPayload.songId,
@@ -115,6 +145,13 @@ class WebSocketService {
             singer: playPayload.singer,
             startTime: Date.now()
           });
+          store.setPlaybackState('playing');
+          
+          if (playPayload.restart) {
+            console.log('[WebSocketService] Song restarted');
+          } else if (playPayload.replay) {
+            console.log('[WebSocketService] Song replayed from history');
+          }
         }
         break;
         
@@ -126,11 +163,17 @@ class WebSocketService {
             isFiller: true,
             startTime: Date.now()
           });
+          store.setPlaybackState('playing');
         }
         break;
         
       case 'pause':
         store.setNowPlaying(null);
+        store.setPlaybackState('stopped');
+        break;
+        
+      case 'resume':
+        store.setPlaybackState('playing');
         break;
         
       case 'ticker_updated':

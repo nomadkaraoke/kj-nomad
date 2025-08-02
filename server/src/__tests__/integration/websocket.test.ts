@@ -230,7 +230,8 @@ describe('WebSocket Integration Tests', () => {
       mockGetSongById.mockReturnValue(mockSong);
       mockGetQueue.mockReturnValue([{
         song: mockSong,
-        singerName: 'John Doe'
+        singerName: 'John Doe',
+        queuedAt: Date.now()
       }]);
 
       const client = await createClient(port);
@@ -273,7 +274,7 @@ describe('WebSocket Integration Tests', () => {
   describe('Queue Management', () => {
     it('should return current queue on request', async () => {
       const mockQueue = [
-        { song: { id: '1', artist: 'Artist', title: 'Song', fileName: 'song.mp4' }, singerName: 'Singer 1' }
+        { song: { id: '1', artist: 'Artist', title: 'Song', fileName: 'song.mp4' }, singerName: 'Singer 1', queuedAt: Date.now() }
       ];
       mockGetQueue.mockReturnValue(mockQueue);
 
@@ -317,7 +318,8 @@ describe('WebSocket Integration Tests', () => {
     it('should handle song end and play next song', async () => {
       const nextSong = {
         song: { id: '2', artist: 'Artist 2', title: 'Song 2', fileName: 'song2.mp4' },
-        singerName: 'Singer 2'
+        singerName: 'Singer 2',
+        queuedAt: Date.now()
       };
       mockGetNextSong.mockReturnValue(nextSong);
 

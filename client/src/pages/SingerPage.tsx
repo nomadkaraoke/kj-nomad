@@ -310,7 +310,7 @@ const SingerPage: React.FC = () => {
             <div className="space-y-2">
               {queue.slice(0, 5).map((entry, index) => (
                 <div
-                  key={`${entry.song.id}-${entry.timestamp}`}
+                  key={`${entry.song.id}-${entry.queuedAt}`}
                   className={`flex items-center space-x-3 p-3 rounded-lg ${
                     index === 0 
                       ? 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700'

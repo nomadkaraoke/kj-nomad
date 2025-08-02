@@ -2,9 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useAppStore } from '../store/appStore';
 import Ticker from '../components/Player/Ticker';
 import { 
-  PlayIcon, 
-  SpeakerWaveIcon,
-  SpeakerXMarkIcon
+  PlayIcon
 } from '@heroicons/react/24/outline';
 
 const PlayerPage: React.FC = () => {
@@ -12,7 +10,6 @@ const PlayerPage: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
@@ -30,7 +27,11 @@ const PlayerPage: React.FC = () => {
           setIsPlaying(true);
         }).catch((err) => {
           console.error('Failed to play video:', err);
-          setError('Failed to play video');
+          if (err.name === 'NotAllowedError') {
+            setError('Click to enable video playback');
+          } else {
+            setError('Failed to play video');
+          }
         });
       };
       
@@ -62,13 +63,7 @@ const PlayerPage: React.FC = () => {
     setIsPlaying(false);
   };
   
-  const toggleMute = () => {
-    const video = videoRef.current;
-    if (video) {
-      video.muted = !video.muted;
-      setIsMuted(video.muted);
-    }
-  };
+
   
   // Get next few singers for display
   const upcomingSingers = queue.slice(0, 3);
@@ -83,7 +78,7 @@ const PlayerPage: React.FC = () => {
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         playsInline
-        muted={isMuted}
+        muted={false}
         data-testid="video"
       />
       
@@ -155,7 +150,24 @@ const PlayerPage: React.FC = () => {
           <div className="text-center text-white">
             <div className="text-6xl mb-4">⚠️</div>
             <h2 className="text-2xl font-bold mb-2">Playback Error</h2>
-            <p className="text-lg">{error}</p>
+            <p className="text-lg mb-4">{error}</p>
+            {error.includes('Click to enable') && (
+              <button 
+                onClick={() => {
+                  const video = videoRef.current;
+                  if (video) {
+                    setError(null);
+                    video.play().catch((err) => {
+                      console.error('Manual play failed:', err);
+                      setError('Failed to play video');
+                    });
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg font-semibold transition-colors"
+              >
+                Click to Play
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -178,22 +190,6 @@ const PlayerPage: React.FC = () => {
       {nowPlaying?.isFiller && (
         <div className="absolute top-4 right-4 bg-yellow-500/80 backdrop-blur-sm text-slate-900 px-4 py-2 rounded-lg font-semibold">
           Intermission Music
-        </div>
-      )}
-      
-      {/* Player Controls (for testing - hidden in production) */}
-      {process.env.NODE_ENV === 'development' && nowPlaying && isVideoLoaded && (
-        <div className="absolute bottom-20 right-4 flex space-x-2">
-          <button 
-            onClick={toggleMute}
-            className="bg-black/60 text-white p-2 rounded-full hover:bg-black/80 transition-colors"
-          >
-            {isMuted ? (
-              <SpeakerXMarkIcon className="w-6 h-6" />
-            ) : (
-              <SpeakerWaveIcon className="w-6 h-6" />
-            )}
-          </button>
         </div>
       )}
       

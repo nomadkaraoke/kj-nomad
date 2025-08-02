@@ -11,7 +11,7 @@ export interface Song {
 export interface QueueEntry {
   song: Song;
   singerName: string;
-  timestamp: number;
+  queuedAt: number; // Updated to match server
 }
 
 export interface NowPlaying {
@@ -20,6 +20,22 @@ export interface NowPlaying {
   isFiller: boolean;
   singer?: string;
   startTime?: number;
+}
+
+export interface PlayedSong extends QueueEntry {
+  playedAt: number;
+  completedAt?: number;
+}
+
+export interface SessionState {
+  startedAt: number;
+  queue: QueueEntry[];
+  nowPlaying: QueueEntry | null;
+  playbackState: 'playing' | 'paused' | 'stopped';
+  history: PlayedSong[];
+  currentSongStartTime?: number;
+  totalSongsPlayed: number;
+  queueLength: number;
 }
 
 interface AppState {
@@ -32,10 +48,16 @@ interface AppState {
   queue: QueueEntry[];
   nowPlaying: NowPlaying | null;
   
+  // Session state
+  sessionState: SessionState | null;
+  sessionHistory: PlayedSong[];
+  playbackState: 'playing' | 'paused' | 'stopped';
+  
   // UI state
   tickerText: string;
   currentView: 'home' | 'player' | 'controller' | 'singer';
   isLoading: boolean;
+  showHistory: boolean;
   
   // Search state
   searchQuery: string;
@@ -55,10 +77,20 @@ interface AppState {
   setSearchQuery: (query: string) => void;
   setSearchResults: (results: Song[]) => void;
   
+  // Session state actions
+  setSessionState: (sessionState: SessionState) => void;
+  setSessionHistory: (history: PlayedSong[]) => void;
+  setPlaybackState: (state: 'playing' | 'paused' | 'stopped') => void;
+  setShowHistory: (show: boolean) => void;
+  
   // Complex actions
   requestSong: (songId: string, singerName: string) => void;
   playNext: () => void;
   pausePlayback: () => void;
+  resumePlayback: () => void;
+  stopPlayback: () => void;
+  restartSong: () => void;
+  replaySong: (songId: string, singerName?: string) => void;
   skipSong: () => void;
   updateTicker: (text: string) => void;
 }
@@ -72,9 +104,19 @@ export const useAppStore = create<AppState>()(
       connectionError: null,
       queue: [],
       nowPlaying: null,
+      
+      // Session state
+      sessionState: null,
+      sessionHistory: [],
+      playbackState: 'stopped',
+      
+      // UI state
       tickerText: 'Welcome to KJ-Nomad! 🎤 Professional Karaoke System',
       currentView: 'home',
       isLoading: false,
+      showHistory: false,
+      
+      // Search state
       searchQuery: '',
       searchResults: [],
       
@@ -89,18 +131,18 @@ export const useAppStore = create<AppState>()(
       removeFromQueue: (songId) => set((state) => ({
         queue: state.queue.filter(entry => entry.song.id !== songId)
       })),
-      setNowPlaying: (nowPlaying) => {
-        console.log('[AppStore] Setting nowPlaying:', nowPlaying);
-        set({ nowPlaying });
-      },
-      setTickerText: (tickerText) => {
-        console.log('[AppStore] Setting tickerText:', tickerText);
-        set({ tickerText });
-      },
+      setNowPlaying: (nowPlaying) => set({ nowPlaying }),
+      setTickerText: (tickerText) => set({ tickerText }),
       setCurrentView: (currentView) => set({ currentView }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setSearchResults: (searchResults) => set({ searchResults }),
+      
+      // Session state setters
+      setSessionState: (sessionState) => set({ sessionState }),
+      setSessionHistory: (sessionHistory) => set({ sessionHistory }),
+      setPlaybackState: (playbackState) => set({ playbackState }),
+      setShowHistory: (showHistory) => set({ showHistory }),
       
       // Complex actions that send WebSocket messages
       requestSong: (songId, singerName) => {
@@ -135,7 +177,38 @@ export const useAppStore = create<AppState>()(
       pausePlayback: () => {
         const { socket } = get();
         if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: 'pause' }));
+          socket.send(JSON.stringify({ type: 'pause_playback' }));
+        }
+      },
+      
+      resumePlayback: () => {
+        const { socket } = get();
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'resume_playback' }));
+        }
+      },
+      
+      stopPlayback: () => {
+        const { socket } = get();
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'stop_playback' }));
+        }
+      },
+      
+      restartSong: () => {
+        const { socket } = get();
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'restart_song' }));
+        }
+      },
+      
+      replaySong: (songId, singerName) => {
+        const { socket } = get();
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ 
+            type: 'replay_song', 
+            payload: { songId, singerName } 
+          }));
         }
       },
       

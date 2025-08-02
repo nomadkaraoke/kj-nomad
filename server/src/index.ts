@@ -24,7 +24,20 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
-import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong, resetQueue } from './songQueue';
+import { 
+  addSongToQueue, 
+  getQueue, 
+  removeSongFromQueue, 
+  getNextSong, 
+  resetQueue,
+  getSessionState,
+  playSong,
+  restartCurrentSong,
+  getSessionHistory,
+  pausePlayback,
+  resumePlayback,
+  stopPlayback
+} from './songQueue';
 import { scanFillerMusic, getNextFillerSong } from './fillerMusic';
 
 // import { Bonjour } from 'bonjour-service';
@@ -197,6 +210,11 @@ const broadcast = (data: WebSocketMessage) => {
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
+  
+  // Send current session state to newly connected client
+  ws.send(JSON.stringify({ type: 'session_state_updated', payload: getSessionState() }));
+  ws.send(JSON.stringify({ type: 'queue_updated', payload: getQueue() }));
+  ws.send(JSON.stringify({ type: 'history_updated', payload: getSessionHistory() }));
 
   ws.on('message', (message) => {
     try {
@@ -210,41 +228,116 @@ wss.on('connection', (ws) => {
             if (song) {
             addSongToQueue(song, payload.singerName);
             broadcast({ type: 'queue_updated', payload: getQueue() });
+            broadcast({ type: 'session_state_updated', payload: getSessionState() });
             }
             break;
         }
         case 'get_queue':
             ws.send(JSON.stringify({ type: 'queue_updated', payload: getQueue() }));
             break;
-        case 'remove_from_queue':
-            removeSongFromQueue(payload.songId);
-            broadcast({ type: 'queue_updated', payload: getQueue() });
+        case 'get_session_state':
+            // Send complete session state for reconnecting clients
+            ws.send(JSON.stringify({ type: 'session_state_updated', payload: getSessionState() }));
             break;
-        case 'play': {
-            console.log('[WebSocket] Play message received:', payload);
-            // When KJ manually plays a song, broadcast to all clients
-            broadcast({ type: 'play', payload: { 
-                songId: payload.songId, 
-                fileName: payload.fileName,
-                singer: payload.singer
-            }});
+        case 'get_history':
+            ws.send(JSON.stringify({ type: 'history_updated', payload: getSessionHistory() }));
+            break;
+        case 'remove_from_queue': {
+            const removed = removeSongFromQueue(payload.songId);
+            if (removed) {
+              broadcast({ type: 'queue_updated', payload: getQueue() });
+              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            }
             break;
         }
+        case 'play': {
+            console.log('[WebSocket] Play message received:', payload);
+            // When KJ manually plays a song
+            const playedSong = playSong(payload.songId, payload.singer);
+            if (playedSong) {
+              broadcast({ type: 'play', payload: { 
+                  songId: playedSong.song.id, 
+                  fileName: playedSong.song.fileName,
+                  singer: playedSong.singerName
+              }});
+              broadcast({ type: 'queue_updated', payload: getQueue() });
+              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            } else {
+              // Fallback for direct file play (legacy support)
+              broadcast({ type: 'play', payload: { 
+                  songId: payload.songId, 
+                  fileName: payload.fileName,
+                  singer: payload.singer
+              }});
+            }
+            break;
+        }
+        case 'restart_song': {
+            console.log('[WebSocket] Restart song requested');
+            const currentSong = restartCurrentSong();
+            if (currentSong) {
+              broadcast({ type: 'play', payload: { 
+                  songId: currentSong.song.id, 
+                  fileName: currentSong.song.fileName,
+                  singer: currentSong.singerName,
+                  restart: true
+              }});
+              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            }
+            break;
+        }
+        case 'replay_song': {
+            console.log('[WebSocket] Replay song requested:', payload);
+            const replayedSong = playSong(payload.songId, payload.singerName);
+            if (replayedSong) {
+              broadcast({ type: 'play', payload: { 
+                  songId: replayedSong.song.id, 
+                  fileName: replayedSong.song.fileName,
+                  singer: replayedSong.singerName,
+                  replay: true
+              }});
+              broadcast({ type: 'queue_updated', payload: getQueue() });
+              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            }
+            break;
+        }
+        case 'pause_playback':
+            pausePlayback();
+            broadcast({ type: 'pause' });
+            broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            break;
+        case 'resume_playback':
+            resumePlayback();
+            broadcast({ type: 'resume' });
+            broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            break;
+        case 'stop_playback':
+            stopPlayback();
+            broadcast({ type: 'pause' });
+            broadcast({ type: 'queue_updated', payload: getQueue() });
+            broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            broadcast({ type: 'history_updated', payload: getSessionHistory() });
+            break;
         case 'song_ended': {
+            // Mark current song as completed and move to next
             const nextSong = getNextSong();
             if (nextSong) {
-            broadcast({ type: 'play', payload: { 
-                songId: nextSong.song.id, 
-                fileName: nextSong.song.fileName,
-                singer: nextSong.singerName
-            }});
+              broadcast({ type: 'play', payload: { 
+                  songId: nextSong.song.id, 
+                  fileName: nextSong.song.fileName,
+                  singer: nextSong.singerName
+              }});
+              broadcast({ type: 'queue_updated', payload: getQueue() });
+              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+              broadcast({ type: 'history_updated', payload: getSessionHistory() });
             } else {
-                const nextFillerSong = getNextFillerSong();
-                if(nextFillerSong) {
-                    broadcast({ type: 'play_filler_music', payload: { fileName: nextFillerSong.fileName } });
-                } else {
-                    broadcast({ type: 'pause' });
-                }
+              const nextFillerSong = getNextFillerSong();
+              if(nextFillerSong) {
+                  broadcast({ type: 'play_filler_music', payload: { fileName: nextFillerSong.fileName } });
+              } else {
+                  broadcast({ type: 'pause' });
+              }
+              broadcast({ type: 'session_state_updated', payload: getSessionState() });
             }
             break;
         }
