@@ -30,6 +30,21 @@ let session: CurrentSession = {
   currentSongStartTime: undefined
 };
 
+// Export session for testing purposes
+export { session };
+
+// Initialize session properly
+const initializeSession = (): void => {
+  session = {
+    startedAt: Date.now(),
+    queue: [],
+    nowPlaying: null,
+    playbackState: 'stopped',
+    history: [],
+    currentSongStartTime: undefined
+  };
+};
+
 // === Queue Management ===
 export const getQueue = (): QueueEntry[] => {
   return session.queue;
@@ -184,14 +199,7 @@ export const getPlaybackState = (): 'playing' | 'paused' | 'stopped' => {
 
 // === Session Management ===
 export const resetSession = (): void => {
-  session = {
-    startedAt: Date.now(),
-    queue: [],
-    nowPlaying: null,
-    playbackState: 'stopped',
-    history: [],
-    currentSongStartTime: undefined
-  };
+  initializeSession();
 };
 
 // Legacy compatibility - keep for existing tests

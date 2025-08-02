@@ -44,10 +44,7 @@ describe('DeviceManager', () => {
     // Create fresh DeviceManager instance for each test
     deviceManager = new DeviceManager();
     
-    // Mock setInterval/clearInterval for fake timers
-    global.setInterval = vi.fn((_fn, _delay) => {
-      return 123 as any;
-    });
+    // Mock clearInterval for fake timers
     global.clearInterval = vi.fn();
   });
 
@@ -234,6 +231,26 @@ describe('DeviceManager', () => {
       
       const group = deviceManager.getGroup(groupId);
       expect(group?.deviceIds).not.toContain('device-1');
+    });
+
+    it('should permanently delete device after timeout', () => {
+      const ws = new MockWebSocket() as any;
+      const deviceInfo = {
+        ipAddress: '192.168.1.100',
+        userAgent: 'Chrome/91.0',
+        capabilities: {}
+      };
+      
+      deviceManager.registerDevice('device-1', ws, deviceInfo);
+      deviceManager.unregisterDevice('device-1');
+      
+      // Device should still exist but be offline
+      expect(deviceManager.getDevice('device-1')).toBeDefined();
+      
+      // Advance timers past the 5-minute timeout
+      vi.advanceTimersByTime(300000);
+      
+      expect(deviceManager.getDevice('device-1')).toBeUndefined();
     });
   });
 
@@ -960,6 +977,41 @@ describe('DeviceManager', () => {
           clientTime: Date.now()
         });
       }).not.toThrow();
+    });
+
+    it('should send heartbeats and detect timeouts', () => {
+      const ws1 = new MockWebSocket() as any;
+      const ws2 = new MockWebSocket() as any;
+      const deviceInfo = {
+        ipAddress: '192.168.1.100',
+        userAgent: 'Chrome/91.0',
+        capabilities: {}
+      };
+      
+      const device1 = deviceManager.registerDevice('device-1', ws1, deviceInfo);
+      const device2 = deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
+      
+      const timeoutSpy = vi.fn();
+      deviceManager.on('deviceTimeout', timeoutSpy);
+      
+      // Clear registration messages
+      ws1.clearMessages();
+      ws2.clearMessages();
+      
+      // Set device1's lastActivity to an old time to simulate timeout
+      const oldTime = Date.now() - 70000; // 70 seconds ago (past 60 second timeout)
+      device1.lastActivity = oldTime;
+      
+      // Advance time past heartbeat interval to trigger heartbeat check
+      vi.advanceTimersByTime(30000);
+      
+      // The heartbeat should have detected device1 as timed out
+      expect(timeoutSpy).toHaveBeenCalledWith(device1);
+      expect(device1.isOnline).toBe(false);
+      expect(device1.status).toBe('disconnected');
+      
+      // Device2 should still be online (it was registered more recently)
+      expect(device2.isOnline).toBe(true);
     });
   });
 

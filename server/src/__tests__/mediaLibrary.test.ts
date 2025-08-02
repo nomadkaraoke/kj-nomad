@@ -132,6 +132,15 @@ describe('mediaLibrary', () => {
       expect(allSongs).toHaveLength(0);
     });
 
+    it('should handle non-existent media directory gracefully', () => {
+      mockFs.existsSync.mockReturnValue(false);
+
+      expect(() => scanMediaLibrary()).not.toThrow();
+      
+      const allSongs = searchSongs('');
+      expect(allSongs).toHaveLength(0);
+    });
+
     it('should handle media directory read error gracefully', () => {
       mockFs.readdirSync.mockImplementation(() => {
         throw new Error('Directory not found');

@@ -69,6 +69,15 @@ describe('fillerMusic', () => {
       expect(fillerSong).toBeNull();
     });
 
+    it('should handle non-existent media directory gracefully', () => {
+      mockFs.existsSync.mockReturnValue(false);
+      
+      expect(() => scanFillerMusic()).not.toThrow();
+      
+      const fillerSong = getNextFillerSong();
+      expect(fillerSong).toBeNull();
+    });
+
     it('should handle media directory read error gracefully', () => {
       mockFs.readdirSync.mockImplementation(() => {
         throw new Error('Directory not found');

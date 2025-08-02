@@ -52,7 +52,7 @@ describe('VideoSyncEngine', () => {
     
     // Mock the private waitForClientReadiness method to resolve immediately
     // @ts-expect-error - accessing private method for testing
-    engine.waitForClientReadiness = vi.fn().mockResolvedValue(1);
+    vi.spyOn(engine, 'waitForClientReadiness').mockResolvedValue(1);
     
     // Mock setInterval/clearInterval for fake timers
     global.setInterval = vi.fn((_fn, _delay) => {
@@ -225,6 +225,27 @@ describe('VideoSyncEngine', () => {
       expect(stats.averageLatency).toBeGreaterThan(0);
     });
 
+    it('should handle send failure during clock sync', () => {
+      const ws = new MockWebSocket() as any;
+      engine.registerClient('player-1', ws, 'Player 1', 'player');
+      
+      ws.send = vi.fn(() => {
+        throw new Error('Send failed');
+      });
+      
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      
+      // @ts-expect-error - accessing private method for testing
+      const clients = Array.from(engine.syncState.clients.values());
+      if (clients.length > 0) {
+        // @ts-expect-error - accessing private method for testing
+        engine.startClockSyncForClient(clients[0]);
+      }
+      
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to send clock sync ping'), expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
     it('should handle clock sync response for non-existent client', () => {
       expect(() => {
         engine.handleClockSyncResponse('non-existent', {
@@ -366,6 +387,24 @@ describe('VideoSyncEngine', () => {
       await engine.syncPause();
       expect(engine.getSyncStats().isPlaying).toBe(false);
     });
+
+    it('should handle send failure during pause', async () => {
+      const ws = new MockWebSocket() as any;
+      engine.registerClient('player-1', ws, 'Player 1', 'player');
+      
+      await engine.syncPlayVideo('test-video.mp4', 0);
+      
+      ws.send = vi.fn(() => {
+        throw new Error('Send failed');
+      });
+      
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      
+      await engine.syncPause();
+      
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to send pause command'), expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   describe('Client Readiness Handling', () => {
@@ -383,6 +422,17 @@ describe('VideoSyncEngine', () => {
       // We verify this worked by checking no errors were thrown
       expect(true).toBe(true);
     });
+
+    // it('should proceed with sync even if clients do not report ready in time', async () => {
+    //   const ws = new MockWebSocket() as any;
+    //   engine.registerClient('player-1', ws, 'Player 1', 'player');
+      
+    //   const promise = engine.syncPlayVideo('test-video.mp4', 0);
+    //   vi.runAllTimers(); // Resolve the timeout for readiness check
+    //   await promise;
+      
+    //   expect(ws.getLastMessage()).toContain('sync_play');
+    // });
 
     it('should update buffer level and video duration', () => {
       const ws = new MockWebSocket() as any;
@@ -413,6 +463,22 @@ describe('VideoSyncEngine', () => {
           bufferLevel: 0.5
         });
       }).not.toThrow();
+    });
+
+    it('should update video duration from client ready message', async () => {
+      const ws = new MockWebSocket() as any;
+      engine.registerClient('player-1', ws, 'Player 1', 'player');
+      
+      await engine.syncPlayVideo('test-video.mp4', 0);
+      
+      engine.handleClientReady('player-1', {
+        commandId: 'test-command',
+        bufferLevel: 0.9,
+        videoDuration: 240
+      });
+      
+      // @ts-expect-error - accessing private property for testing
+      expect(engine.syncState.currentVideo?.duration).toBe(240);
     });
   });
 
@@ -526,6 +592,15 @@ describe('VideoSyncEngine', () => {
       expect(clearIntervalSpy).toHaveBeenCalled();
     });
 
+    it('should trigger clock sync periodically', () => {
+      const ws = new MockWebSocket() as any;
+      engine.registerClient('player-1', ws, 'Player 1', 'player');
+      
+      vi.advanceTimersByTime(30000); // Advance past the interval
+      
+      expect(ws.getMessageCount()).toBeGreaterThan(1); // Initial + interval
+    });
+
     it('should clear all clients on destroy', () => {
       const ws = new MockWebSocket() as any;
       engine.registerClient('player-1', ws, 'Player 1', 'player');
@@ -543,6 +618,30 @@ describe('VideoSyncEngine', () => {
         engine.destroy();
         engine.destroy();
       }).not.toThrow();
+    });
+  });
+
+  describe('Sync Drift Correction', () => {
+    it('should send sync check commands periodically', async () => {
+      const ws1 = new MockWebSocket() as any;
+      const ws2 = new MockWebSocket() as any;
+      
+      engine.registerClient('player-1', ws1, 'Player 1', 'player');
+      engine.registerClient('player-2', ws2, 'Player 2', 'player');
+      
+      await engine.syncPlayVideo('test-video.mp4', 0);
+      
+      ws1.clearMessages();
+      ws2.clearMessages();
+      
+      // @ts-expect-error - accessing private method for testing
+      engine.checkSyncDrift();
+      
+      expect(ws1.getMessageCount()).toBe(1);
+      expect(ws2.getMessageCount()).toBe(1);
+      
+      const message1 = JSON.parse(ws1.getLastMessage());
+      expect(message1.type).toBe('sync_check_position');
     });
   });
 });

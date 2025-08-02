@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { networkInterfaces } from 'os';
+import express, { Request, Response } from 'express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,34 +116,46 @@ export function saveSetupConfig(config: SetupConfig): boolean {
  * Get network information for setup
  */
 export function getNetworkInfo(): NetworkInfo {
-  const nets = networkInterfaces();
-  const interfaces: Array<{ name: string; address: string; internal: boolean }> = [];
-  let localIP = 'localhost';
-  
-  for (const name of Object.keys(nets)) {
-    const netInterface = nets[name];
-    if (!netInterface) continue;
+  try {
+    const nets = networkInterfaces();
+    const interfaces: Array<{ name: string; address: string; internal: boolean }> = [];
+    let localIP = 'localhost';
     
-    for (const net of netInterface) {
-      if (net.family === 'IPv4') {
-        interfaces.push({
-          name,
-          address: net.address,
-          internal: net.internal
-        });
-        
-        // Prefer non-internal addresses for localIP
-        if (!net.internal && (localIP === 'localhost' || localIP.startsWith('127.'))) {
-          localIP = net.address;
+    if (!nets) {
+      return { localIP, interfaces };
+    }
+    
+    for (const name of Object.keys(nets)) {
+      const netInterface = nets[name];
+      if (!netInterface) continue;
+      
+      for (const net of netInterface) {
+        if (net.family === 'IPv4') {
+          interfaces.push({
+            name,
+            address: net.address,
+            internal: net.internal
+          });
+          
+          // Prefer non-internal addresses for localIP
+          if (!net.internal && (localIP === 'localhost' || localIP.startsWith('127.'))) {
+            localIP = net.address;
+          }
         }
       }
     }
+    
+    return {
+      localIP,
+      interfaces
+    };
+  } catch (error) {
+    console.error('[SetupWizard] Error getting network info:', error);
+    return {
+      localIP: 'localhost',
+      interfaces: []
+    };
   }
-  
-  return {
-    localIP,
-    interfaces
-  };
 }
 
 /**
@@ -160,6 +173,14 @@ export function validateMediaDirectory(directory: string): {
   };
 } {
   try {
+    // Check if directory is provided
+    if (!directory) {
+      return {
+        valid: false,
+        error: 'Directory path is required'
+      };
+    }
+    
     // Check if directory exists
     if (!fs.existsSync(directory)) {
       return {
@@ -198,13 +219,23 @@ export function validateMediaDirectory(directory: string): {
     const files = fs.readdirSync(directory);
     const videoExtensions = ['.mp4', '.webm', '.avi', '.mov'];
     const videoFiles = files.filter(file => {
-      const ext = path.extname(file).toLowerCase();
-      return videoExtensions.includes(ext) && !file.toLowerCase().startsWith('filler-');
+      // Convert file to string and ensure it's a valid string before calling string methods
+      const fileName = String(file);
+      if (!fileName || fileName === 'undefined' || fileName === 'null') {
+        return false;
+      }
+      const ext = path.extname(fileName).toLowerCase();
+      return videoExtensions.includes(ext) && !fileName.toLowerCase().startsWith('filler-');
     });
     
     const fillerFiles = files.filter(file => {
-      const ext = path.extname(file).toLowerCase();
-      return videoExtensions.includes(ext) && file.toLowerCase().startsWith('filler-');
+      // Convert file to string and ensure it's a valid string before calling string methods
+      const fileName = String(file);
+      if (!fileName || fileName === 'undefined' || fileName === 'null') {
+        return false;
+      }
+      const ext = path.extname(fileName).toLowerCase();
+      return videoExtensions.includes(ext) && fileName.toLowerCase().startsWith('filler-');
     });
     
     return {
@@ -220,7 +251,7 @@ export function validateMediaDirectory(directory: string): {
   } catch (error) {
     return {
       valid: false,
-      error: `Error accessing directory: ${error}`
+      error: `Error accessing directory: ${error instanceof Error ? `Error: ${error.message}` : String(error)}`
     };
   }
 }
@@ -310,6 +341,122 @@ export function resetSetup(): boolean {
   const config = loadSetupConfig();
   config.setupComplete = false;
   return saveSetupConfig(config);
+}
+
+/**
+ * Apply setup routes to the Express app
+ */
+export function applySetupRoutes(app: express.Application): void {
+  // Ensure config directory exists
+  ensureConfigDirectory();
+
+  // Get setup status
+  app.get('/api/setup/status', (req, res) => {
+    console.log('[API] GET /api/setup/status - Get setup status');
+    const config = loadSetupConfig();
+    const required = isSetupRequired();
+    const steps = getSetupSteps(config);
+    const networkInfo = getNetworkInfo();
+    
+    res.json({
+      success: true,
+      data: {
+        setupRequired: required,
+        steps,
+        networkInfo
+      }
+    });
+  });
+
+  // Get setup configuration
+  app.get('/api/setup/config', (req, res) => {
+    console.log('[API] GET /api/setup/config - Get setup configuration');
+    const config = loadSetupConfig();
+    res.json({ success: true, data: config });
+  });
+
+  // Update setup configuration
+  app.post('/api/setup/config', (req: Request, res: Response) => {
+    console.log('[API] POST /api/setup/config - Update setup configuration');
+    try {
+      const config = req.body;
+      const success = saveSetupConfig(config);
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: 'Configuration saved successfully',
+          data: config 
+        });
+      } else {
+        res.status(500).json({ success: false, error: 'Failed to save configuration' });
+      }
+    } catch {
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  // Validate media directory
+  app.post('/api/setup/validate-media', (req: Request, res: Response) => {
+    console.log('[API] POST /api/setup/validate-media - Validate media directory');
+    const { path: directory } = req.body;
+    
+    if (!directory) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Directory path is required' 
+      });
+    }
+    
+    const validation = validateMediaDirectory(directory);
+    res.json({ success: true, data: validation });
+  });
+
+  // Get directory suggestions
+  app.get('/api/setup/directory-suggestions', (req: Request, res: Response) => {
+    console.log('[API] GET /api/setup/directory-suggestions - Get directory suggestions');
+    const suggestions = getMediaDirectorySuggestions();
+    res.json({ success: true, data: suggestions });
+  });
+
+  // Mark setup as complete
+  app.post('/api/setup/complete', (req: Request, res: Response) => {
+    console.log('[API] POST /api/setup/complete - Mark setup as complete');
+    const success = markSetupComplete();
+    
+    if (success) {
+      res.json({ 
+        success: true, 
+        message: 'Setup completed successfully',
+        data: { setupComplete: true }
+      });
+    } else {
+      res.status(500).json({ success: false, error: 'Failed to mark setup as complete' });
+    }
+  });
+
+  // Reset setup wizard
+  app.post('/api/setup/reset', (req: Request, res: Response) => {
+    console.log('[API] POST /api/setup/reset - Reset setup wizard');
+    const success = resetSetup();
+    
+    if (success) {
+      res.json({ 
+        success: true, 
+        message: 'Setup reset successfully',
+        data: { setupComplete: false }
+      });
+    } else {
+      res.status(500).json({ success: false, error: 'Failed to reset setup' });
+    }
+  });
+
+  // Get network information
+  app.get('/api/setup/network', (req: Request, res: Response) => {
+    console.log('[API] GET /api/setup/network - Get network information');
+    const networkInfo = getNetworkInfo();
+    res.json({ success: true, data: networkInfo });
+  });
 }
 
 /**

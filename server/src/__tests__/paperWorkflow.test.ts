@@ -601,6 +601,19 @@ describe('PaperWorkflowManager', () => {
       expect(slips[2].priority).toBe('normal');
     });
 
+    it('should sort slips by timestamp when priority is the same', () => {
+      workflowManager.clearSlips();
+      
+      workflowManager.addSlip('John', 'Song 1', { priority: 'high' });
+      vi.advanceTimersByTime(100);
+      workflowManager.addSlip('Jane', 'Song 2', { priority: 'high' });
+      
+      const slips = workflowManager.getSlips();
+      
+      expect(slips[0].singerName).toBe('John');
+      expect(slips[1].singerName).toBe('Jane');
+    });
+
     it('should get specific slip by ID', () => {
       const allSlips = workflowManager.getSlips();
       const slip = workflowManager.getSlip(allSlips[0].id);
@@ -680,6 +693,18 @@ describe('PaperWorkflowManager', () => {
       expect(stats.busiestSingers).toHaveLength(2);
       expect(stats.busiestSingers[0]).toEqual({
         singer: 'John',
+        count: 2
+      });
+    });
+
+    it('should correctly report top requested songs for unmatched slips', () => {
+      workflowManager.clearSlips();
+      workflowManager.addSlip('John', 'Unmatched Song 1');
+      workflowManager.addSlip('Jane', 'Unmatched Song 1');
+      
+      const stats = workflowManager.getStats();
+      expect(stats.topRequestedSongs[0]).toEqual({
+        song: 'Unmatched Song 1',
         count: 2
       });
     });
@@ -768,6 +793,18 @@ describe('PaperWorkflowManager', () => {
       // Since we can't easily mock the internal slipFuse, let's test that the method exists
       const results = workflowManager.searchSlips('john');
       expect(Array.isArray(results)).toBe(true);
+    });
+
+    it('should initialize fuse index on first search', () => {
+      const newWorkflowManager = new PaperWorkflowManager(mockSongLibrary);
+      
+      // @ts-expect-error - accessing private property for testing
+      expect(newWorkflowManager.slipFuse).toBeNull();
+      
+      newWorkflowManager.addSlip('John Doe', 'Bohemian Rhapsody');
+      
+      // @ts-expect-error - accessing private property for testing
+      expect(newWorkflowManager.slipFuse).not.toBeNull();
     });
 
     it('should handle empty search query', () => {
