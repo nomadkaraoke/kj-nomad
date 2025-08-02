@@ -1,116 +1,376 @@
 # KJ-Nomad: System Architecture and Implementation Plan
 
-This document outlines the technical architecture and implementation roadmap for KJ-Nomad, an automated, offline-first karaoke hosting system. The plan is based on the "Karaoke-in-a-Box" PWA concept detailed in `INITIAL_CONTEXT.md`.
+This document outlines the technical architecture and implementation roadmap for KJ-Nomad, a dual-mode karaoke hosting system supporting both offline-first local operation and cloud-coordinated online experiences.
 
-The summarised app description, essentially acting as a pitch to encourage other KJs using existing tech to try KJ-Nomad is:
-"Modern, offline-first, beautiful but reliable KJ software. In online mode, can use both data from offline collection and YouTube together. Multiple screens in sync, scrolling ticker / notes, rotation tracking, tip-backed actions, etc. All of your KJ inputs and actions can be done easily from your phone, freeing you up to be a great host!"
+## Application Vision
 
-## 1. Core Architecture: "Karaoke-in-a-Box" PWA
+KJ-Nomad provides professional KJs with two deployment modes:
 
-The system will run as a self-contained, local-network-native application. A single server application on the host's MacBook will serve a Progressive Web App (PWA) to all clients on the local network. No internet connection is required during an event.
+**Local Mode**: "Modern, offline-first, beautiful but reliable KJ software. Multiple screens in perfect sync, scrolling ticker, automated rotation tracking. All KJ controls accessible from your phone, freeing you up to be a great host!"
 
-### 1.1. Backend Server (Node.js)
+**Online Mode**: "Cloud-coordinated karaoke with singer self-service. Uses local media library AND YouTube together. Singers request songs from their phones, videos sync perfectly across screens, zero-config setup."
 
-The core of the system will be a Node.js application, packaged into a single, distributable executable for ease of use.
+## 1. Dual-Mode Architecture Overview
 
-*   **Technology Stack:**
-    *   **Runtime:** Node.js
-    *   **Framework:** Express.js (for REST API and file serving)
-    *   **Real-time Communication:** `ws` library for a high-performance WebSocket server.
-    *   **Service Discovery:** `bonjour-service` (or similar) for zero-configuration network setup via mDNS/Bonjour.
-    *   **Fuzzy Search:** `fuse.js` for robust searching of the song library.
-    *   **Packaging:** `pkg` to create a single executable for macOS, Windows, and Linux.
+KJ-Nomad operates in two distinct modes, each optimized for different venue scenarios:
 
-*   **Responsibilities:**
-    *   **Web Server:** Serve the static assets for the frontend PWA.
-    *   **WebSocket Server:** Act as the real-time control plane, broadcasting state changes (playback control, queue updates) to all connected clients.
-    *   **State Management:** Maintain the authoritative state for the singer queue, playback status, and filler music playlist.
-    *   **Media Library:** Scan a local media directory, create a searchable song database (e.g., a JSON file or SQLite), and manage metadata.
-    *   **Efficient File Serving:** Stream large video files to player clients using HTTP Range Requests to support seeking and minimize server memory usage.
-    *   **Service Discovery:** Advertise its presence on the local network so clients can connect without knowing the server's IP address.
+### 1.1 Local Mode (Offline-First)
+- **Target**: Venues with unreliable internet or KJs preferring traditional paper-based requests
+- **Architecture**: Self-contained executable + local network PWA
+- **Discovery**: Manual IP address entry for player screens
+- **Requests**: Paper slips entered via KJ admin interface
+- **Media**: Local video library only
 
-### 1.2. Frontend (React PWA)
+### 1.2 Online Mode (Cloud-Coordinated)  
+- **Target**: Venues with reliable WiFi, modern singer self-service experience
+- **Architecture**: Cloudflare-hosted frontends + local server + cloud relay
+- **Discovery**: 4-digit session IDs for automatic device connection
+- **Requests**: Singer self-service via mobile web app
+- **Media**: Local library + YouTube on-demand downloads
 
-A single Progressive Web App will serve as the interface for all users, adapting its UI based on the user's role (player, singer, or KJ).
+## 2. Local Mode Architecture
 
-*   **Technology Stack:**
-    *   **Framework:** React (with TypeScript)
-    *   **Build Tool:** Vite for a fast development experience.
-    *   **State Management:** React Context or a lightweight library like Zustand.
-    *   **Offline Storage:** Service Workers for caching assets and IndexedDB for storing application state like the singer queue.
+### 2.1 Components Overview
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   KJ's Laptop   │    │  Player Screen  │    │  Player Screen  │
+│                 │    │      #1         │    │      #2         │
+│ ┌─────────────┐ │    │                 │    │                 │
+│ │Local Server │◄┼────┤http://192.168.  │    │http://192.168.  │
+│ │Executable   │ │    │1.34:8080/player│    │1.34:8080/player│
+│ │- Express.js │ │    │                 │    │                 │
+│ │- WebSocket  │ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │- Media Scan │ │    │ │Video Player │ │    │ │Video Player │ │
+│ │- Auto Launch│ │    │ │+ Ticker     │ │    │ │+ Sidebar    │ │
+│ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │
+│        │        │    └─────────────────┘    └─────────────────┘
+│ ┌─────────────┐ │             │                       │
+│ │Admin UI     │ │             │    Perfect Sync      │
+│ │localhost:   │ │             │    (<100ms)          │
+│ │8080/admin   │ │             └───────────────────────┘
+│ └─────────────┘ │
+└─────────────────┘
+```
 
-*   **Interfaces:**
-    *   **Player Interface:** Runs in a browser on the mini PCs (in kiosk mode). Displays the main video, lyrics, and scrolling ticker. It primarily listens for commands from the WebSocket server.
-    *   **Singer Self-Service Interface:** A mobile-friendly view accessible via a QR code. Allows audience members to search the song library and add themselves to the queue.
-    *   **KJ Control Interface:** A minimal UI, optimized for mobile phones, allowing the KJ to moderate the queue (reorder, skip, remove singers) and override playback controls.
+### 2.2 Local Mode Server (Enhanced Node.js)
 
-### 1.3. Automation Engine
+**Technology Stack:**
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js for HTTP/WebSocket serving
+- **Real-time:** `ws` library for WebSocket server
+- **Media:** `fuse.js` for search, HTTP Range Requests for streaming
+- **Packaging:** `pkg` for single executable (Windows/Mac/Linux)
+- **Auto-launch:** Platform-specific browser launching
 
-The server will house the logic to automate most of the KJ's traditional tasks.
+**Core Responsibilities:**
+- **Media Library Management:** Scan local directories, parse metadata, build search index
+- **Perfect Video Synchronization:** <100ms tolerance across multiple screens
+- **Setup Wizard:** Guide KJ through library selection and player screen configuration
+- **Device Management:** Track connected player screens, individual control toggles
+- **Paper Request Workflow:** Optimized UI for manual singer/song entry
 
-*   **Automated Singer Rotation:** A fair-play algorithm will manage the singer queue. When a song ends, the next singer's song is automatically cued up.
-*   **Automated Filler Music:** The system will automatically play from a "bumper music" playlist between karaoke tracks and fade it out when the next performance starts.
+### 2.3 Local Mode Setup Flow
 
-## 2. Implementation Roadmap
+1. **Launch:** KJ double-clicks executable → auto-opens admin UI in browser
+2. **Setup Wizard:**
+   - Select local media directory
+   - Scan and index video library
+   - Display server IP address (e.g., 192.168.1.34:8080)
+3. **Player Setup:** Navigate player devices to `http://[IP]:8080/player`
+4. **Device Controls:** Toggle audio output, ticker, sidebar per screen
+5. **Paper Requests:** Search library, add singers to queue manually
 
-The project will be developed in phases.
+## 3. Online Mode Architecture  
 
-### Phase 1: Project Setup & Core Backend (Current Phase)
+### 3.1 Cloudflare Infrastructure Stack
 
-*   [x] Set up a monorepo structure with `server` and `client` directories.
-*   [ ] Initialize a Node.js project in `/server`.
-*   [ ] Install core dependencies: `express`, `ws`.
-*   [ ] Create a basic Express server and WebSocket server.
-*   [ ] Initialize a React PWA in `/client` using Vite.
+```
+┌─────────────────────────────────────────────────────────┐
+│                 Cloudflare Edge Network                 │
+├─────────────────────────────────────────────────────────┤
+│ 📄 Pages (Static Hosting - FREE)                       │
+│   • kj.nomadkaraoke.com (Landing + Admin)              │
+│   • sing.nomadkaraoke.com (Singer Self-Service)        │
+├─────────────────────────────────────────────────────────┤
+│ ⚡ Workers (API Layer - 100k req/day FREE)             │
+│   • Session Management API                              │
+│   • Authentication & Routing                            │
+│   • /api/sessions/* endpoints                          │
+├─────────────────────────────────────────────────────────┤
+│ 🔄 Durable Objects (WebSocket Relay - 400k/month FREE) │
+│   • One DO per session (session:1234)                  │
+│   • Real-time message routing                           │
+│   • Connection state management                         │
+├─────────────────────────────────────────────────────────┤
+│ 💾 Workers KV (Session Storage - 100k reads/day FREE)  │
+│   • Session metadata & local server registration        │
+│   • Active session tracking                            │
+└─────────────────────────────────────────────────────────┘
+```
 
-### Phase 2: Basic Playback Control
+### 3.2 Online Mode Data Flow
 
-*   [ ] Implement the basic Player and KJ Control interfaces in the React app.
-*   [ ] Establish WebSocket communication between the backend, player, and controller.
-*   [ ] Implement basic playback control: the KJ controller can send play/pause commands that are executed on the player client.
-*   [ ] Implement efficient video streaming from the server with HTTP Range Request support.
+```
+Singer (4G) ──┐   ┌── Admin (Venue WiFi) ──┐   ┌── Players (LAN)
+              │   │                        │   │
+              ▼   ▼                        ▼   ▼
+    ┌─────────────────────────────────────────────────────┐
+    │            Cloudflare Edge Network                  │
+    │  ┌─────────────────┐    ┌─────────────────────────┐ │
+    │  │ Durable Object  │◄──►│     Workers KV          │ │
+    │  │ (Session 1234)  │    │ session:1234 →          │ │
+    │  │ • 4 WebSockets  │    │ {localIP, port, status} │ │
+    │  │ • Message Relay │    └─────────────────────────┘ │
+    │  └─────────────────┘                                │
+    └─────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+                     ┌─────────────────────────┐
+                     │    Local Server         │
+                     │   (KJ's Laptop)         │
+                     │ 192.168.1.34:8080      │
+                     │ • Connects to Cloudflare│
+                     │ • Serves videos to LAN  │
+                     │ • Downloads from YouTube│
+                     │ • yt-dlp integration    │
+                     └─────────────────────────┘
+```
 
-### Phase 3: Singer & Song Management
+### 3.3 Session Management System
 
-*   [ ] Implement media library scanning to build a song database.
-*   [ ] Implement the Singer Self-Service interface.
-*   [ ] Add fuzzy search (`fuse.js`) to the song request UI.
-*   [ ] Implement the server-side singer queue logic.
-*   [ ] Display the singer queue on the KJ Control and Player interfaces.
+**Workers KV Schema:**
+```typescript
+interface SessionData {
+  sessionId: string;        // "1234" (4-digit)
+  localServerIP: string;    // "192.168.1.34" 
+  localServerPort: number;  // 8080
+  kjName?: string;
+  venue?: string;
+  status: 'active' | 'ended';
+  hasLocalLibrary: boolean;
+  allowYouTube: boolean;
+  createdAt: number;
+  lastSeen: number;
+}
 
-### Phase 4: Automation and Advanced Features
+// KV Keys:
+// session:1234 → SessionData
+// active_sessions → string[] (session IDs)
+```
 
-*   [ ] Implement the automated singer rotation logic.
-*   [ ] Implement the automated filler music player.
-*   [ ] Add a scrolling ticker to the Player interface, controllable from the KJ interface.
-*   [ ] Refine the UI/UX for all interfaces.
+**Durable Object (WebSocket Relay):**
+```typescript
+export class SessionRelay {
+  // One instance per session
+  // Relays messages between: Singer Apps ↔ Admin UI ↔ Player Screens
+  // Handles connection management and message broadcasting
+}
+```
 
-### Phase 5: Polishing and Packaging
+### 3.4 Online Mode Setup Flow
 
-*   [ ] Implement PWA features: Service Worker for offline caching and Add-to-Homescreen functionality.
-*   [ ] Implement Service Discovery (mDNS/Bonjour) for zero-conf networking.
-*   [ ] Package the backend server into a single executable using `pkg`.
-*   [ ] Conduct thorough testing and bug fixing.
+1. **Session Creation:** KJ visits kj.nomadkaraoke.com → creates session → gets 4-digit ID
+2. **Local Server:** Enhanced server connects to Cloudflare relay, registers IP
+3. **Player Setup:** Navigate to kj.nomadkaraoke.com/player → enter session ID
+4. **Singer Access:** Singers visit sing.nomadkaraoke.com → enter session ID
+5. **Media Sources:** Choose local library + YouTube, or YouTube only
+6. **Auto-Discovery:** All devices auto-connect via session ID
 
-## 3. Development Principles
+## 4. Shared Components & Synchronization
 
-To ensure the long-term success and quality of KJ-Nomad, the following principles will be adhered to throughout development:
+### 4.1 Perfect Video Synchronization Engine
 
-*   **Code Quality:** All code will be written to be clean, readable, and maintainable. SOLID principles will be applied where appropriate to create a flexible and scalable architecture.
-*   **Testing:** A strong emphasis will be placed on testing to ensure correctness and reliability at all levels.
-    *   **Unit Tests:** The goal is to achieve at least 80% test coverage for both frontend and backend business logic.
-        *   **Backend:** Logic in modules like `songQueue.ts` and `mediaLibrary.ts` will be tested using Vitest. `fs` and other external dependencies will be mocked to ensure tests are fast and reliable.
-        *   **Frontend:** React components will be tested using Vitest and React Testing Library to verify their behavior from a user's perspective. Hooks and utility functions will also have dedicated unit tests.
-    *   **Integration Tests:**
-        *   **Backend:** The API endpoints and WebSocket message handlers will be tested to ensure they behave correctly when integrated. This will involve using libraries like `supertest` for HTTP requests and a WebSocket client to test the real-time communication layer.
-    *   **End-to-End (E2E) Tests:** The application will be tested from a user's perspective using a browser automation framework like Cypress. These tests will cover critical user flows, such as:
-        1.  A singer successfully searching for and requesting a song.
-        2.  The KJ seeing the request appear in the queue and being able to start the song.
-        3.  The player view correctly playing the selected song.
-        4.  Automated rotation to the next song or filler music upon song completion.
-        5.  Real-time updates to the scrolling ticker.
-*   **Continuous Integration (CI):** While not implemented here, the test suite will be structured to be easily runnable in a CI environment (e.g., GitHub Actions) to automate testing on every code change in the future.
-*   **Modularity & Reusability:** The application will be broken down into small, single-responsibility modules and components. This applies to both the frontend (React components, custom hooks) and the backend (services, controllers).
-*   **TypeScript Throughout:** TypeScript will be used in both the client and server projects to leverage static typing for improved code clarity, early error detection, and better developer experience.
-*   **Scalable State Management:** The frontend will use a predictable and scalable state management solution, likely starting with React Context and `useReducer` and potentially moving to Zustand for more complex state to avoid prop-drilling and create a clear data flow.
-*   **Component-Based UI:** The user interface will be built as a composition of well-defined React components, organized logically in the project structure.
+**Requirements:** <100ms synchronization tolerance across multiple screens
+
+**Implementation:**
+- **Clock Synchronization:** NTP-like algorithm for client time sync
+- **Pre-fetch Coordination:** Download and buffer videos before playback
+- **Latency Compensation:** Calculate network delays and adjust timing
+- **Drift Correction:** Continuous monitoring and micro-adjustments
+- **Synchronized Start:** All players begin playback at identical timestamps
+
+### 4.2 YouTube Integration (Online Mode Only)
+
+**Technology:** `yt-dlp` for video downloading
+- **On-demand Download:** Fetch videos when added to queue
+- **Local Caching:** Store downloaded videos temporarily 
+- **Hybrid Search:** Combine local library + YouTube search results
+- **Progress Tracking:** Real-time download status for KJ/singers
+- **Quality Management:** Automatic quality selection based on bandwidth
+
+### 4.3 Automation Engine (Both Modes)
+
+**Automated Singer Rotation:**
+- Fair-play algorithms for queue management
+- Automatic progression to next song
+- Configurable rotation rules
+
+**Automated Filler Music:**  
+- Background music between performances
+- Auto-fade when next song begins
+- Separate filler music library management
+
+## 5. Implementation Roadmap
+
+### Phase 1: Infrastructure & Landing Page
+**Goal:** Set up deployment infrastructure and create user-facing entry points
+
+**Deliverables:**
+- [ ] Cloudflare Workers + Pages deployment configuration
+- [ ] Landing page at kj.nomadkaraoke.com with mode selection
+- [ ] GitHub Actions CI/CD pipeline  
+- [ ] Domain setup: kj.nomadkaraoke.com, sing.nomadkaraoke.com
+- [ ] Basic session management API (Workers + KV)
+
+**Technical Tasks:**
+- Set up `wrangler.toml` configurations for Workers and Pages
+- Create landing page with Local vs Online mode explanations
+- Build session creation API endpoint
+- Configure automated deployment from GitHub
+
+### Phase 2: Local Mode MVP  
+**Goal:** Create fully functional offline karaoke system
+
+**Deliverables:**
+- [ ] Self-contained executable (Windows/Mac/Linux)
+- [ ] Auto-browser launch on server startup
+- [ ] Setup wizard for media library selection
+- [ ] Perfect video synchronization engine (<100ms)
+- [ ] Multi-screen device management interface
+- [ ] Paper request workflow optimization
+
+**Technical Tasks:**  
+- Enhance server with auto-launch capabilities
+- Implement video sync engine with clock synchronization
+- Build setup wizard UI components
+- Add device management and per-screen controls
+- Package executable with `pkg`
+
+### Phase 3: Online Mode Foundation
+**Goal:** Establish cloud-coordinated session management
+
+**Deliverables:**
+- [ ] Durable Objects WebSocket relay system
+- [ ] 4-digit session ID generation and discovery
+- [ ] Cloud-local hybrid architecture
+- [ ] Enhanced local server with cloud connectivity
+- [ ] Player auto-discovery via session ID
+
+**Technical Tasks:**
+- Implement Durable Objects for session relay
+- Build session registration and discovery APIs
+- Create cloud-frontend connection logic
+- Enhance local server with Cloudflare integration
+- Build session-based player connection system
+
+### Phase 4: YouTube Integration
+**Goal:** Add on-demand video downloading and hybrid search
+
+**Deliverables:**
+- [ ] `yt-dlp` integration for video downloading
+- [ ] Hybrid search (local library + YouTube)
+- [ ] Video caching and storage management
+- [ ] Download progress tracking UI
+- [ ] Quality management and bandwidth optimization
+
+**Technical Tasks:**
+- Integrate yt-dlp with Node.js wrapper
+- Build hybrid search interface
+- Implement local video caching system
+- Create download progress components
+- Add bandwidth-based quality selection
+
+### Phase 5: Advanced Features & Polish
+**Goal:** Complete professional-grade feature set
+
+**Deliverables:**
+- [ ] Drag-and-drop queue reordering
+- [ ] Per-device control toggles (audio/ticker/sidebar)
+- [ ] Singer profile management
+- [ ] Advanced queue management (VIP, priority)
+- [ ] Comprehensive monitoring and analytics
+
+**Technical Tasks:**
+- Build drag-and-drop UI components
+- Implement granular device control systems
+- Create singer profile persistence
+- Add queue management algorithms
+- Integrate usage analytics
+
+## 6. Technical Specifications
+
+### 6.1 Project Structure
+```
+kj-nomad/
+├── server/                 # Local server (both modes)
+│   ├── src/
+│   │   ├── local-mode/     # Local-specific features
+│   │   ├── online-mode/    # Cloud integration
+│   │   ├── shared/         # Common components
+│   │   └── sync/           # Video synchronization
+│   └── package.json
+├── client/                 # Shared React components
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── services/
+│   └── package.json
+├── cloudflare/
+│   ├── workers/            # API and session management
+│   │   ├── src/
+│   │   ├── wrangler.toml
+│   │   └── package.json
+│   └── pages/              # Static frontends
+│       ├── landing/        # kj.nomadkaraoke.com
+│       ├── admin/          # Admin interface
+│       ├── singer/         # sing.nomadkaraoke.com
+│       └── player/         # Player interface
+└── docs/
+    ├── ARCHITECTURE.md     # This file
+    ├── FEATURES.md         # Feature implementation status
+    └── API.md              # API documentation
+```
+
+### 6.2 Cloudflare Cost Analysis (Free Tier)
+- **Workers:** 100,000 requests/day → ~3,000 sessions/day
+- **Durable Objects:** 400,000 invocations/month → ~13,000/day  
+- **KV:** 100,000 reads/day, 1,000 writes/day
+- **Pages:** Unlimited static hosting
+- **Bandwidth:** 100GB/month
+- **Estimated Cost:** $0/month for typical usage
+
+### 6.3 Video Synchronization Requirements
+- **Tolerance:** <100ms between all player screens
+- **Network Handling:** Compensate for varying latency (WiFi vs Ethernet)
+- **Clock Sync:** NTP-like algorithm for time coordination
+- **Buffer Management:** Pre-fetch videos before playback commands
+- **Drift Correction:** Continuous micro-adjustments during playback
+
+### 6.4 Session Management Specifications
+- **Session IDs:** 4-digit numeric codes (1000-9999)
+- **Collision Handling:** Regenerate on conflicts
+- **Timeout:** Sessions expire after 24 hours of inactivity
+- **Capacity:** Support up to 100 concurrent sessions per region
+- **Geographic:** Leverage Cloudflare's global edge network
+
+## 7. Development Principles
+
+### 7.1 Code Quality Standards
+- **TypeScript:** Strict typing throughout (frontend and backend)
+- **Testing:** Minimum 80% coverage for core business logic
+- **Modularity:** Single-responsibility principle for all components
+- **Documentation:** Inline docs and comprehensive API documentation
+
+### 7.2 Testing Strategy
+- **Unit Tests:** Core modules (songQueue, mediaLibrary, sync engine)
+- **Integration Tests:** API endpoints and WebSocket communication  
+- **E2E Tests:** Critical user flows (Cypress for browser automation)
+- **Performance Tests:** Video synchronization accuracy validation
+- **Load Tests:** Cloud infrastructure stress testing
+
+### 7.3 Security Considerations
+- **Local Mode:** No external network access required
+- **Online Mode:** Session ID-based access control
+- **YouTube Integration:** Rate limiting and ToS compliance
+- **Data Privacy:** No persistent user data storage
+- **Network Security:** HTTPS/WSS everywhere, input validation
