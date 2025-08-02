@@ -5,12 +5,10 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { networkInterfaces } from 'os';
 import express, { Request, Response } from 'express';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// __dirname is automatically available in CommonJS modules
 
 export interface SetupConfig {
   mediaDirectory: string;

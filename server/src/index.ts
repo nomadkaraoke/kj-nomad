@@ -21,7 +21,6 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 
 import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
@@ -64,9 +63,7 @@ import { paperWorkflow } from './paperWorkflow';
 
 // import { Bonjour } from 'bonjour-service';
 
-// ES Module equivalent for __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// __dirname is automatically available in CommonJS modules
 
 const app = express();
 const server = http.createServer(app);

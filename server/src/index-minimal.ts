@@ -6,15 +6,12 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
 import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong } from './songQueue';
 import { scanFillerMusic, getNextFillerSong } from './fillerMusic';
 
-// ES Module equivalent for __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// __dirname is automatically available in CommonJS modules
 
 const app = express();
 const server = http.createServer(app);
