@@ -118,7 +118,7 @@ KJ-Nomad supports two distinct deployment modes:
 - **❌ Key/Tempo Controls**: Advanced audio manipulation not implemented
 
 ### Advanced Queue Features
-- **❌ Drag-and-Drop Reordering**: Queue reordering UI not implemented
+- **✅ Drag-and-Drop Reordering**: Complete queue reordering UI with @dnd-kit integration
 - **❌ Singer Rotation Algorithms**: Fair-play rotation logic incomplete
 - **❌ Priority/VIP System**: No priority queue management
 - **❌ Singer Profiles**: No persistent singer history across sessions
@@ -213,9 +213,9 @@ KJ-Nomad supports two distinct deployment modes:
 - [x] Download progress tracking UI - Real-time progress with speed/ETA information
 - [x] Quality management and bandwidth optimization - 720p preferred with automatic selection
 
-### Phase 5: Advanced Features & Polish ❌ (Not Started)
+### Phase 5: Advanced Features & Polish 🟡 (Partially Complete)
 **Goal:** Complete professional-grade feature set
-- [ ] Drag-and-drop queue reordering
+- [x] Drag-and-drop queue reordering - Complete with @dnd-kit integration and comprehensive testing
 - [ ] Singer profile management
 - [ ] Advanced queue management (VIP, priority)
 - [ ] Comprehensive monitoring and analytics

@@ -29,6 +29,7 @@ import {
   addSongToQueue, 
   getQueue, 
   removeSongFromQueue, 
+  reorderQueue,
   getNextSong, 
   resetQueue,
   getSessionState,
@@ -129,6 +130,37 @@ app.post('/api/queue/clear', (req, res) => {
     console.log('[API] POST /api/queue/clear - Queue cleared successfully');
     broadcast({ type: 'queue_updated', payload: getQueue() });
     res.json({ success: true, message: 'Queue cleared' });
+});
+
+// API endpoint to reorder queue
+app.post('/api/queue/reorder', (req, res) => {
+    console.log('[API] POST /api/queue/reorder - Reorder queue endpoint hit');
+    const { fromIndex, toIndex } = req.body;
+    
+    if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'fromIndex and toIndex must be numbers' 
+        });
+    }
+    
+    const success = reorderQueue(fromIndex, toIndex);
+    
+    if (success) {
+        console.log(`[API] Queue reordered: moved item from ${fromIndex} to ${toIndex}`);
+        broadcast({ type: 'queue_updated', payload: getQueue() });
+        broadcast({ type: 'session_state_updated', payload: getSessionState() });
+        res.json({ 
+            success: true, 
+            message: 'Queue reordered successfully',
+            data: { fromIndex, toIndex, queue: getQueue() }
+        });
+    } else {
+        res.status(400).json({ 
+            success: false, 
+            error: 'Invalid indices for queue reordering' 
+        });
+    }
 });
 
 // Cloud connectivity endpoints

@@ -5,16 +5,12 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAppStore } from '../store/appStore';
 import SessionHistory from '../components/SessionHistory/SessionHistory';
+import DraggableQueue from '../components/QueueManager/DraggableQueue';
 import { 
   PlayIcon, 
   PauseIcon,
   ForwardIcon,
-  QueueListIcon,
   Cog6ToothIcon,
-  PlusIcon,
-  TrashIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
   ArrowPathIcon,
   ClockIcon,
   StopIcon
@@ -48,6 +44,36 @@ const ControllerPage: React.FC = () => {
   
   const handleRemoveSinger = (songId: string) => {
     removeFromQueue(songId);
+  };
+
+  const handleReorderQueue = async (fromIndex: number, toIndex: number) => {
+    try {
+      const response = await fetch('/api/queue/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fromIndex, toIndex }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to reorder queue:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error reordering queue:', error);
+    }
+  };
+
+  const handlePlaySong = (songId: string, singerName: string) => {
+    // Use the existing playNext function or create a custom play function
+    // For now, we'll use a WebSocket message similar to the KjController
+    const { socket } = useAppStore.getState();
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ 
+        type: 'play', 
+        payload: { songId, singer: singerName } 
+      }));
+    }
   };
   
   const currentlyPlaying = nowPlaying && !nowPlaying.isFiller;
@@ -193,108 +219,13 @@ const ControllerPage: React.FC = () => {
       
       {/* Singer Queue */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center space-x-2">
-              <QueueListIcon className="h-5 w-5" />
-              <span>Singer Queue ({queue.length})</span>
-            </h2>
-            <Button variant="ghost" size="sm">
-              <PlusIcon className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
         <CardContent>
-          {queue.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              <QueueListIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No singers in queue</p>
-              <p className="text-sm">Share the singer portal for requests!</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {queue.map((entry, index) => (
-                <div
-                  key={`${entry.song.id}-${entry.queuedAt}`}
-                  data-testid="queue-item"
-                  className={`p-4 rounded-lg border transition-all duration-200 ${
-                    index === 0 
-                      ? 'border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' 
-                      : 'border-gray-200 dark:border-dark-600 bg-white dark:bg-dark-700 hover:bg-gray-50 dark:hover:bg-dark-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                          index === 0
-                            ? 'bg-yellow-500 text-white'
-                            : 'bg-gray-200 dark:bg-dark-600 text-gray-600 dark:text-gray-300'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-lg text-gray-900 dark:text-white truncate">
-                            {entry.singerName}
-                          </p>
-                          <p className="text-gray-600 dark:text-gray-300 truncate">
-                            {entry.song.artist} - {entry.song.title}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      {/* Reorder buttons */}
-                      <div className="flex flex-col space-y-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          disabled={index === 0}
-                        >
-                          <ArrowUpIcon className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          disabled={index === queue.length - 1}
-                        >
-                          <ArrowDownIcon className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      
-                      {/* Remove button */}
-                      <Button
-                        onClick={() => handleRemoveSinger(entry.song.id)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {index === 0 && (
-                    <div className="mt-3 pt-3 border-t border-yellow-200 dark:border-yellow-700">
-                      <Button
-                        onClick={playNext}
-                        variant="primary"
-                        size="sm"
-                        className="w-full"
-                        disabled={!isConnected}
-                      >
-                        <PlayIcon className="h-4 w-4 mr-2" />
-                        Start This Song
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <DraggableQueue
+            queue={queue}
+            onReorder={handleReorderQueue}
+            onPlay={handlePlaySong}
+            onRemove={handleRemoveSinger}
+          />
         </CardContent>
       </Card>
       

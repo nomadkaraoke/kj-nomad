@@ -17,13 +17,16 @@ describe('KjController', () => {
   it('renders the queue and can play the next song', async () => {
     render(<KjController socket={mockSocket} queue={mockQueue} />);
 
-    expect(screen.getByText('a-ha - Take On Me (Alice)')).toBeInTheDocument();
-    expect(screen.getByText('Queen - Bohemian Rhapsody (Bob)')).toBeInTheDocument();
+    // Check for the new format used by DraggableQueue
+    expect(screen.getByText('a-ha - Take On Me')).toBeInTheDocument();
+    expect(screen.getByText('Singer: Alice')).toBeInTheDocument();
+    expect(screen.getByText('Queen - Bohemian Rhapsody')).toBeInTheDocument();
+    expect(screen.getByText('Singer: Bob')).toBeInTheDocument();
 
-    const playNextButton = screen.getByText('Play Next');
+    const playNextButton = screen.getByText('▶️ Play Next Song');
     await userEvent.click(playNextButton);
 
-    expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'play', payload: { songId: '1', fileName: 'a-ha - Take On Me.mp4' } }));
-    expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'remove_from_queue', payload: { songId: '1' } }));
+    expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'play', payload: { songId: '1', fileName: 'a-ha - Take On Me.mp4', singer: 'Alice' } }));
+    expect(mockSocket.send).toHaveBeenCalledTimes(1);
   });
 });
