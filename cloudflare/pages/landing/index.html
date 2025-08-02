@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KJ-Nomad - Professional Karaoke Software | Nomad Karaoke</title>
+    <meta name="description" content="Modern, offline-first karaoke hosting software with cloud coordination. Perfect multi-screen sync, automated rotation, singer self-service.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <style>
+        :root {
+            --pink: #ff7acc;
+            --blue: #230a89;
+            --yellow: #ffdf6b;
+            --dark-bg: #0a0a0f;
+            --dark-card: #1a1a2e;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0c4;
+            --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Header */
+        .header {
+            padding: 2rem 0;
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 122, 204, 0.1);
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Righteous', cursive;
+            font-size: 2rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--pink);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 6rem 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at center, rgba(255, 122, 204, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-family: 'Righteous', cursive;
+            font-size: clamp(3rem, 8vw, 6rem);
+            margin-bottom: 1rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            color: var(--yellow);
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .hero-description {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 800px;
+            margin: 0 auto 3rem;
+        }
+
+        /* Mode Selection */
+        .mode-selection {
+            padding: 6rem 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(26, 26, 46, 0.5) 100%);
+        }
+
+        .section-title {
+            font-family: 'Righteous', cursive;
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .modes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 3rem;
+            margin-top: 4rem;
+        }
+
+        .mode-card {
+            background: var(--dark-card);
+            border-radius: 20px;
+            padding: 3rem;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 20px;
+            padding: 2px;
+            background: var(--gradient-primary);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mode-card:hover::before {
+            opacity: 1;
+        }
+
+        .mode-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(255, 122, 204, 0.2);
+        }
+
+        .mode-icon {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            display: block;
+        }
+
+        .local-mode .mode-icon {
+            color: var(--yellow);
+        }
+
+        .online-mode .mode-icon {
+            color: var(--pink);
+        }
+
+        .mode-title {
+            font-family: 'Righteous', cursive;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .mode-description {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .mode-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .mode-features li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .mode-features li::before {
+            content: '✓';
+            color: var(--pink);
+            font-weight: bold;
+            margin-right: 0.75rem;
+            font-size: 1.2rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--gradient-primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 122, 204, 0.3);
+        }
+
+        .cta-button.secondary {
+            background: transparent;
+            border: 2px solid var(--yellow);
+            color: var(--yellow);
+        }
+
+        .cta-button.secondary:hover {
+            background: var(--yellow);
+            color: var(--dark-bg);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 6rem 0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: var(--dark-card);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 122, 204, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--pink);
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+        }
+
+        /* Footer */
+        .footer {
+            padding: 4rem 0 2rem;
+            background: var(--dark-card);
+            border-top: 1px solid rgba(255, 122, 204, 0.1);
+            text-align: center;
+        }
+
+        .footer-content {
+            margin-bottom: 2rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--pink);
+        }
+
+        .copyright {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .modes-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .mode-card {
+                padding: 2rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding: 4rem 0;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 122, 204, 0.3);
+            border-top: 3px solid var(--pink);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav container">
+            <a href="/" class="logo">KJ-NOMAD</a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#modes">Get Started</a></li>
+                <li><a href="https://nomadkaraoke.com">Nomad Karaoke</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-bg"></div>
+            <div class="container hero-content">
+                <h1>KJ-NOMAD</h1>
+                <div class="hero-subtitle">— WHEREVER YOU HOST, PERFECT SYNC! —</div>
+                <p class="hero-description">
+                    Professional karaoke hosting software with perfect multi-screen synchronization. 
+                    Choose between offline-first local mode or cloud-coordinated online mode with singer self-service.
+                </p>
+                <a href="#modes" class="cta-button">Choose Your Mode</a>
+            </div>
+        </section>
+
+        <section id="modes" class="mode-selection">
+            <div class="container">
+                <h2 class="section-title">Choose Your Deployment Mode</h2>
+                
+                <div class="modes-grid">
+                    <!-- Local Mode -->
+                    <div class="mode-card local-mode" onclick="selectMode('local')">
+                        <span class="mode-icon">🏠</span>
+                        <h3 class="mode-title">Local Mode</h3>
+                        <p class="mode-description">
+                            Perfect for venues with unreliable internet or KJs who prefer traditional paper-based requests. 
+                            Runs completely offline with professional multi-screen synchronization.
+                        </p>
+                        <ul class="mode-features">
+                            <li>Works completely offline</li>
+                            <li>Perfect video sync (&lt;100ms)</li>
+                            <li>Paper request workflow</li>
+                            <li>Self-contained executable</li>
+                            <li>Multi-screen management</li>
+                            <li>Auto-discovery on local network</li>
+                        </ul>
+                        <button class="cta-button">Download Local App</button>
+                    </div>
+
+                    <!-- Online Mode -->
+                    <div class="mode-card online-mode" onclick="selectMode('online')">
+                        <span class="mode-icon">☁️</span>
+                        <h3 class="mode-title">Online Mode</h3>
+                        <p class="mode-description">
+                            Cloud-coordinated experience with singer self-service. Combines your local library with 
+                            YouTube downloads for the ultimate modern karaoke experience.
+                        </p>
+                        <ul class="mode-features">
+                            <li>Singer self-service via mobile</li>
+                            <li>YouTube + local library</li>
+                            <li>4-digit session codes</li>
+                            <li>Cross-network access</li>
+                            <li>Cloud coordination</li>
+                            <li>Real-time sync everywhere</li>
+                        </ul>
+                        <button class="cta-button secondary">Start Online Session</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2 class="section-title">Why KJs Choose KJ-Nomad</h2>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <h3 class="feature-title">Perfect Synchronization</h3>
+                        <p class="feature-description">
+                            Sub-100ms video sync across multiple screens. No more awkward delays or mismatched audio.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">📱</div>
+                        <h3 class="feature-title">Mobile-First Control</h3>
+                        <p class="feature-description">
+                            Control everything from your phone. Free yourself from being tied to a laptop all night.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">🤖</div>
+                        <h3 class="feature-title">Smart Automation</h3>
+                        <p class="feature-description">
+                            Automated rotation, filler music, and queue management. Focus on hosting, not technical details.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">🎵</div>
+                        <h3 class="feature-title">Hybrid Music Library</h3>
+                        <p class="feature-description">
+                            Use your existing collection plus YouTube downloads. Never disappoint a singer again.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3 class="feature-title">Zero Setup</h3>
+                        <p class="feature-description">
+                            Players auto-discover sessions. Singers connect with simple 4-digit codes. It just works.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">💎</div>
+                        <h3 class="feature-title">Professional Grade</h3>
+                        <p class="feature-description">
+                            Built for real KJs who need reliability. Comprehensive testing and professional features.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="https://nomadkaraoke.com">Nomad Karaoke</a>
+                    <a href="https://github.com/nomadkaraoke/kj-nomad">GitHub</a>
+                    <a href="#features">Features</a>
+                    <a href="mailto:support@nomadkaraoke.com">Support</a>
+                </div>
+                <p class="copyright">
+                    © 2025 Nomad Karaoke. Building a better karaoke experience for everyone.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading overlay -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Setting up your karaoke session...</p>
+    </div>
+
+    <script>
+        async function selectMode(mode) {
+            if (mode === 'local') {
+                // For now, show coming soon
+                alert('Local Mode downloads coming soon! The software is in active development.');
+                return;
+            }
+
+            if (mode === 'online') {
+                // Show loading
+                document.getElementById('loading').style.display = 'block';
+                
+                try {
+                    // Create new session
+                    const response = await fetch('/api/sessions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            allowYouTube: true,
+                            hasLocalLibrary: false
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to create session');
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Redirect to admin interface with session ID
+                        window.location.href = `/admin?session=${data.data.sessionId}`;
+                    } else {
+                        throw new Error(data.error || 'Unknown error');
+                    }
+                } catch (error) {
+                    console.error('Failed to create session:', error);
+                    alert('Failed to create session. Please try again.');
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

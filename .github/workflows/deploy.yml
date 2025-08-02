@@ -1,0 +1,159 @@
+name: Deploy KJ-Nomad to Cloudflare
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cloudflare/**'
+      - 'wrangler.toml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-workers:
+    runs-on: ubuntu-latest
+    name: Deploy Workers API
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'cloudflare/workers/package-lock.json'
+
+      - name: Install Workers dependencies
+        run: |
+          cd cloudflare/workers
+          npm ci
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: a7dd2a2bee7151ef4dc7a9f53d99b520
+          workingDirectory: '.'
+
+  deploy-landing-page:
+    runs-on: ubuntu-latest
+    name: Deploy Landing Page
+    needs: deploy-workers
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy Landing Page to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: a7dd2a2bee7151ef4dc7a9f53d99b520
+          command: pages deploy cloudflare/pages/landing --project-name=kj-nomad-landing
+
+  deploy-admin-page:
+    runs-on: ubuntu-latest
+    name: Deploy Admin Page
+    needs: deploy-workers
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy Admin Page to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: a7dd2a2bee7151ef4dc7a9f53d99b520
+          command: pages deploy cloudflare/pages/admin --project-name=kj-nomad-admin
+
+  deploy-singer-page:
+    runs-on: ubuntu-latest
+    name: Deploy Singer Page (Placeholder)
+    needs: deploy-workers
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Singer Page Placeholder
+        run: |
+          mkdir -p cloudflare/pages/singer
+          cat > cloudflare/pages/singer/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Singer App - Coming Soon</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                  body { 
+                      font-family: Arial, sans-serif; 
+                      text-align: center; 
+                      background: #0a0a0f; 
+                      color: white; 
+                      padding: 2rem; 
+                  }
+                  h1 { color: #ff7acc; }
+              </style>
+          </head>
+          <body>
+              <h1>Singer Self-Service</h1>
+              <p>Coming soon! Singer interface will be available here.</p>
+              <p>For now, ask your KJ to add songs for you.</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy Singer Page to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: a7dd2a2bee7151ef4dc7a9f53d99b520
+          command: pages deploy cloudflare/pages/singer --project-name=kj-nomad-singer
+
+  deploy-player-page:
+    runs-on: ubuntu-latest
+    name: Deploy Player Page (Placeholder)
+    needs: deploy-workers
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Player Page Placeholder
+        run: |
+          mkdir -p cloudflare/pages/player
+          cat > cloudflare/pages/player/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Player Screen - Coming Soon</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                  body { 
+                      font-family: Arial, sans-serif; 
+                      text-align: center; 
+                      background: #0a0a0f; 
+                      color: white; 
+                      padding: 2rem; 
+                      margin: 0;
+                      height: 100vh;
+                      display: flex;
+                      flex-direction: column;
+                      justify-content: center;
+                  }
+                  h1 { color: #ff7acc; }
+              </style>
+          </head>
+          <body>
+              <h1>Player Screen</h1>
+              <p>Coming soon! Video player interface will be available here.</p>
+              <p>This screen will display karaoke videos in perfect sync.</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy Player Page to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: a7dd2a2bee7151ef4dc7a9f53d99b520
+          command: pages deploy cloudflare/pages/player --project-name=kj-nomad-player

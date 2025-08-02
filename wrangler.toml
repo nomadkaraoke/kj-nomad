@@ -1,0 +1,41 @@
+# KJ-Nomad Cloudflare Workers Configuration
+name = "kj-nomad-api"
+main = "cloudflare/workers/src/index.ts"
+compatibility_date = "2024-01-01"
+account_id = "a7dd2a2bee7151ef4dc7a9f53d99b520"
+
+# Durable Objects for WebSocket relay
+[[durable_objects.bindings]]
+name = "SESSION_RELAY"
+class_name = "SessionRelay"
+
+# Workers KV for session storage
+[[kv_namespaces]]
+binding = "SESSIONS_KV"
+preview_id = ""
+id = ""  # Will be populated during first deployment
+
+# Routes - API endpoints
+[[routes]]
+pattern = "kj.nomadkaraoke.com/api/*"
+zone_name = "nomadkaraoke.com"
+
+[[routes]]
+pattern = "kj.nomadkaraoke.com/sessions/*"
+zone_name = "nomadkaraoke.com"
+
+[[routes]]
+pattern = "sing.nomadkaraoke.com/api/*"
+zone_name = "nomadkaraoke.com"
+
+[[routes]]
+pattern = "sing.nomadkaraoke.com/sessions/*"
+zone_name = "nomadkaraoke.com"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+
+# Build configuration
+[build]
+command = "cd cloudflare/workers && npm run build"
