@@ -9,11 +9,16 @@ account_id = "a7dd2a2bee7151ef4dc7a9f53d99b520"
 name = "SESSION_RELAY"
 class_name = "SessionRelay"
 
+# Durable Objects migrations
+[[migrations]]
+tag = "v1"
+new_classes = ["SessionRelay"]
+
 # Workers KV for session storage
 [[kv_namespaces]]
 binding = "SESSIONS_KV"
 preview_id = ""
-id = ""  # Will be populated during first deployment
+id = "0b84d20586b64469a68aaf3e2907c239"
 
 # Routes - API endpoints
 [[routes]]
@@ -38,4 +43,4 @@ ENVIRONMENT = "production"
 
 # Build configuration
 [build]
-command = "cd cloudflare/workers && npm run build"
+command = "npm run build"

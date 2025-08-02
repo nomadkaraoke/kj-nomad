@@ -18,7 +18,8 @@ export class SessionRelay {
   }
 
   private async handleWebSocket(request: Request, sessionId: string): Promise<Response> {
-    const [client, server] = Object.values(new WebSocketPair());
+    const webSocketPair = new WebSocketPair();
+    const [client, server] = Object.values(webSocketPair);
     const clientId = crypto.randomUUID();
     
     // Parse client type from URL params
@@ -31,12 +32,12 @@ export class SessionRelay {
     }
     
     const sessionClients = this.sessions.get(sessionId)!;
-    sessionClients.set(clientId, server);
+    sessionClients.set(clientId, server as WebSocket);
     this.clientTypes.set(clientId, clientType);
 
-    server.accept();
+    (server as WebSocket).accept();
 
-    server.addEventListener('message', (event) => {
+    (server as WebSocket).addEventListener('message', (event: any) => {
       try {
         const message: WSMessage = JSON.parse(event.data as string);
         message.sessionId = sessionId;
@@ -47,14 +48,14 @@ export class SessionRelay {
         this.broadcast(sessionId, message, clientId);
       } catch (error) {
         console.error('[SessionRelay] Failed to process message:', error);
-        server.send(JSON.stringify({
+        (server as WebSocket).send(JSON.stringify({
           type: 'error',
           payload: { message: 'Invalid message format' }
         }));
       }
     });
 
-    server.addEventListener('close', () => {
+    (server as WebSocket).addEventListener('close', () => {
       console.log(`[SessionRelay] Client disconnected: ${clientType}`);
       sessionClients.delete(clientId);
       this.clientTypes.delete(clientId);
@@ -71,12 +72,12 @@ export class SessionRelay {
       });
     });
 
-    server.addEventListener('error', (error) => {
+    (server as WebSocket).addEventListener('error', (error: any) => {
       console.error(`[SessionRelay] WebSocket error for ${clientType}:`, error);
     });
 
     // Send welcome message
-    server.send(JSON.stringify({
+    (server as WebSocket).send(JSON.stringify({
       type: 'connected',
       payload: { 
         clientId, 
@@ -103,7 +104,7 @@ export class SessionRelay {
     for (const [clientId, ws] of sessionClients) {
       if (clientId === excludeClientId) continue;
       
-      if (ws.readyState === WebSocket.READY_STATE_OPEN) {
+      if (ws.readyState === 1) { // WebSocket OPEN state
         try {
           ws.send(messageStr);
         } catch (error) {
