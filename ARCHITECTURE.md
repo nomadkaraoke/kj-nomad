@@ -52,15 +52,15 @@ KJ-Nomad operates in two distinct modes, each optimized for different venue scen
 └─────────────────┘
 ```
 
-### 2.2 Local Mode Server (Enhanced Node.js)
+### 2.2 Local Mode Application (Electron Desktop App)
 
 **Technology Stack:**
-- **Runtime:** Node.js 18+
-- **Framework:** Express.js for HTTP/WebSocket serving
+- **Runtime:** Electron (Node.js + Chromium)
+- **Backend:** Express.js for HTTP/WebSocket serving
 - **Real-time:** `ws` library for WebSocket server
 - **Media:** `fuse.js` for search, HTTP Range Requests for streaming
-- **Packaging:** `pkg` for single executable (Windows/Mac/Linux)
-- **Auto-launch:** Platform-specific browser launching
+- **Packaging:** Electron Builder for native installers (Windows/Mac/Linux)
+- **UI:** Built-in Chromium browser (no external browser dependency)
 
 **Core Responsibilities:**
 - **Media Library Management:** Scan local directories, parse metadata, build search index
@@ -71,7 +71,7 @@ KJ-Nomad operates in two distinct modes, each optimized for different venue scen
 
 ### 2.3 Local Mode Setup Flow
 
-1. **Launch:** KJ double-clicks executable → auto-opens admin UI in browser
+1. **Launch:** KJ double-clicks Electron app → opens integrated admin UI (no browser required)
 2. **Setup Wizard:**
    - Select local media directory
    - Scan and index video library
@@ -283,12 +283,12 @@ export class SessionRelay {
 - **Real-time statistics:** Processing time tracking, popular songs, and workflow analytics
 - **Priority management:** VIP/High/Normal queuing with smart suggestions
 
-**📦 Executable Packaging (`package-executable.cjs`)**
+**📦 Electron Application Packaging**
 - **Multi-platform builds:** Windows x64, macOS (Intel/ARM64), Linux (x64/ARM64)
 - **Build automation:** Client compilation, server TypeScript, asset bundling
-- **Single-file distribution:** `pkg` with Brotli compression for optimal size
-- **Installation scripts:** Platform-specific installers (PowerShell for Windows, Bash for Unix)
-- **Complete packaging:** Desktop shortcuts, PATH integration, uninstaller included
+- **Native installers:** Electron Builder with platform-specific packages (MSI, DMG, AppImage)
+- **Desktop integration:** Native app icons, file associations, auto-updater support
+- **Complete packaging:** Desktop shortcuts, system tray, native menus, uninstaller included
 
 **Current Status (2025-08-02):** ✅ **PHASE 2 COMPLETE!** Professional offline karaoke system ready for production distribution. All 6 major deliverables implemented with comprehensive backend APIs (60+ endpoints), real-time synchronization, and cross-platform packaging. System tested with auto-browser launch, perfect video sync, and efficient paper workflow management.
 

@@ -9,6 +9,7 @@ build/
 */build/
 out/
 */out/
+dist-electron/
 
 # Coverage reports
 coverage/

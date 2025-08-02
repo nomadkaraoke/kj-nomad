@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Modern, offline-first, beautiful karaoke hosting software",
   "private": true,
-  "type": "module",
+  "main": "electron/main.js",
+  "homepage": "./",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
@@ -27,14 +28,96 @@
     "lint:fix:client": "cd client && npm run lint:fix",
     "clean": "rm -rf server/dist client/dist server/public/* */node_modules",
     "setup": "npm install && cd server && npm install && cd ../client && npm install",
-    "check-all": "npm run lint && npm run test && npm run build",
+    "check-all": "npm run lint && npm run test && npm run build && npm run test:packaging",
     "iterate": "npm run lint && npm run test && npm run build && npm run dev",
-    "package": "node package-executable.cjs",
+    "package": "npm run package:electron",
+    "package:electron": "npm run generate:icons && npm run dist",
+    "package:legacy": "node package-executable.cjs",
     "package:quick": "node package-executable.cjs --skip-deps",
     "package:skip-build": "node package-executable.cjs --skip-build",
-    "release": "npm run check-all && npm run package"
+    "generate:icons": "node scripts/generate-icons.js",
+    "test:packaging": "npm run dist && node scripts/test-electron-packaging.js",
+    "release": "npm run check-all && npm run package",
+    "electron": "npm run build && electron .",
+    "electron:dev": "concurrently \"npm run dev:server\" \"wait-on http://localhost:3000 && electron .\"",
+    "dist": "npm run build && electron-builder",
+    "dist:all": "npm run build && electron-builder --publish=never",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "electron": "^37.2.5",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.nomadkaraoke.kj-nomad",
+    "productName": "KJ-Nomad",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "server/dist/**/*",
+      "server/public/**/*",
+      "server/media/**/*",
+      "server/package.json",
+      "server/node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "server/media",
+        "to": "media",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "icon": "electron/assets/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "icon": "electron/assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "electron/assets/icon.png",
+      "category": "AudioVideo",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

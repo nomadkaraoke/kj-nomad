@@ -539,10 +539,234 @@
     </div>
 
     <script>
+        // Download functionality
+        let releaseData = null;
+
+        async function loadReleaseData() {
+            try {
+                const response = await fetch('/latest-release.json');
+                releaseData = await response.json();
+                updateDownloadButtons();
+            } catch (error) {
+                console.error('Failed to load release data:', error);
+                // Fallback to GitHub releases page
+                releaseData = {
+                    version: "latest",
+                    downloads: {
+                        windows_installer: "https://github.com/nomadkaraoke/kj-nomad/releases/latest",
+                        macos_intel: "https://github.com/nomadkaraoke/kj-nomad/releases/latest",
+                        linux_appimage: "https://github.com/nomadkaraoke/kj-nomad/releases/latest"
+                    }
+                };
+                updateDownloadButtons();
+            }
+        }
+
+        function updateDownloadButtons() {
+            const localButton = document.querySelector('.local-mode .cta-button');
+            if (localButton && releaseData) {
+                localButton.textContent = `Download v${releaseData.version}`;
+                localButton.onclick = (e) => {
+                    e.stopPropagation();
+                    showDownloadOptions();
+                };
+            }
+        }
+
+        function showDownloadOptions() {
+            const platform = detectPlatform();
+            const downloadUrl = getDownloadUrl(platform);
+            
+            if (downloadUrl) {
+                // Direct download for detected platform
+                window.open(downloadUrl, '_blank');
+            } else {
+                // Show all options
+                showAllDownloadOptions();
+            }
+        }
+
+        function detectPlatform() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const platform = navigator.platform.toLowerCase();
+            
+            if (userAgent.includes('win') || platform.includes('win')) {
+                return 'windows';
+            } else if (userAgent.includes('mac') || platform.includes('mac')) {
+                // Detect Apple Silicon vs Intel
+                if (userAgent.includes('arm') || userAgent.includes('aarch64')) {
+                    return 'macos_apple_silicon';
+                }
+                return 'macos_intel';
+            } else if (userAgent.includes('linux') || platform.includes('linux')) {
+                return 'linux';
+            }
+            return null;
+        }
+
+        function getDownloadUrl(platform) {
+            if (!releaseData || !releaseData.downloads) return null;
+            
+            switch (platform) {
+                case 'windows':
+                    return releaseData.downloads.windows_installer;
+                case 'macos_intel':
+                    return releaseData.downloads.macos_intel;
+                case 'macos_apple_silicon':
+                    return releaseData.downloads.macos_apple_silicon;
+                case 'linux':
+                    return releaseData.downloads.linux_appimage;
+                default:
+                    return null;
+            }
+        }
+
+        function showAllDownloadOptions() {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                backdrop-filter: blur(10px);
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: var(--dark-card);
+                    border-radius: 20px;
+                    padding: 3rem;
+                    max-width: 600px;
+                    width: 90%;
+                    border: 2px solid var(--pink);
+                ">
+                    <h3 style="
+                        font-family: 'Righteous', cursive;
+                        font-size: 2rem;
+                        margin-bottom: 2rem;
+                        text-align: center;
+                        color: var(--pink);
+                    ">Download KJ-Nomad v${releaseData?.version || 'latest'}</h3>
+                    
+                    <div style="display: grid; gap: 1rem;">
+                        <a href="${releaseData?.downloads?.windows_installer || '#'}" 
+                           style="
+                               display: flex;
+                               align-items: center;
+                               padding: 1rem;
+                               background: rgba(255, 122, 204, 0.1);
+                               border-radius: 10px;
+                               text-decoration: none;
+                               color: white;
+                               transition: all 0.3s ease;
+                           "
+                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
+                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
+                            <span style="font-size: 2rem; margin-right: 1rem;">🪟</span>
+                            <div>
+                                <div style="font-weight: 600;">Windows Installer</div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary);">Recommended for Windows users</div>
+                            </div>
+                        </a>
+                        
+                        <a href="${releaseData?.downloads?.macos_intel || '#'}" 
+                           style="
+                               display: flex;
+                               align-items: center;
+                               padding: 1rem;
+                               background: rgba(255, 122, 204, 0.1);
+                               border-radius: 10px;
+                               text-decoration: none;
+                               color: white;
+                               transition: all 0.3s ease;
+                           "
+                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
+                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
+                            <span style="font-size: 2rem; margin-right: 1rem;">🍎</span>
+                            <div>
+                                <div style="font-weight: 600;">macOS (Intel)</div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary);">For Intel-based Macs</div>
+                            </div>
+                        </a>
+                        
+                        <a href="${releaseData?.downloads?.macos_apple_silicon || '#'}" 
+                           style="
+                               display: flex;
+                               align-items: center;
+                               padding: 1rem;
+                               background: rgba(255, 122, 204, 0.1);
+                               border-radius: 10px;
+                               text-decoration: none;
+                               color: white;
+                               transition: all 0.3s ease;
+                           "
+                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
+                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
+                            <span style="font-size: 2rem; margin-right: 1rem;">🍎</span>
+                            <div>
+                                <div style="font-weight: 600;">macOS (Apple Silicon)</div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary);">For M1/M2/M3 Macs</div>
+                            </div>
+                        </a>
+                        
+                        <a href="${releaseData?.downloads?.linux_appimage || '#'}" 
+                           style="
+                               display: flex;
+                               align-items: center;
+                               padding: 1rem;
+                               background: rgba(255, 122, 204, 0.1);
+                               border-radius: 10px;
+                               text-decoration: none;
+                               color: white;
+                               transition: all 0.3s ease;
+                           "
+                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
+                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
+                            <span style="font-size: 2rem; margin-right: 1rem;">🐧</span>
+                            <div>
+                                <div style="font-weight: 600;">Linux AppImage</div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary);">Universal Linux application</div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 2rem;">
+                        <button onclick="document.body.removeChild(this.closest('div').parentElement)" 
+                                style="
+                                    background: transparent;
+                                    border: 2px solid var(--text-secondary);
+                                    color: var(--text-secondary);
+                                    padding: 0.5rem 1.5rem;
+                                    border-radius: 25px;
+                                    cursor: pointer;
+                                    transition: all 0.3s ease;
+                                "
+                                onmouseover="this.style.borderColor='var(--pink)'; this.style.color='var(--pink)'"
+                                onmouseout="this.style.borderColor='var(--text-secondary)'; this.style.color='var(--text-secondary)'">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            };
+            
+            document.body.appendChild(modal);
+        }
+
         async function selectMode(mode) {
             if (mode === 'local') {
-                // For now, show coming soon
-                alert('Local Mode downloads coming soon! The software is in active development.');
+                showDownloadOptions();
                 return;
             }
 
@@ -583,6 +807,9 @@
                 }
             }
         }
+
+        // Load release data when page loads
+        document.addEventListener('DOMContentLoaded', loadReleaseData);
 
         // Smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

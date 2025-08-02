@@ -89,23 +89,28 @@ export function shouldAutoLaunch(): boolean {
   // Don't auto-launch in these conditions:
   
   // 1. If explicitly disabled via environment variable
-  if (process.env.NO_AUTO_LAUNCH === 'true') {
+  if (process.env.NO_AUTO_LAUNCH === 'true' || process.env.AUTO_LAUNCH === 'false') {
     return false;
   }
   
-  // 2. If running in cloud mode (has session ID)
+  // 2. If running in Electron mode
+  if (process.env.ELECTRON_MODE === 'true') {
+    return false;
+  }
+  
+  // 3. If running in cloud mode (has session ID)
   const hasSessionId = process.argv.some(arg => arg.startsWith('--session=')) || 
                       process.env.SESSION_ID;
   if (hasSessionId) {
     return false;
   }
   
-  // 3. If running in CI/testing environment
+  // 4. If running in CI/testing environment
   if (process.env.CI === 'true' || process.env.NODE_ENV === 'test') {
     return false;
   }
   
-  // 4. If running headless (no display)
+  // 5. If running headless (no display)
   if (process.env.DISPLAY === '' && platform() === 'linux') {
     return false;
   }

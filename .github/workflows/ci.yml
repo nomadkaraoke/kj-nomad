@@ -3,6 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main, develop ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
@@ -74,63 +75,6 @@ jobs:
         path: ./client/dist/
         retention-days: 30
 
-  # End-to-End Testing
-  # e2e-test:
-  #   name: E2E Tests
-  #   runs-on: ubuntu-latest
-  #   needs: [backend-test, frontend-test]
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
-  #       cache: 'npm'
-  #       cache-dependency-path: './client/package-lock.json'
-        
-  #   - name: Install backend dependencies
-  #     run: cd server && npm ci
-      
-  #   - name: Install frontend dependencies  
-  #     run: cd client && npm ci
-      
-  #   - name: Install FFmpeg for test videos
-  #     run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      
-  #   - name: Setup test media files
-  #     run: bash scripts/setup-test-data.sh
-        
-  #   - name: Build frontend
-  #     run: cd client && npm run build
-      
-  #   - name: Copy frontend build to server for serving
-  #     run: |
-  #       mkdir -p server/public
-  #       cp -r client/dist/* server/public/
-        
-  #   - name: Start backend server in background
-  #     run: cd server && npm start &
-  #     env:
-  #       NODE_ENV: test
-  #       PORT: 8080
-        
-  #   - name: Wait for server to start
-  #     run: npx wait-on http://localhost:8080 --timeout 60000
-      
-  #   - name: Run Cypress E2E tests
-  #     run: cd client && npm run cypress:run
-      
-  #   - name: Upload E2E videos on failure
-  #     uses: actions/upload-artifact@v4
-  #     if: failure()
-  #     with:
-  #       name: e2e-videos
-  #       path: ./client/cypress/videos/
-  #       retention-days: 7
-
   # Code Quality Checks
   lint-and-typecheck:
     name: Lint & Type Check
@@ -145,25 +89,20 @@ jobs:
       with:
         node-version: '18'
         
+    - name: Install root dependencies
+      run: npm ci
+        
     - name: Install backend dependencies
       run: cd server && npm ci
       
     - name: Install frontend dependencies
       run: cd client && npm ci
       
-    - name: Lint backend
-      run: cd server && npm run lint
-      continue-on-error: true
+    - name: Run full lint check
+      run: npm run lint
       
-    - name: Type check backend
-      run: cd server && npm run type-check
-      
-    - name: Lint frontend
-      run: cd client && npm run lint
-      continue-on-error: true
-      
-    - name: Type check frontend
-      run: cd client && npm run type-check
+    - name: Run full build check
+      run: npm run build
 
   # Security Audit
   security-audit:
@@ -187,12 +126,11 @@ jobs:
       run: cd client && npm audit --audit-level=moderate
       continue-on-error: true
 
-  # Build Release Package
-  build-release:
-    name: Build Release Package
+  # Packaging Test (runs on all platforms)
+  packaging-test:
+    name: Packaging Test
     runs-on: ${{ matrix.os }}
-    needs: [backend-test, frontend-test]
-    if: github.ref == 'refs/heads/main'
+    needs: [backend-test, frontend-test, lint-and-typecheck]
     
     strategy:
       matrix:
@@ -207,58 +145,98 @@ jobs:
       with:
         node-version: '18'
         
+    - name: Install root dependencies
+      run: npm ci
+        
     - name: Install backend dependencies
       run: cd server && npm ci
       
     - name: Install frontend dependencies
       run: cd client && npm ci
       
-    - name: Build frontend
-      run: cd client && npm run build
-      
-    - name: Copy frontend build to server
-      run: |
-        mkdir -p server/public
-        cp -r client/dist/* server/public/
+    - name: Run packaging test
+      run: npm run test:packaging
+
+  # Build Electron Release (only on main branch or tags)
+  build-electron:
+    name: Build Electron App
+    runs-on: ${{ matrix.os }}
+    needs: [backend-test, frontend-test, lint-and-typecheck]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+          - os: windows-latest
+            platform: win32
+            arch: x64
+          - os: macos-latest
+            platform: darwin
+            arch: x64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
         
-    - name: Build backend
-      run: cd server && npm run build
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-    - name: Create executable with pkg
-      run: npm run package
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install root dependencies
+      run: npm ci
+        
+    - name: Install backend dependencies
+      run: cd server && npm ci
       
-    - name: Create release archive (Unix)
-      if: matrix.os != 'windows-latest'
-      run: |
-        mkdir -p release
-        cp server/dist/kj-nomad release/
-        cp -r server/media release/ || mkdir release/media
-        cp README.md TROUBLESHOOTING.md release/
-        tar -czf kj-nomad-${{ matrix.os }}.tar.gz -C release .
+    - name: Install frontend dependencies
+      run: cd client && npm ci
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Build Electron app
+      run: npm run dist
+      env:
+        # Code signing environment variables (if available)
+        CSC_LINK: ${{ secrets.CSC_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        # Windows code signing
+        WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        # macOS notarization
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
         
-    - name: Create release archive (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        mkdir release
-        copy server\dist\kj-nomad.exe release\
-        xcopy server\media release\media\ /E /I 2>nul || mkdir release\media
-        copy README.md release\
-        copy TROUBLESHOOTING.md release\
-        powershell Compress-Archive -Path release\* -DestinationPath kj-nomad-windows.zip
-        
-    - name: Upload release artifacts
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: kj-nomad-${{ matrix.os }}
-        path: kj-nomad-*
+        name: electron-${{ matrix.platform }}-${{ matrix.arch }}
+        path: |
+          dist-electron/*.dmg
+          dist-electron/*.zip
+          dist-electron/*.exe
+          dist-electron/*.msi
+          dist-electron/*.AppImage
+          dist-electron/*.deb
+          dist-electron/*.rpm
         retention-days: 90
 
-  # Create GitHub Release
+  # Create GitHub Release (only on version tags)
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-release]
-    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release]')
+    needs: [build-electron]
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - name: Checkout code
@@ -266,10 +244,12 @@ jobs:
       
     - name: Download all artifacts
       uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
       
-    - name: Get version from package.json
-      id: package-version
-      run: echo "version=$(node -p "require('./server/package.json').version")" >> $GITHUB_OUTPUT
+    - name: Get version from tag
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
       
     - name: Create Release
       id: create_release
@@ -277,64 +257,104 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ steps.package-version.outputs.version }}
-        release_name: KJ-Nomad v${{ steps.package-version.outputs.version }}
+        tag_name: ${{ github.ref }}
+        release_name: KJ-Nomad v${{ steps.get_version.outputs.version }}
         body: |
-          ## What's New in v${{ steps.package-version.outputs.version }}
+          ## 🎤 KJ-Nomad v${{ steps.get_version.outputs.version }}
           
-          ### 🎉 Features
-          - Professional karaoke hosting software
-          - Multi-screen synchronization
-          - Mobile KJ control interface
-          - Offline-first operation
+          Professional karaoke hosting software with multi-screen synchronization and mobile control.
           
           ### 📦 Downloads
-          - **Windows**: Download `kj-nomad-windows.zip`
-          - **macOS**: Download `kj-nomad-macos.tar.gz`
-          - **Linux**: Download `kj-nomad-ubuntu.tar.gz`
+          
+          **Windows:**
+          - `KJ-Nomad-Setup-${{ steps.get_version.outputs.version }}.exe` - Windows Installer
+          - `KJ-Nomad-${{ steps.get_version.outputs.version }}-win.zip` - Portable Version
+          
+          **macOS:**
+          - `KJ-Nomad-${{ steps.get_version.outputs.version }}.dmg` - macOS Installer (Intel)
+          - `KJ-Nomad-${{ steps.get_version.outputs.version }}-arm64.dmg` - macOS Installer (Apple Silicon)
+          
+          **Linux:**
+          - `KJ-Nomad-${{ steps.get_version.outputs.version }}.AppImage` - Universal Linux App
+          - `kj-nomad_${{ steps.get_version.outputs.version }}_amd64.deb` - Debian/Ubuntu Package
           
           ### 🚀 Quick Start
-          1. Download the appropriate package for your OS
-          2. Extract to your preferred location
-          3. Add your karaoke videos to the `media/` folder
-          4. Run the executable
-          5. Open http://localhost:8080 in your browser
+          1. Download the appropriate installer for your operating system
+          2. Install and launch KJ-Nomad
+          3. Follow the setup wizard to configure your media library
+          4. Connect player screens to the displayed network address
+          5. Start hosting professional karaoke shows!
           
-          See the [README](README.md) for full setup instructions.
+          ### 🎯 Features
+          - **Offline-First Operation** - Works without internet connection
+          - **Multi-Screen Sync** - Perfect video synchronization across unlimited screens
+          - **Mobile KJ Control** - Manage everything from your phone
+          - **Professional UI** - Beautiful, responsive interface for all devices
+          - **Paper Workflow** - Optimized for traditional paper slip requests
+          - **YouTube Integration** - Download and cache videos on-demand (online mode)
+          
+          See the [Documentation](https://kj.nomadkaraoke.com) for full setup instructions.
         draft: false
         prerelease: false
         
-    - name: Upload Windows Release
-      uses: actions/upload-release-asset@v1
+    - name: Upload Release Assets
+      run: |
+        # Upload all built artifacts to the release
+        for artifact_dir in ./artifacts/*/; do
+          for file in "$artifact_dir"*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename..."
+              gh release upload ${{ github.ref }} "$file" --clobber
+            fi
+          done
+        done
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./kj-nomad-windows-latest/kj-nomad-windows.zip
-        asset_name: kj-nomad-windows.zip
-        asset_content_type: application/zip
-        
-    - name: Upload macOS Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./kj-nomad-macos-latest/kj-nomad-macos-latest.tar.gz
-        asset_name: kj-nomad-macos.tar.gz
-        asset_content_type: application/gzip
-        
-    - name: Upload Linux Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./kj-nomad-ubuntu-latest/kj-nomad-ubuntu-latest.tar.gz
-        asset_name: kj-nomad-linux.tar.gz
-        asset_content_type: application/gzip
 
-  # Deploy Documentation
+  # Update Latest Release Links (for consistent download URLs)
+  update-latest-links:
+    name: Update Latest Release Links
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get version from tag
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Update Cloudflare Pages with latest download links
+      run: |
+        # Update the landing page with latest download links
+        # This will be used by kj.nomadkaraoke.com to show consistent download URLs
+        cat > ./cloudflare/pages/landing/latest-release.json << EOF
+        {
+          "version": "${{ steps.get_version.outputs.version }}",
+          "tag": "${{ github.ref }}",
+          "downloads": {
+            "windows_installer": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-Setup-${{ steps.get_version.outputs.version }}.exe",
+            "windows_portable": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}-win.zip",
+            "macos_intel": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}.dmg",
+            "macos_apple_silicon": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}-arm64.dmg",
+            "linux_appimage": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}.AppImage",
+            "linux_deb": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/kj-nomad_${{ steps.get_version.outputs.version }}_amd64.deb"
+          },
+          "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        }
+        EOF
+        
+    - name: Deploy updated landing page
+      run: |
+        # Deploy to Cloudflare Pages (this would typically use wrangler)
+        echo "Latest release info updated for landing page integration"
+        # In a real deployment, this would push to Cloudflare Pages
+        # wrangler pages publish ./cloudflare/pages/landing --project-name=kj-nomad-landing
+
+  # Deploy Documentation (on main branch)
   deploy-docs:
     name: Deploy Documentation
     runs-on: ubuntu-latest
@@ -356,9 +376,8 @@ jobs:
     - name: Build documentation site
       run: cd client && npm run build
       
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./client/dist
-        cname: kj-nomad.nomadkaraoke.com
+    - name: Deploy to Cloudflare Pages
+      run: |
+        echo "Documentation deployment would happen here"
+        # In a real setup, this would deploy to Cloudflare Pages
+        # wrangler pages publish ./client/dist --project-name=kj-nomad-docs

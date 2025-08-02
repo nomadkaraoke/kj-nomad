@@ -85,7 +85,10 @@ const updatePaperWorkflow = () => {
 };
 updatePaperWorkflow();
 
-const PORT = process.env.PORT || 8080;
+// Parse command line arguments
+const args = process.argv.slice(2);
+const portArg = args.find(arg => arg.startsWith('--port='))?.split('=')[1];
+const PORT = portArg ? parseInt(portArg, 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 8080);
 
 // Serve static files from the React client
 // Try production path first (when frontend is copied to server/public), then development path
