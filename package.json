@@ -28,7 +28,11 @@
     "clean": "rm -rf server/dist client/dist server/public/* */node_modules",
     "setup": "npm install && cd server && npm install && cd ../client && npm install",
     "check-all": "npm run lint && npm run test && npm run build",
-    "iterate": "npm run lint && npm run test && npm run build && npm run dev"
+    "iterate": "npm run lint && npm run test && npm run build && npm run dev",
+    "package": "node package-executable.cjs",
+    "package:quick": "node package-executable.cjs --skip-deps",
+    "package:skip-build": "node package-executable.cjs --skip-build",
+    "release": "npm run check-all && npm run package"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

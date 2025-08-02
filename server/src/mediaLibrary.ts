@@ -29,12 +29,27 @@ const parseFileName = (fileName: string): { artist: string, title: string } => {
   return { artist: artist.trim(), title: title.trim() };
 };
 
-export const scanMediaLibrary = () => {
-  console.log('Scanning media library...');
+export const scanMediaLibrary = (customDirectory?: string) => {
+  const scanDir = customDirectory || mediaDir;
+  console.log(`Scanning media library in: ${scanDir}`);
+  
   try {
-    const files = fs.readdirSync(mediaDir);
+    // Ensure directory exists
+    if (!fs.existsSync(scanDir)) {
+      console.error(`Media directory does not exist: ${scanDir}`);
+      songLibrary = [];
+      fuse = new Fuse([], { keys: ['artist', 'title'], threshold: 0.4 });
+      return;
+    }
+
+    const files = fs.readdirSync(scanDir);
     songLibrary = files
-      .filter(file => !file.startsWith('filler-') && (file.endsWith('.mp4') || file.endsWith('.webm')))
+      .filter(file => {
+        // Filter out filler music and only include video files
+        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm') || file.endsWith('.avi') || file.endsWith('.mov');
+        const isNotFiller = !file.toLowerCase().startsWith('filler-');
+        return isVideoFile && isNotFiller;
+      })
       .map((file, index) => {
         const { artist, title } = parseFileName(file);
         return {

@@ -16,12 +16,26 @@ let nowPlayingIndex = -1;
 
 const mediaDir = path.join(__dirname, '../media');
 
-export const scanFillerMusic = () => {
-  console.log('Scanning for filler music...');
+export const scanFillerMusic = (customDirectory?: string) => {
+  const scanDir = customDirectory || mediaDir;
+  console.log(`Scanning for filler music in: ${scanDir}`);
+  
   try {
-    const files = fs.readdirSync(mediaDir);
+    // Ensure directory exists
+    if (!fs.existsSync(scanDir)) {
+      console.error(`Filler music directory does not exist: ${scanDir}`);
+      fillerPlaylist = [];
+      return;
+    }
+
+    const files = fs.readdirSync(scanDir);
     fillerPlaylist = files
-      .filter(file => file.startsWith('filler-') && (file.endsWith('.mp4') || file.endsWith('.webm')))
+      .filter(file => {
+        // Filter for filler music files (start with 'filler-') and video extensions
+        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm') || file.endsWith('.avi') || file.endsWith('.mov');
+        const isFillerFile = file.toLowerCase().startsWith('filler-');
+        return isVideoFile && isFillerFile;
+      })
       .map((file, index) => ({
         id: `${index}`,
         fileName: file,

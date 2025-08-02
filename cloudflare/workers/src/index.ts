@@ -144,7 +144,15 @@ async function getSession(sessionId: string, env: Env): Promise<Response> {
 }
 
 async function registerLocalServer(sessionId: string, request: Request, env: Env): Promise<Response> {
-  const { localIP, port } = await request.json() as { localIP: string; port?: number };
+  const registration = await request.json() as {
+    sessionId: string;
+    localServerIP: string;
+    localServerPort: number;
+    kjName?: string;
+    venue?: string;
+    hasLocalLibrary: boolean;
+    allowYouTube: boolean;
+  };
   
   const sessionData = await env.SESSIONS_KV.get(`session:${sessionId}`);
   if (!sessionData) {
@@ -152,13 +160,27 @@ async function registerLocalServer(sessionId: string, request: Request, env: Env
   }
 
   const session: SessionData = JSON.parse(sessionData);
-  session.localServerIP = localIP;
-  session.localServerPort = port || 8080;
+  
+  // Update session with local server information
+  session.localServerIP = registration.localServerIP;
+  session.localServerPort = registration.localServerPort;
+  session.kjName = registration.kjName || session.kjName;
+  session.venue = registration.venue || session.venue;
+  session.hasLocalLibrary = registration.hasLocalLibrary;
+  session.allowYouTube = registration.allowYouTube;
   session.lastSeen = Date.now();
 
   await env.SESSIONS_KV.put(`session:${sessionId}`, JSON.stringify(session));
 
-  return jsonResponse({ success: true, data: { message: 'Local server registered successfully' } });
+  return jsonResponse({ 
+    success: true, 
+    data: { 
+      message: 'Local server registered successfully',
+      sessionId,
+      localServerIP: session.localServerIP,
+      localServerPort: session.localServerPort
+    } 
+  });
 }
 
 async function updateHeartbeat(sessionId: string, env: Env): Promise<Response> {
