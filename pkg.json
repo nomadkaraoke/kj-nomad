@@ -1,0 +1,22 @@
+{
+  "name": "kj-nomad",
+  "version": "1.0.0",
+  "description": "Professional Karaoke Hosting System",
+  "main": "server/dist/index.js",
+  "scripts": {},
+  "pkg": {
+    "targets": [
+      "node18-win-x64",
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-linux-x64",
+      "node18-linux-arm64"
+    ],
+    "assets": [
+      "server/public/**/*",
+      "server/media/**/*",
+      "server/config/**/*"
+    ],
+    "outputPath": "dist"
+  }
+}

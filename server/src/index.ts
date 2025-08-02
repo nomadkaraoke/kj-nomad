@@ -508,9 +508,14 @@ app.get('/api/paper/slips', (req, res) => {
     console.log('[API] GET /api/paper/slips - Get paper slips');
     const { status, priority, singer, limit } = req.query;
     
-    const filter: any = {};
-    if (status) filter.status = (status as string).split(',');
-    if (priority) filter.priority = (priority as string).split(',');
+    const filter: {
+        status?: ('pending' | 'matched' | 'queued' | 'duplicate' | 'unavailable' | 'rejected')[];
+        priority?: ('normal' | 'high' | 'vip')[];
+        singer?: string;
+        limit?: number;
+    } = {};
+    if (status) filter.status = (status as string).split(',') as ('pending' | 'matched' | 'queued' | 'duplicate' | 'unavailable' | 'rejected')[];
+    if (priority) filter.priority = (priority as string).split(',') as ('normal' | 'high' | 'vip')[];
     if (singer) filter.singer = singer as string;
     if (limit) filter.limit = parseInt(limit as string);
     
@@ -799,7 +804,11 @@ const broadcast = (data: WebSocketMessage) => {
     
     // Also send to cloud relay if connected
     if (cloudConnector.isCloudMode()) {
-        cloudConnector.sendToCloud(data);
+        cloudConnector.sendToCloud({
+            type: data.type,
+            payload: data.payload as Record<string, unknown>,
+            timestamp: Date.now()
+        });
     }
 };
 
@@ -1042,7 +1051,7 @@ server.listen(PORT, async () => {
                    process.env.SESSION_ID;
   
   let cloudMode = false;
-  let localIP = cloudConnector.getStatus().localIP;
+  const localIP = cloudConnector.getStatus().localIP;
   
   if (sessionId) {
     // Auto-connect to cloud session
@@ -1076,10 +1085,10 @@ server.listen(PORT, async () => {
     console.log('🚀 Auto-launching admin interface...\n');
     launchAdminInterface(PORT as number).then((success) => {
       if (!success) {
-        console.log('💡 Please manually open: http://localhost:' + PORT);
+        console.log(`💡 Please manually open: http://localhost:${  PORT}`);
       }
     });
   } else {
-    console.log('ℹ️  Auto-launch disabled. Manual access: http://localhost:' + PORT + '\n');
+    console.log(`ℹ️  Auto-launch disabled. Manual access: http://localhost:${  PORT  }\n`);
   }
 });

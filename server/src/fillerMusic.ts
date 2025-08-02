@@ -31,8 +31,8 @@ export const scanFillerMusic = (customDirectory?: string) => {
     const files = fs.readdirSync(scanDir);
     fillerPlaylist = files
       .filter(file => {
-        // Filter for filler music files (start with 'filler-') and video extensions
-        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm') || file.endsWith('.avi') || file.endsWith('.mov');
+        // Filter for filler music files (start with 'filler-') and supported video extensions
+        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm');
         const isFillerFile = file.toLowerCase().startsWith('filler-');
         return isVideoFile && isFillerFile;
       })

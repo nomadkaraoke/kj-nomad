@@ -8,9 +8,26 @@ import {
   resetMediaLibrary
 } from '../mediaLibrary';
 
-// Mock fs module
-vi.mock('fs');
-vi.mock('path');
+// Mock fs and path modules
+vi.mock('fs', () => ({
+  default: {
+    existsSync: vi.fn(),
+    readdirSync: vi.fn(),
+  }
+}));
+
+vi.mock('path', () => ({
+  default: {
+    join: vi.fn(),
+    parse: vi.fn(),
+    extname: vi.fn(),
+    dirname: vi.fn(),
+  }
+}));
+
+vi.mock('url', () => ({
+  fileURLToPath: vi.fn(() => '/mocked/path/mediaLibrary.js')
+}));
 
 const mockFs = vi.mocked(fs);
 const mockPath = vi.mocked(path);
@@ -20,15 +37,25 @@ describe('mediaLibrary', () => {
     vi.clearAllMocks();
     resetMediaLibrary(); // Reset media library state before each test
     
-    // Setup path mocks
+    // Setup default mocks
+    mockFs.existsSync.mockReturnValue(true);
     mockPath.join.mockImplementation((...args) => args.join('/'));
-    mockPath.parse.mockImplementation((filePath) => ({
-      root: '',
-      dir: '',
-      base: filePath,
-      ext: path.extname(filePath),
-      name: filePath.replace(path.extname(filePath), '')
-    }));
+    mockPath.dirname.mockReturnValue('/mocked/path');
+    mockPath.extname.mockImplementation((filePath) => {
+      const ext = filePath.split('.').pop();
+      return ext ? `.${ext}` : '';
+    });
+    mockPath.parse.mockImplementation((filePath) => {
+      const ext = mockPath.extname(filePath);
+      const name = filePath.replace(ext, '');
+      return {
+        root: '',
+        dir: '',
+        base: filePath,
+        ext,
+        name
+      };
+    });
   });
 
   afterEach(() => {

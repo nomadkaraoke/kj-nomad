@@ -61,10 +61,46 @@ export interface DeviceManagerStats {
   syncQuality: 'excellent' | 'good' | 'fair' | 'poor';
 }
 
+// Device message interfaces
+interface DeviceMessage {
+  type: string;
+  payload?: Record<string, unknown>;
+  timestamp?: number;
+  deviceId?: string;
+}
+
+interface DeviceStatusData {
+  video?: {
+    url: string;
+    title: string;
+    currentTime: number;
+    duration: number;
+    buffered: number;
+  };
+  audio?: {
+    volume: number;
+    muted: boolean;
+  };
+  syncStats?: {
+    clockOffset: number;
+    averageLatency: number;
+    lastSyncError?: number;
+  };
+}
+
+interface GroupControlData {
+  volume?: number;
+  seek?: number;
+  video?: {
+    url: string;
+    currentTime: number;
+  };
+}
+
 export class DeviceManager extends EventEmitter {
   private devices: Map<string, PlayerDevice> = new Map();
   private groups: Map<string, DeviceGroup> = new Map();
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private readonly HEARTBEAT_INTERVAL = 30000; // 30 seconds
   private readonly ACTIVITY_TIMEOUT = 60000; // 1 minute
 
@@ -155,7 +191,7 @@ export class DeviceManager extends EventEmitter {
   /**
    * Update device status
    */
-  updateDeviceStatus(id: string, status: PlayerDevice['status'], data?: any): void {
+  updateDeviceStatus(id: string, status: PlayerDevice['status'], data?: DeviceStatusData): void {
     const device = this.devices.get(id);
     if (!device) return;
 
@@ -176,7 +212,7 @@ export class DeviceManager extends EventEmitter {
   /**
    * Send command to a specific device
    */
-  sendToDevice(deviceId: string, message: any): boolean {
+  sendToDevice(deviceId: string, message: DeviceMessage): boolean {
     const device = this.devices.get(deviceId);
     if (!device || !device.isOnline || device.ws.readyState !== device.ws.OPEN) {
       return false;
@@ -196,7 +232,7 @@ export class DeviceManager extends EventEmitter {
   /**
    * Send command to multiple devices
    */
-  sendToDevices(deviceIds: string[], message: any): number {
+  sendToDevices(deviceIds: string[], message: DeviceMessage): number {
     let successCount = 0;
     for (const deviceId of deviceIds) {
       if (this.sendToDevice(deviceId, message)) {
@@ -209,7 +245,7 @@ export class DeviceManager extends EventEmitter {
   /**
    * Send command to all online devices
    */
-  broadcastToDevices(message: any): number {
+  broadcastToDevices(message: DeviceMessage): number {
     const onlineDevices = Array.from(this.devices.values())
       .filter(d => d.isOnline)
       .map(d => d.id);
@@ -299,7 +335,7 @@ export class DeviceManager extends EventEmitter {
   /**
    * Control group playback
    */
-  controlGroup(groupId: string, command: 'play' | 'pause' | 'stop' | 'mute' | 'unmute', data?: any): number {
+  controlGroup(groupId: string, command: 'play' | 'pause' | 'stop' | 'mute' | 'unmute', data?: GroupControlData): number {
     const group = this.groups.get(groupId);
     if (!group) return 0;
 

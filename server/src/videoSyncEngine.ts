@@ -45,8 +45,8 @@ interface SyncState {
 
 export class VideoSyncEngine {
   private syncState: SyncState;
-  private clockSyncInterval: NodeJS.Timeout | null = null;
-  private syncCheckInterval: NodeJS.Timeout | null = null;
+  private clockSyncInterval: ReturnType<typeof setInterval> | null = null;
+  private syncCheckInterval: ReturnType<typeof setInterval> | null = null;
   private readonly SYNC_TOLERANCE = 100; // 100ms tolerance
   private readonly CLOCK_SYNC_INTERVAL = 30000; // 30 seconds
   private readonly PRELOAD_BUFFER_TIME = 2000; // 2 seconds preload time
@@ -201,7 +201,6 @@ export class VideoSyncEngine {
       commandId: syncCommand.commandId
     };
 
-    let preloadSuccessCount = 0;
     for (const client of playerClients) {
       if (client.ws.readyState === client.ws.OPEN) {
         client.ws.send(JSON.stringify(preloadCommand));

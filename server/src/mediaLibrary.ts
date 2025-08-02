@@ -45,8 +45,8 @@ export const scanMediaLibrary = (customDirectory?: string) => {
     const files = fs.readdirSync(scanDir);
     songLibrary = files
       .filter(file => {
-        // Filter out filler music and only include video files
-        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm') || file.endsWith('.avi') || file.endsWith('.mov');
+        // Filter out filler music and only include supported video files
+        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm');
         const isNotFiller = !file.toLowerCase().startsWith('filler-');
         return isVideoFile && isNotFiller;
       })

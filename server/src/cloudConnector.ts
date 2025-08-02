@@ -13,6 +13,13 @@ interface CloudConfig {
   enableCloud: boolean;
 }
 
+interface CloudMessage {
+  type: string;
+  payload?: Record<string, unknown>;
+  timestamp?: number;
+  sessionId?: string;
+}
+
 interface SessionRegistration {
   sessionId: string;
   localServerIP: string;
@@ -30,10 +37,10 @@ export class CloudConnector {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reconnectDelay: number = 5000; // 5 seconds
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   
   // Callback for broadcasting messages to local clients
-  private localBroadcast: ((data: any) => void) | null = null;
+  private localBroadcast: ((data: CloudMessage) => void) | null = null;
 
   constructor(config: CloudConfig) {
     this.config = config;
@@ -42,7 +49,7 @@ export class CloudConnector {
   /**
    * Set the local broadcast function
    */
-  setLocalBroadcast(broadcastFn: (data: any) => void) {
+  setLocalBroadcast(broadcastFn: (data: CloudMessage) => void) {
     this.localBroadcast = broadcastFn;
   }
 
@@ -182,7 +189,7 @@ export class CloudConnector {
   /**
    * Send message to cloud relay
    */
-  sendToCloud(message: any): boolean {
+  sendToCloud(message: CloudMessage): boolean {
     if (!this.isConnected || !this.cloudWs) {
       console.warn('[CloudConnector] Not connected to cloud, message dropped:', message);
       return false;

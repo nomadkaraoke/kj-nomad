@@ -167,7 +167,7 @@ export class PaperWorkflowManager extends EventEmitter {
 
     let artist = '';
     let title = '';
-    let bestMatch: any = null;
+    let bestMatch: { item: Song; score?: number } | null = null;
 
     for (const pattern of patterns) {
       const match = request.match(pattern);
@@ -355,7 +355,7 @@ export class PaperWorkflowManager extends EventEmitter {
     item: Song | string | QuickEntryTemplate;
     confidence: number;
   }> {
-    const suggestions: Array<{ type: 'song' | 'singer' | 'template'; item: any; confidence: number }> = [];
+    const suggestions: Array<{ type: 'song' | 'singer' | 'template'; item: Song | string | QuickEntryTemplate; confidence: number }> = [];
 
     // Song suggestions
     if (this.songFuse) {
@@ -419,11 +419,13 @@ export class PaperWorkflowManager extends EventEmitter {
     let slips = Array.from(this.slips.values());
 
     if (filter) {
-      if (filter.status) {
-        slips = slips.filter(s => filter.status!.includes(s.status));
+      if (filter.status && Array.isArray(filter.status)) {
+        const statusArray = filter.status;
+        slips = slips.filter(s => statusArray.includes(s.status));
       }
-      if (filter.priority) {
-        slips = slips.filter(s => filter.priority!.includes(s.priority));
+      if (filter.priority && Array.isArray(filter.priority)) {
+        const priorityArray = filter.priority;
+        slips = slips.filter(s => priorityArray.includes(s.priority));
       }
       if (filter.singer) {
         const query = filter.singer.toLowerCase();
