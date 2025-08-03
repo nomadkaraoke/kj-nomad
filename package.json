@@ -81,7 +81,7 @@
     ],
     "mac": {
       "category": "public.app-category.entertainment",
-      "icon": "electron/assets/icon.icns",
+      "icon": "electron/assets/icons/mac/icon.icns",
       "identity": null,
       "target": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "win": {
-      "icon": "electron/assets/icon.ico",
+      "icon": "electron/assets/icons/win/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -118,6 +118,10 @@
         },
         {
           "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "dir",
           "arch": ["x64"]
         }
       ]
