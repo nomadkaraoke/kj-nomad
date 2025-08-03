@@ -129,6 +129,19 @@ KJ-Nomad supports two distinct deployment modes:
 
 ## ❌ **Still Not Implemented**
 
+### Tipping & Monetization
+- **❌ Payment Gateway Integration**: No system for processing tips.
+- **❌ Tipping UI**: No interface for singers to give tips.
+- **❌ "Love Heart" Feature**: The social recognition feature is not implemented.
+- **❌ Gated Features**: No mechanism to restrict features to tippers.
+- **❌ "Tip Prize Raffle"**: The gamification/raffle system is not implemented.
+- **❌ "Tip to Skip"**: The priority bidding system is not implemented.
+
+### Payments & Payouts
+- **❌ Singer Payment Methods**: While planned, the UI and backend integration for accepting Cards, PayPal, Venmo, and Cash App is not implemented.
+- **❌ KJ Payout System**: The Stripe Connect onboarding flow for KJs is not implemented.
+- **❌ Automated Payouts**: The logic for nightly automated payouts via Direct Deposit or Debit Card is not implemented.
+
 ### Professional Features
 - **❌ Service Discovery (mDNS/Bonjour)**: Zero-configuration networking not implemented
 - **❌ QR Code Generation**: Automatic QR codes for easy device access not implemented

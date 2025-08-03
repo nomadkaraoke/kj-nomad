@@ -210,6 +210,29 @@ export class SessionRelay {
 - Auto-fade when next song begins
 - Separate filler music library management
 
+### 4.4 Tipping Engine (Online Mode Only)
+
+**Goal:** Facilitate and encourage tipping to provide a revenue stream for both KJs and the platform.
+
+**Components:**
+- **Payment Processor Integration (Stripe Connect):** Utilize Stripe Connect to manage the entire lifecycle of funds. This includes:
+    - **Onboarding KJs:** A flow for KJs to connect their bank accounts securely.
+    - **Processing Charges:** Accepting payments from singers using various methods (Cards, PayPal, Venmo, Cash App Pay).
+    - **Holding Funds:** Aggregating funds for a session.
+    - **Automated Payouts:** Triggering nightly payouts to KJs via Direct Deposit (ACH) or to a debit card.
+- **Tipping Configuration API:** Endpoints for KJs to manage tipping settings (e.g., enable/disable features, set minimum tip amounts, configure raffle prizes, manage payout settings).
+- **Real-time Event Bus:** Utilize the existing WebSocket (Durable Objects) infrastructure to broadcast tipping events instantly (e.g., a singer has tipped, display the 'heart' icon).
+- **State Management:** Extend the session state to include tipping information, such as which singers have tipped and raffle entries.
+- **Queue Management Logic:** The existing `songQueue.ts` will need to be enhanced with logic to handle the reordering of singers based on "Tip to Skip" events, while respecting any fairness rules configured by the KJ.
+
+**Data Flow:**
+1. **Singer UI:** Presents tipping options during song request.
+2. **Cloudflare Worker:** Receives tokenized payment information from the singer's client.
+3. **Payment Gateway (Stripe):** The Worker securely communicates with the payment gateway to process the charge.
+4. **Durable Object:** Upon successful payment, the Worker notifies the session's Durable Object.
+5. **Broadcast:** The Durable Object broadcasts the `tip_received` event to all connected clients (Admin, Players).
+6. **Client UIs:** Player screens update to show the 'heart' icon; Admin UI updates with tipping analytics.
+
 ## 5. Implementation Roadmap
 
 ### Phase 1: Infrastructure & Landing Page ✅ **COMPLETED**
@@ -362,6 +385,17 @@ Ready for Phase 5 advanced features.
 - [ ] Per-device control toggles (audio/ticker/sidebar)
 - [ ] Singer profile management
 - [ ] Advanced queue management (VIP, priority)
+- [ ] **Tipping Engine & Monetization:**
+    - [ ] Payment gateway integration (Stripe)
+    - [ ] "Gentle Nudge" tipping UI in singer request flow
+    - [ ] "Love Heart" social recognition on player screens
+    - [ ] KJ-configurable gated features (e.g., YouTube access for tippers)
+    - [ ] "Tip Prize Raffle" gamification system
+    - [ ] "Tip to Skip" priority bidding system
+- [ ] **Payment & Payout System:**
+    - [ ] Stripe Connect integration for KJ onboarding and automated payouts.
+    - [ ] Support for multiple singer payment methods (Cards, PayPal, Venmo, Cash App).
+    - [ ] Nightly automated payout system (Direct Deposit, Debit Card).
 - [ ] Comprehensive monitoring and analytics
 
 **Technical Tasks:**
@@ -402,6 +436,7 @@ kj-nomad/
 └── docs/
     ├── ARCHITECTURE.md     # This file
     ├── FEATURES.md         # Feature implementation status
+    ├── MONETIZATION.md     # Monetization strategy
     └── API.md              # API documentation
 ```
 
