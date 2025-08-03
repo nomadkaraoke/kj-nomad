@@ -167,6 +167,7 @@ jobs:
       
     - name: List files (Windows)
       if: runner.os == 'Windows'
+      shell: cmd
       run: dir /s
       
     - name: Run packaging test (Linux)
