@@ -145,9 +145,61 @@
             content: '✓';
             color: var(--yellow);
             font-weight: bold;
-            margin-right: 0.75rem;
+            margin-right: 1.5rem;
             font-size: 1.2rem;
             line-height: 1.6;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1rem 2rem;
+            align-items: start;
+        }
+
+        .feature-list li {
+            display: contents; /* Allows li to be part of the grid */
+        }
+
+        .feature-list .feature-title,
+        .feature-list .feature-description {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-list .feature-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .feature-list li::before {
+            grid-column: 1;
+            text-align: right;
+            margin-right: 0;
+        }
+        
+        .feature-list .feature-title {
+            grid-column: 2;
+        }
+
+        .feature-list .feature-description {
+            grid-column: 3;
+        }
+        
+        @media (max-width: 768px) {
+            .feature-list {
+                grid-template-columns: auto 1fr;
+                gap: 0.5rem 1rem;
+            }
+            .feature-list .feature-title,
+            .feature-list .feature-description {
+                grid-column: 2 / -1;
+            }
+            .feature-list .feature-title {
+                margin-bottom: 0.25rem;
+            }
         }
         
         .highlight {
@@ -234,22 +286,46 @@
             <div class="pricing-section">
                 <h3>The Tipping Engine: More Tips for You</h3>
                 <p>These features are designed to maximize your earnings:</p>
-                <ul>
-                    <li><strong>Gentle Nudge Tipping:</strong> A simple, non-intrusive option for singers to add a tip when they request a song.</li>
-                    <li><strong>Social Recognition ❤️:</strong> Singers who tip get a heart icon next to their name on the rotation screen, encouraging others to join in.</li>
-                    <li><strong>Tip to Skip:</strong> An optional feature allowing singers to tip for priority in the queue—a powerful earner for busy nights.</li>
-                    <li><strong>Tip Prize Raffle:</strong> Gamify the experience by offering a prize draw for singers who tip, building excitement and loyalty.</li>
-                    <li><strong>Gated Features:</strong> Optionally restrict certain features, like YouTube requests, to singers who have tipped.</li>
+                <ul class="feature-list">
+                    <li>
+                        <span class="feature-title">Gentle Nudge Tipping:</span>
+                        <span class="feature-description">A simple, non-intrusive option for singers to add a tip when they request a song.</span>
+                    </li>
+                    <li>
+                        <span class="feature-title">Social Recognition ❤️:</span>
+                        <span class="feature-description">Singers who tip get a heart icon next to their name on the rotation screen, encouraging others to join in.</span>
+                    </li>
+                    <li>
+                        <span class="feature-title">Tip to Skip:</span>
+                        <span class="feature-description">An optional feature allowing singers to tip for priority in the queue—a powerful earner for busy nights.</span>
+                    </li>
+                    <li>
+                        <span class="feature-title">Tip Prize Raffle:</span>
+                        <span class="feature-description">Gamify the experience by offering a prize draw for singers who tip, building excitement and loyalty.</span>
+                    </li>
+                    <li>
+                        <span class="feature-title">Gated Features:</span>
+                        <span class="feature-description">Optionally restrict certain features, like YouTube requests, to singers who have tipped.</span>
+                    </li>
                 </ul>
             </div>
             
             <div class="pricing-section">
                 <h3>Seamless Payments & Payouts</h3>
                 <p>We make the money part easy and secure for everyone.</p>
-                <ul>
-                    <li><strong>Easy for Singers:</strong> We accept all major payment methods, including Debit/Credit Cards, PayPal, Venmo, and Cash App.</li>
-                    <li><strong>Automatic for KJs:</strong> Your earnings are automatically deposited to your account. We support Direct Deposit (ACH) and Payout to Debit Card.</li>
-                    <li><strong>Coming Soon:</strong> We are working on adding payouts to PayPal and Venmo.</li>
+                <ul class="feature-list">
+                    <li>
+                        <span class="feature-title">Easy for Singers:</span>
+                        <span class="feature-description">We accept all major payment methods, including Debit/Credit Cards, PayPal, Venmo, and Cash App.</span>
+                    </li>
+                    <li>
+                        <span class="feature-title">Automatic for KJs:</span>
+                        <span class="feature-description">Your earnings are automatically deposited to your account. We support Direct Deposit (ACH) and Payout to Debit Card.</span>
+                    </li>
+                    <li>
+                        <span class="feature-title">Coming Soon:</span>
+                        <span class="feature-description">We are working on adding payouts to PayPal and Venmo.</span>
+                    </li>
                 </ul>
             </div>
 
