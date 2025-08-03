@@ -146,13 +146,43 @@ jobs:
       with:
         node-version: '18'
         
+    - name: Cache root node_modules
+      uses: actions/cache@v4
+      id: cache-root-modules
+      with:
+        path: ./node_modules
+        key: ${{ runner.os }}-node-root-${{ hashFiles('./package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-root-
+
     - name: Install root dependencies
+      if: steps.cache-root-modules.outputs.cache-hit != 'true'
       run: npm ci
         
+    - name: Cache server node_modules
+      uses: actions/cache@v4
+      id: cache-server-modules
+      with:
+        path: ./server/node_modules
+        key: ${{ runner.os }}-node-server-${{ hashFiles('./server/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-server-
+
     - name: Install backend dependencies
+      if: steps.cache-server-modules.outputs.cache-hit != 'true'
       run: cd server && npm ci
       
+    - name: Cache client node_modules
+      uses: actions/cache@v4
+      id: cache-client-modules
+      with:
+        path: ./client/node_modules
+        key: ${{ runner.os }}-node-client-${{ hashFiles('./client/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-client-
+
     - name: Install frontend dependencies
+      if: steps.cache-client-modules.outputs.cache-hit != 'true'
       run: cd client && npm ci
       
     - name: Debug Information

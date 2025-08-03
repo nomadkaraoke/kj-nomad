@@ -131,7 +131,7 @@ function testServerStartup() {
     }
     
     // Start the executable
-    const child = spawn(executablePath, ['--no-sandbox'], {
+    const child = spawn(executablePath, ['--no-sandbox', '--disable-gpu'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
