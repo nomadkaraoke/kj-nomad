@@ -540,36 +540,28 @@
 
     <script>
         // Download functionality
-        let releaseData = null;
-
-        async function loadReleaseData() {
-            try {
-                const response = await fetch('/latest-release.json');
-                releaseData = await response.json();
-                updateDownloadButtons();
-            } catch (error) {
-                console.error('Failed to load release data:', error);
-                // Fallback to GitHub releases page
-                releaseData = {
-                    version: "latest",
-                    downloads: {
-                        windows_installer: "https://github.com/nomadkaraoke/kj-nomad/releases/latest",
-                        macos_intel: "https://github.com/nomadkaraoke/kj-nomad/releases/latest",
-                        linux_appimage: "https://github.com/nomadkaraoke/kj-nomad/releases/latest"
-                    }
-                };
-                updateDownloadButtons();
+        const releaseData = {
+            version: "1.0.0",
+            repo: "nomadkaraoke/kj-nomad",
+            downloads: {
+                windows_installer: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-Setup-1.0.0.exe`,
+                windows_portable: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0-win.zip`,
+                macos_intel: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.dmg`,
+                macos_apple_silicon: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0-arm64.dmg`,
+                linux_appimage: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.AppImage`,
+                linux_deb: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/kj-nomad_1.0.0_amd64.deb`
             }
-        }
+        };
 
         function updateDownloadButtons() {
             const localButton = document.querySelector('.local-mode .cta-button');
-            if (localButton && releaseData) {
+            const onlineButton = document.querySelector('.online-mode .cta-button');
+            
+            if (localButton) {
                 localButton.textContent = `Download v${releaseData.version}`;
-                localButton.onclick = (e) => {
-                    e.stopPropagation();
-                    showDownloadOptions();
-                };
+            }
+            if (onlineButton) {
+                onlineButton.textContent = `Download v${releaseData.version}`;
             }
         }
 

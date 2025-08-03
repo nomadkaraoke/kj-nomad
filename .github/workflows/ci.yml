@@ -360,40 +360,6 @@ jobs:
     - name: Get short SHA
       id: get_sha
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      
-    - name: Update release JSON
-      id: update_json
-      run: |
-        # Find asset files
-        WINDOWS_INSTALLER=$(find ./artifacts/electron-win32 -name '*Setup*.exe' -printf "%f")
-        WINDOWS_PORTABLE=$(find ./artifacts/electron-win32 -name '*.zip' -printf "%f")
-        MACOS_INTEL=$(find ./artifacts/electron-darwin -name '*.dmg' ! -name '*-arm64.dmg' -printf "%f")
-        MACOS_ARM=$(find ./artifacts/electron-darwin -name '*-arm64.dmg' -printf "%f")
-        LINUX_APPIMAGE=$(find ./artifacts/electron-linux -name '*.AppImage' -printf "%f")
-        LINUX_DEB=$(find ./artifacts/electron-linux -name '*.deb' -printf "%f")
-
-        # Construct JSON
-        cat > ./cloudflare/pages/landing/latest-release.json << EOF
-        {
-          "version": "main-${{ steps.get_sha.outputs.sha_short }}",
-          "tag": "latest",
-          "downloads": {
-            "windows_installer": "https://github.com/${{ github.repository }}/releases/download/latest/${WINDOWS_INSTALLER}",
-            "windows_portable": "https://github.com/${{ github.repository }}/releases/download/latest/${WINDOWS_PORTABLE}",
-            "macos_intel": "https://github.com/${{ github.repository }}/releases/download/latest/${MACOS_INTEL}",
-            "macos_apple_silicon": "https://github.com/${{ github.repository }}/releases/download/latest/${MACOS_ARM}",
-            "linux_appimage": "https://github.com/${{ github.repository }}/releases/download/latest/${LINUX_APPIMAGE}",
-            "linux_deb": "https://github.com/${{ github.repository }}/releases/download/latest/${LINUX_DEB}"
-          },
-          "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        }
-        EOF
-        
-    - name: Commit and push updated release info
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: "ci: update latest release links [skip ci]"
-        file_pattern: cloudflare/pages/landing/latest-release.json
 
     - name: Update latest tag
       run: |
