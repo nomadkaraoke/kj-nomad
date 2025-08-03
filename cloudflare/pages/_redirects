@@ -1,0 +1,8 @@
+# This file controls the routing for the Cloudflare Pages deployment.
+# Adding this file, even with just comments, can often disable default SPA routing.
+# The presence of this file signals that we are defining our own routing rules.
+
+# The following rule is not strictly necessary for existing files, but can help
+# in cases where the default routing is misbehaving.
+# It ensures that a request to /pricing.html serves the pricing.html file.
+/pricing.html /pricing.html 200

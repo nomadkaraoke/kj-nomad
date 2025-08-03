@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing & Monetization - KJ-Nomad</title>
+    <meta name="description" content="Learn about the KJ-Nomad monetization model. Free software for KJs, powered by a small commission on tips.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <style>
+        :root {
+            --pink: #ff7acc;
+            --blue: #230a89;
+            --yellow: #ffdf6b;
+            --dark-bg: #0a0a0f;
+            --dark-card: #1a1a2e;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0c4;
+            --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Header */
+        .header {
+            padding: 2rem 0;
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 122, 204, 0.1);
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Righteous', cursive;
+            font-size: 2rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--pink);
+        }
+        
+        .main-content {
+            padding: 4rem 0;
+        }
+
+        .section-title {
+            font-family: 'Righteous', cursive;
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+        }
+
+        .pricing-section {
+            background: var(--dark-card);
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 3rem;
+            border: 1px solid rgba(255, 122, 204, 0.1);
+        }
+
+        .pricing-section h3 {
+            font-family: 'Righteous', cursive;
+            font-size: 2rem;
+            color: var(--pink);
+            margin-bottom: 1rem;
+        }
+        
+        .pricing-section p, .pricing-section li {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .pricing-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .pricing-section li {
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .pricing-section li::before {
+            content: '✓';
+            color: var(--yellow);
+            font-weight: bold;
+            margin-right: 0.75rem;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+        
+        .highlight {
+            color: var(--yellow);
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 4rem 0 2rem;
+            background: var(--dark-card);
+            border-top: 1px solid rgba(255, 122, 204, 0.1);
+            text-align: center;
+        }
+
+        .footer-content {
+            margin-bottom: 2rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--pink);
+        }
+
+        .copyright {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav container">
+            <a href="/" class="logo">KJ-NOMAD</a>
+            <ul class="nav-links">
+                <li><a href="/#features">Features</a></li>
+                <li><a href="/#modes">Get Started</a></li>
+                <li><a href="/pricing.html">Pricing</a></li>
+                <li><a href="https://nomadkaraoke.com">Nomad Karaoke</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <h2 class="section-title">Our Monetization Model</h2>
+            <p class="section-subtitle">
+                We believe in empowering KJs. That's why our professional software is completely free to use. 
+                Our revenue comes from a simple, transparent partnership that helps you earn more.
+            </p>
+
+            <div class="pricing-section">
+                <h3>The Software is Free. Seriously.</h3>
+                <p>
+                    The KJ-Nomad application is <span class="highlight">100% free for KJs</span>. No subscriptions, no hidden fees, no feature limits. 
+                    Our goal is to give you the best tool for the job without adding to your costs. We only make money when you do.
+                </p>
+            </div>
+            
+            <div class="pricing-section">
+                <h3>How We Make Money: A Win-Win Partnership</h3>
+                <p>
+                    We integrate a seamless tipping system into the online mode. When singers tip you through the app, 
+                    we keep a small <span class="highlight">10% commission</span>.
+                </p>
+                <p>
+                    Our built-in features are designed to encourage singers to tip more often and in larger amounts than they normally would. 
+                    The result? You take home more money at the end of the night, even after our commission.
+                </p>
+            </div>
+
+            <div class="pricing-section">
+                <h3>The Tipping Engine: More Tips for You</h3>
+                <p>These features are designed to maximize your earnings:</p>
+                <ul>
+                    <li><strong>Gentle Nudge Tipping:</strong> A simple, non-intrusive option for singers to add a tip when they request a song.</li>
+                    <li><strong>Social Recognition ❤️:</strong> Singers who tip get a heart icon next to their name on the rotation screen, encouraging others to join in.</li>
+                    <li><strong>Tip to Skip:</strong> An optional feature allowing singers to tip for priority in the queue—a powerful earner for busy nights.</li>
+                    <li><strong>Tip Prize Raffle:</strong> Gamify the experience by offering a prize draw for singers who tip, building excitement and loyalty.</li>
+                    <li><strong>Gated Features:</strong> Optionally restrict certain features, like YouTube requests, to singers who have tipped.</li>
+                </ul>
+            </div>
+            
+            <div class="pricing-section">
+                <h3>Seamless Payments & Payouts</h3>
+                <p>We make the money part easy and secure for everyone.</p>
+                <ul>
+                    <li><strong>Easy for Singers:</strong> We accept all major payment methods, including Debit/Credit Cards, PayPal, Venmo, and Cash App.</li>
+                    <li><strong>Automatic for KJs:</strong> Your earnings are automatically deposited to your account. We support Direct Deposit (ACH) and Payout to Debit Card.</li>
+                    <li><strong>Coming Soon:</strong> We are working on adding payouts to PayPal and Venmo.</li>
+                </ul>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="/">Home</a>
+                    <a href="https://nomadkaraoke.com">Nomad Karaoke</a>
+                    <a href="https://github.com/nomadkaraoke/kj-nomad">GitHub</a>
+                    <a href="mailto:support@nomadkaraoke.com">Support</a>
+                </div>
+                <p class="copyright">
+                    © 2025 Nomad Karaoke. Building a better karaoke experience for everyone.
+                </p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
