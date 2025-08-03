@@ -8,132 +8,187 @@ on:
     branches: [ main ]
 
 jobs:
-  # # Backend Testing
-  # backend-test:
-  #   name: Backend Tests
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ./server
+  # Backend Testing
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
     
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
-  #       cache: 'npm'
-  #       cache-dependency-path: './server/package-lock.json'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './server/package-lock.json'
         
-  #   - name: Install dependencies
-  #     run: npm ci
+    - name: Install dependencies
+      run: npm ci
       
-  #   - name: Run tests with coverage
-  #     run: npm test -- --run
+    - name: Run tests with coverage
+      run: npm test -- --run
       
-  #   - name: Upload coverage to Codecov
-  #     uses: codecov/codecov-action@v4
-  #     with:
-  #       directory: ./server/coverage
-  #       flags: backend
-  #       name: backend-coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ./server/coverage
+        flags: backend
+        name: backend-coverage
         
-  # # Frontend Testing  
-  # frontend-test:
-  #   name: Frontend Tests
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ./client
+  # Frontend Testing  
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
         
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
-  #       cache: 'npm'
-  #       cache-dependency-path: './client/package-lock.json'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './client/package-lock.json'
         
-  #   - name: Install dependencies
-  #     run: npm ci
+    - name: Install dependencies
+      run: npm ci
       
-  #   - name: Run tests
-  #     run: npm test -- --run
+    - name: Run tests
+      run: npm test -- --run
       
-  #   - name: Build frontend
-  #     run: npm run build
+    - name: Build frontend
+      run: npm run build
       
-  #   - name: Upload build artifacts
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: client-build
-  #       path: ./client/dist/
-  #       retention-days: 30
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: client-build
+        path: ./client/dist/
+        retention-days: 30
 
-  # # Code Quality Checks
-  # lint-and-typecheck:
-  #   name: Lint & Type Check
-  #   runs-on: ubuntu-latest
+  # Code Quality Checks
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
     
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
         
-  #   - name: Install root dependencies
-  #     run: npm ci
-        
-  #   - name: Install backend dependencies
-  #     run: cd server && npm ci
-      
-  #   - name: Install frontend dependencies
-  #     run: cd client && npm ci
-      
-  #   - name: Run full lint check
-  #     run: npm run lint
-      
-  #   - name: Run full build check
-  #     run: npm run build
+    - name: Cache root node_modules
+      uses: actions/cache@v4
+      id: cache-root-modules
+      with:
+        path: ./node_modules
+        key: ${{ runner.os }}-node-root-${{ hashFiles('./package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-root-
 
-  # # Security Audit
-  # security-audit:
-  #   name: Security Audit
-  #   runs-on: ubuntu-latest
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
+    - name: Install root dependencies
+      if: steps.cache-root-modules.outputs.cache-hit != 'true'
+      run: npm ci
         
-  #   - name: Audit backend dependencies
-  #     run: cd server && npm audit --audit-level=moderate
-  #     continue-on-error: true
+    - name: Cache server node_modules
+      uses: actions/cache@v4
+      id: cache-server-modules
+      with:
+        path: ./server/node_modules
+        key: ${{ runner.os }}-node-server-${{ hashFiles('./server/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-server-
+
+    - name: Install backend dependencies
+      if: steps.cache-server-modules.outputs.cache-hit != 'true'
+      run: cd server && npm ci
       
-  #   - name: Audit frontend dependencies
-  #     run: cd client && npm audit --audit-level=moderate
-  #     continue-on-error: true
+    - name: Cache client node_modules
+      uses: actions/cache@v4
+      id: cache-client-modules
+      with:
+        path: ./client/node_modules
+        key: ${{ runner.os }}-node-client-${{ hashFiles('./client/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-client-
+
+    - name: Install frontend dependencies
+      if: steps.cache-client-modules.outputs.cache-hit != 'true'
+      run: cd client && npm ci
+      
+    - name: Run full lint check
+      run: npm run lint
+      
+    - name: Run full build check
+      run: npm run build
+
+  # Security Audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Cache server node_modules
+      uses: actions/cache@v4
+      id: cache-server-modules
+      with:
+        path: ./server/node_modules
+        key: ${{ runner.os }}-node-server-${{ hashFiles('./server/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-server-
+
+    - name: Install server dependencies for audit
+      if: steps.cache-server-modules.outputs.cache-hit != 'true'
+      run: cd server && npm ci
+
+    - name: Audit backend dependencies
+      run: cd server && npm audit --audit-level=moderate
+      continue-on-error: true
+      
+    - name: Cache client node_modules
+      uses: actions/cache@v4
+      id: cache-client-modules
+      with:
+        path: ./client/node_modules
+        key: ${{ runner.os }}-node-client-${{ hashFiles('./client/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-client-
+
+    - name: Install client dependencies for audit
+      if: steps.cache-client-modules.outputs.cache-hit != 'true'
+      run: cd client && npm ci
+
+    - name: Audit frontend dependencies
+      run: cd client && npm audit --audit-level=moderate
+      continue-on-error: true
 
   # Packaging Test (runs on all platforms)
   packaging-test:
     name: Packaging Test
     runs-on: ${{ matrix.os }}
-    # needs: [backend-test, frontend-test, lint-and-typecheck]
+    needs: [backend-test, frontend-test, lint-and-typecheck]
     
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         
@@ -213,191 +268,223 @@ jobs:
         DEBUG: "electron-builder,electron-updater"
       run: npm run test:packaging
 
-  # # Build Electron Release (only on main branch or tags)
-  # build-electron:
-  #   name: Build Electron App
-  #   runs-on: ${{ matrix.os }}
-  #   needs: [backend-test, frontend-test, lint-and-typecheck]
-  #   if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+  # Build Electron Release (only on main branch or tags)
+  build-electron:
+    name: Build Electron App
+    runs-on: ${{ matrix.os }}
+    needs: [backend-test, frontend-test, lint-and-typecheck]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - os: ubuntu-latest
-  #           platform: linux
-  #         - os: windows-latest
-  #           platform: win32
-  #         - os: macos-latest
-  #           platform: darwin
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: win32
+          - os: macos-latest
+            platform: darwin
         
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
         
-  #   - name: Install root dependencies
-  #     run: npm ci
-        
-  #   - name: Install backend dependencies
-  #     run: cd server && npm ci
-      
-  #   - name: Install frontend dependencies
-  #     run: cd client && npm ci
-      
-  #   - name: Build application
-  #     run: npm run build
-      
-  #   - name: Build Electron app
-  #     run: npm run dist
-  #     env:
-  #       # Code signing environment variables (if available)
-  #       CSC_LINK: ${{ secrets.CSC_LINK }}
-  #       CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-  #       # Windows code signing
-  #       WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-  #       WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-  #       # macOS notarization
-  #       APPLE_ID: ${{ secrets.APPLE_ID }}
-  #       APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
-        
-  #   - name: Upload build artifacts
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: electron-${{ matrix.platform }}
-  #       path: |
-  #         dist-electron/*.dmg
-  #         dist-electron/*.zip
-  #         dist-electron/*.exe
-  #         dist-electron/*.msi
-  #         dist-electron/*.AppImage
-  #         dist-electron/*.deb
-  #         dist-electron/*.rpm
-  #       retention-days: 90
+    - name: Cache root node_modules
+      uses: actions/cache@v4
+      id: cache-root-modules
+      with:
+        path: ./node_modules
+        key: ${{ runner.os }}-node-root-${{ hashFiles('./package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-root-
 
-  # # Create GitHub Release (only on version tags)
-  # create-release:
-  #   name: Create GitHub Release
-  #   runs-on: ubuntu-latest
-  #   needs: [build-electron]
-  #   if: startsWith(github.ref, 'refs/tags/v')
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Download all artifacts
-  #     uses: actions/download-artifact@v4
-  #     with:
-  #       path: ./artifacts
-      
-  #   - name: Get version from tag
-  #     id: get_version
-  #     run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
-  #   - name: Create Release
-  #     id: create_release
-  #     uses: softprops/action-gh-release@v2
-  #     env:
-  #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #     with:
-  #       tag_name: ${{ github.ref }}
-  #       name: KJ-Nomad v${{ steps.get_version.outputs.version }}
-  #       body: |
-  #         ## 🎤 KJ-Nomad v${{ steps.get_version.outputs.version }}
-          
-  #         Professional karaoke hosting software with multi-screen synchronization and mobile control.
-          
-  #         ### 🚀 Quick Start
-  #         1. Download the appropriate installer for your operating system
-  #         2. Install and launch KJ-Nomad
-  #         3. Follow the setup wizard to configure your media library
-  #         4. Connect player screens to the displayed network address
-  #         5. Start hosting professional karaoke shows!
-          
-  #         ### 🎯 Features
-  #         - **Offline-First Operation** - Works without internet connection
-  #         - **Multi-Screen Sync** - Perfect video synchronization across unlimited screens
-  #         - **Mobile KJ Control** - Manage everything from your phone
-  #         - **Professional UI** - Beautiful, responsive interface for all devices
-  #         - **Paper Workflow** - Optimized for traditional paper slip requests
-  #         - **YouTube Integration** - Download and cache videos on-demand (online mode)
-          
-  #         See the [Documentation](https://kj.nomadkaraoke.com) for full setup instructions.
-  #       draft: false
-  #       prerelease: false
-  #       files: |
-  #         ./artifacts/**/*
-
-  # # Update Latest Release Links (for consistent download URLs)
-  # update-latest-links:
-  #   name: Update Latest Release Links
-  #   runs-on: ubuntu-latest
-  #   needs: [create-release]
-  #   if: startsWith(github.ref, 'refs/tags/v')
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-      
-  #   - name: Get version from tag
-  #     id: get_version
-  #     run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
-  #   - name: Update Cloudflare Pages with latest download links
-  #     run: |
-  #       # Update the landing page with latest download links
-  #       # This will be used by kj.nomadkaraoke.com to show consistent download URLs
-  #       cat > ./cloudflare/pages/landing/latest-release.json << EOF
-  #       {
-  #         "version": "${{ steps.get_version.outputs.version }}",
-  #         "tag": "${{ github.ref }}",
-  #         "downloads": {
-  #           "windows_installer": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-Setup-${{ steps.get_version.outputs.version }}.exe",
-  #           "windows_portable": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}-win.zip",
-  #           "macos_intel": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}.dmg",
-  #           "macos_apple_silicon": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}-arm64.dmg",
-  #           "linux_appimage": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}.AppImage",
-  #           "linux_deb": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/kj-nomad_${{ steps.get_version.outputs.version }}_amd64.deb"
-  #         },
-  #         "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  #       }
-  #       EOF
+    - name: Install root dependencies
+      if: steps.cache-root-modules.outputs.cache-hit != 'true'
+      run: npm ci
         
-  #   - name: Deploy updated landing page
-  #     run: |
-  #       # Deploy to Cloudflare Pages (this would typically use wrangler)
-  #       echo "Latest release info updated for landing page integration"
-  #       # In a real deployment, this would push to Cloudflare Pages
-  #       # wrangler pages publish ./cloudflare/pages/landing --project-name=kj-nomad-landing
+    - name: Cache server node_modules
+      uses: actions/cache@v4
+      id: cache-server-modules
+      with:
+        path: ./server/node_modules
+        key: ${{ runner.os }}-node-server-${{ hashFiles('./server/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-server-
 
-  # # Deploy Documentation (on main branch)
-  # deploy-docs:
-  #   name: Deploy Documentation
-  #   runs-on: ubuntu-latest
-  #   needs: [backend-test, frontend-test]
-  #   if: github.ref == 'refs/heads/main'
-    
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
+    - name: Install backend dependencies
+      if: steps.cache-server-modules.outputs.cache-hit != 'true'
+      run: cd server && npm ci
       
-  #   - name: Setup Node.js
-  #     uses: actions/setup-node@v4
-  #     with:
-  #       node-version: '18'
+    - name: Cache client node_modules
+      uses: actions/cache@v4
+      id: cache-client-modules
+      with:
+        path: ./client/node_modules
+        key: ${{ runner.os }}-node-client-${{ hashFiles('./client/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-client-
+
+    - name: Install frontend dependencies
+      if: steps.cache-client-modules.outputs.cache-hit != 'true'
+      run: cd client && npm ci
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Build Electron app
+      run: npm run dist
+      env:
+        # Code signing environment variables (if available)
+        CSC_LINK: ${{ secrets.CSC_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        # Windows code signing
+        WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+        WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        # macOS notarization
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
         
-  #   - name: Install frontend dependencies
-  #     run: cd client && npm ci
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: electron-${{ matrix.platform }}
+        path: |
+          dist-electron/*.dmg
+          dist-electron/*.zip
+          dist-electron/*.exe
+          dist-electron/*.msi
+          dist-electron/*.AppImage
+          dist-electron/*.deb
+          dist-electron/*.rpm
+        retention-days: 90
+
+  # Create GitHub Release (only on version tags)
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-electron]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-  #   - name: Build documentation site
-  #     run: cd client && npm run build
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
       
-  #   - name: Deploy to Cloudflare Pages
-  #     run: |
-  #       echo "Documentation deployment would happen here"
-  #       # In a real setup, this would deploy to Cloudflare Pages
-  #       # wrangler pages publish ./client/dist --project-name=kj-nomad-docs
+    - name: Get version from tag
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        name: KJ-Nomad v${{ steps.get_version.outputs.version }}
+        body: |
+          ## 🎤 KJ-Nomad v${{ steps.get_version.outputs.version }}
+          
+          Professional karaoke hosting software with multi-screen synchronization and mobile control.
+          
+          ### 🚀 Quick Start
+          1. Download the appropriate installer for your operating system
+          2. Install and launch KJ-Nomad
+          3. Follow the setup wizard to configure your media library
+          4. Connect player screens to the displayed network address
+          5. Start hosting professional karaoke shows!
+          
+          ### 🎯 Features
+          - **Offline-First Operation** - Works without internet connection
+          - **Multi-Screen Sync** - Perfect video synchronization across unlimited screens
+          - **Mobile KJ Control** - Manage everything from your phone
+          - **Professional UI** - Beautiful, responsive interface for all devices
+          - **Paper Workflow** - Optimized for traditional paper slip requests
+          - **YouTube Integration** - Download and cache videos on-demand (online mode)
+          
+          See the [Documentation](https://kj.nomadkaraoke.com) for full setup instructions.
+        draft: false
+        prerelease: false
+        files: |
+          ./artifacts/**/*
+
+  # Update Latest Release Links (for consistent download URLs)
+  update-latest-links:
+    name: Update Latest Release Links
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get version from tag
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Update Cloudflare Pages with latest download links
+      run: |
+        # Update the landing page with latest download links
+        # This will be used by kj.nomadkaraoke.com to show consistent download URLs
+        cat > ./cloudflare/pages/landing/latest-release.json << EOF
+        {
+          "version": "${{ steps.get_version.outputs.version }}",
+          "tag": "${{ github.ref }}",
+          "downloads": {
+            "windows_installer": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-Setup-${{ steps.get_version.outputs.version }}.exe",
+            "windows_portable": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}-win.zip",
+            "macos_intel": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}.dmg",
+            "macos_apple_silicon": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}-arm64.dmg",
+            "linux_appimage": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/KJ-Nomad-${{ steps.get_version.outputs.version }}.AppImage",
+            "linux_deb": "https://github.com/nomadkaraoke/kj-nomad/releases/download/${{ github.ref }}/kj-nomad_${{ steps.get_version.outputs.version }}_amd64.deb"
+          },
+          "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        }
+        EOF
+        
+    - name: Deploy updated landing page
+      run: |
+        # Deploy to Cloudflare Pages (this would typically use wrangler)
+        echo "Latest release info updated for landing page integration"
+        # In a real deployment, this would push to Cloudflare Pages
+        # wrangler pages publish ./cloudflare/pages/landing --project-name=kj-nomad-landing
+
+  # Deploy Documentation (on main branch)
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './client/package-lock.json'
+        
+    - name: Install frontend dependencies
+      run: cd client && npm ci
+      
+    - name: Build documentation site
+      run: cd client && npm run build
+      
+    - name: Deploy to Cloudflare Pages
+      run: |
+        echo "Documentation deployment would happen here"
+        # In a real setup, this would deploy to Cloudflare Pages
+        # wrangler pages publish ./client/dist --project-name=kj-nomad-docs
