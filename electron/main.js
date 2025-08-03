@@ -17,6 +17,7 @@ const SERVER_HOST = 'localhost';
 class KJNomadApp {
   constructor() {
     this.serverReady = false;
+    this.isCleaningUp = false;
     this.setupApp();
   }
 
@@ -254,6 +255,11 @@ class KJNomadApp {
       
       // Monitor server output
       serverProcess.stdout.on('data', (data) => {
+        // Don't process output if we're cleaning up
+        if (this.isCleaningUp) {
+          return;
+        }
+        
         const output = data.toString();
         serverOutput += output;
         console.log('📡 Server:', output.trim());
@@ -266,7 +272,7 @@ class KJNomadApp {
             output.includes('🎤 ===== KJ-NOMAD SERVER READY ===== 🎤') ||
             output.includes('🌐 Server listening on port')) {
           
-          if (!serverReady) {
+          if (!serverReady && !this.isCleaningUp) {
             serverReady = true;
             clearTimeout(startupTimeout);
             console.log('✅ Server started successfully');
@@ -280,6 +286,11 @@ class KJNomadApp {
       
       // Monitor server errors
       serverProcess.stderr.on('data', (data) => {
+        // Don't process errors if we're cleaning up
+        if (this.isCleaningUp) {
+          return;
+        }
+        
         const error = data.toString();
         console.error('📡 Server error:', error.trim());
         serverOutput += error;
@@ -326,27 +337,44 @@ class KJNomadApp {
   }
 
   async loadApp() {
+    // Don't proceed if we're already cleaning up
+    if (this.isCleaningUp) {
+      return;
+    }
+    
     const url = `http://${SERVER_HOST}:${SERVER_PORT}`;
     
     try {
-      console.log(`🌐 Loading app from ${url}`);
+      if (!this.isCleaningUp) {
+        console.log(`🌐 Loading app from ${url}`);
+      }
+      
       await mainWindow.loadURL(url);
+      
+      // Don't proceed if cleanup started during loadURL
+      if (this.isCleaningUp) {
+        return;
+      }
       
       // Show window once loaded
       mainWindow.show();
       mainWindow.focus();
       
-      console.log('✅ KJ-Nomad is ready!');
+      if (!this.isCleaningUp) {
+        console.log('✅ KJ-Nomad is ready!');
+      }
       
       // Show success notification
-      if (process.platform !== 'darwin') {
+      if (process.platform !== 'darwin' && !this.isCleaningUp) {
         this.showInfoDialog('KJ-Nomad Ready', 
           `KJ-Nomad is now running!\n\nAdmin Interface: ${url}\nPlayer Screens: ${url}/player`);
       }
       
     } catch (error) {
-      console.error('❌ Failed to load app:', error);
-      this.showErrorDialog('App Loading Error', `Failed to load the application: ${error.message}`);
+      if (!this.isCleaningUp) {
+        console.error('❌ Failed to load app:', error);
+        this.showErrorDialog('App Loading Error', `Failed to load the application: ${error.message}`);
+      }
     }
   }
 
@@ -419,6 +447,9 @@ class KJNomadApp {
   }
 
   cleanup() {
+    // Set cleanup flag to prevent further console output
+    this.isCleaningUp = true;
+    
     console.log('🧹 Cleaning up...');
     
     // Kill server process gracefully
