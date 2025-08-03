@@ -40,7 +40,3 @@ zone_name = "nomadkaraoke.com"
 # Environment variables
 [vars]
 ENVIRONMENT = "production"
-
-# Build configuration
-[build]
-command = "npm run build"
