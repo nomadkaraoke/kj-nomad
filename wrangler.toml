@@ -43,4 +43,4 @@ ENVIRONMENT = "production"
 
 # Build configuration
 [build]
-command = "cd cloudflare/workers && npm run build"
+command = "npm run build"
