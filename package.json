@@ -46,7 +46,7 @@
     "release": "npm run check-all && npm run package",
     "electron": "npm run build && electron .",
     "electron:dev": "concurrently \"npm run dev:server\" \"wait-on http://localhost:3000 && electron .\"",
-    "dist": "npm run build && electron-builder",
+    "dist": "npm run build && electron-builder --publish=never",
     "dist:all": "npm run build && electron-builder --publish=never",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
