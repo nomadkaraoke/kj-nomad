@@ -10,6 +10,7 @@ import HomePage from './pages/HomePage';
 import PlayerPage from './pages/PlayerPage';
 import ControllerPage from './pages/ControllerPage';
 import SingerPage from './pages/SingerPage';
+import SingerProfilesPage from './pages/SingerProfilesPage';
 
 import './App.css';
 
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/player" element={<PlayerPage />} />
                 <Route path="/controller" element={<ControllerPage />} />
                 <Route path="/singer" element={<SingerPage />} />
+                <Route path="/profiles" element={<SingerProfilesPage />} />
               </Routes>
             </main>
           </div>

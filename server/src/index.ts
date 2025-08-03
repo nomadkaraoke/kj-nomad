@@ -65,6 +65,7 @@ import {
 import { videoSyncEngine } from './videoSyncEngine.js';
 import { deviceManager } from './deviceManager.js';
 import { paperWorkflow } from './paperWorkflow.js';
+import { singerProfileManager } from './singerProfiles.js';
 
 // import { Bonjour } from 'bonjour-service';
 
@@ -730,6 +731,182 @@ app.post('/api/paper/import', (req, res) => {
         success: true, 
         message: `Imported ${imported} slips`,
         data: { imported }
+    });
+});
+
+// Singer Profiles endpoints
+app.get('/api/singers', (req, res) => {
+    console.log('[API] GET /api/singers - Get all singer profiles');
+    const profiles = singerProfileManager.getAllProfiles();
+    res.json({ success: true, data: profiles });
+});
+
+app.post('/api/singers', (req, res) => {
+    console.log('[API] POST /api/singers - Create singer profile');
+    const { name, email, phone, favoriteGenres, notes, vipStatus, preferredKey } = req.body;
+    
+    if (!name) {
+        return res.status(400).json({ success: false, error: 'Singer name required' });
+    }
+    
+    const profile = singerProfileManager.createProfile({
+        name,
+        email,
+        phone,
+        favoriteGenres: favoriteGenres || [],
+        favoriteSongs: [],
+        totalSongsPerformed: 0,
+        notes: notes || '',
+        vipStatus: vipStatus || false,
+        preferredKey
+    });
+    
+    res.json({ 
+        success: true, 
+        message: 'Singer profile created successfully',
+        data: profile 
+    });
+});
+
+app.get('/api/singers/:singerId', (req, res) => {
+    console.log(`[API] GET /api/singers/${req.params.singerId} - Get singer profile`);
+    const profile = singerProfileManager.getProfile(req.params.singerId);
+    
+    if (!profile) {
+        return res.status(404).json({ success: false, error: 'Singer profile not found' });
+    }
+    
+    res.json({ success: true, data: profile });
+});
+
+app.put('/api/singers/:singerId', (req, res) => {
+    console.log(`[API] PUT /api/singers/${req.params.singerId} - Update singer profile`);
+    const updates = req.body;
+    
+    const updatedProfile = singerProfileManager.updateProfile(req.params.singerId, updates);
+    
+    if (!updatedProfile) {
+        return res.status(404).json({ success: false, error: 'Singer profile not found' });
+    }
+    
+    res.json({ 
+        success: true, 
+        message: 'Singer profile updated successfully',
+        data: updatedProfile 
+    });
+});
+
+app.delete('/api/singers/:singerId', (req, res) => {
+    console.log(`[API] DELETE /api/singers/${req.params.singerId} - Delete singer profile`);
+    
+    const deleted = singerProfileManager.deleteProfile(req.params.singerId);
+    
+    if (!deleted) {
+        return res.status(404).json({ success: false, error: 'Singer profile not found' });
+    }
+    
+    res.json({ success: true, message: 'Singer profile deleted successfully' });
+});
+
+app.get('/api/singers/search/:query', (req, res) => {
+    console.log(`[API] GET /api/singers/search/${req.params.query} - Search singer profiles`);
+    const results = singerProfileManager.findProfilesByName(req.params.query);
+    res.json({ success: true, data: results });
+});
+
+app.post('/api/singers/search', (req, res) => {
+    console.log('[API] POST /api/singers/search - Advanced singer search');
+    const criteria = req.body;
+    const results = singerProfileManager.searchSingers(criteria);
+    res.json({ success: true, data: results });
+});
+
+app.get('/api/singers/:singerId/stats', (req, res) => {
+    console.log(`[API] GET /api/singers/${req.params.singerId}/stats - Get singer statistics`);
+    const stats = singerProfileManager.getSingerStats(req.params.singerId);
+    
+    if (!stats) {
+        return res.status(404).json({ success: false, error: 'Singer profile not found' });
+    }
+    
+    res.json({ success: true, data: stats });
+});
+
+app.post('/api/singers/:singerId/performances', (req, res) => {
+    console.log(`[API] POST /api/singers/${req.params.singerId}/performances - Record performance`);
+    const { songId, songTitle, artist, rating, notes, sessionId, venue } = req.body;
+    
+    if (!songId || !songTitle || !artist) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Song ID, title, and artist required' 
+        });
+    }
+    
+    const performance = singerProfileManager.recordPerformance({
+        singerId: req.params.singerId,
+        songId,
+        songTitle,
+        artist,
+        rating,
+        notes,
+        sessionId,
+        venue
+    });
+    
+    res.json({ 
+        success: true, 
+        message: 'Performance recorded successfully',
+        data: performance 
+    });
+});
+
+app.get('/api/singers/:singerId/performances', (req, res) => {
+    console.log(`[API] GET /api/singers/${req.params.singerId}/performances - Get performance history`);
+    const performances = singerProfileManager.getPerformanceHistory(req.params.singerId);
+    res.json({ success: true, data: performances });
+});
+
+app.get('/api/singers/vip/list', (req, res) => {
+    console.log('[API] GET /api/singers/vip/list - Get VIP singers');
+    const vipSingers = singerProfileManager.getVipSingers();
+    res.json({ success: true, data: vipSingers });
+});
+
+app.get('/api/singers/top/performers', (req, res) => {
+    console.log('[API] GET /api/singers/top/performers - Get top performers');
+    const { limit } = req.query;
+    const topPerformers = singerProfileManager.getTopPerformers(
+        limit ? parseInt(limit as string) : 10
+    );
+    res.json({ success: true, data: topPerformers });
+});
+
+app.get('/api/singers/export/data', (req, res) => {
+    console.log('[API] GET /api/singers/export/data - Export singer data');
+    const exportData = singerProfileManager.exportData();
+    res.json({ success: true, data: exportData });
+});
+
+app.post('/api/singers/import/data', (req, res) => {
+    console.log('[API] POST /api/singers/import/data - Import singer data');
+    const { profiles, performances } = req.body;
+    
+    if (!profiles || !performances) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Profiles and performances data required' 
+        });
+    }
+    
+    singerProfileManager.importData({ profiles, performances });
+    res.json({ 
+        success: true, 
+        message: 'Singer data imported successfully',
+        data: { 
+            profilesImported: profiles.length, 
+            performancesImported: performances.length 
+        }
     });
 });
 

@@ -10,7 +10,8 @@ import {
   Cog6ToothIcon, 
   MicrophoneIcon,
   WifiIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 export const Navigation: React.FC = () => {
@@ -41,6 +42,12 @@ export const Navigation: React.FC = () => {
       label: 'Song Request', 
       icon: MicrophoneIcon,
       description: 'Singer Portal'
+    },
+    { 
+      path: '/profiles', 
+      label: 'Profiles', 
+      icon: UserGroupIcon,
+      description: 'Singer Profiles'
     },
   ];
   
