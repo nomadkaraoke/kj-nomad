@@ -435,11 +435,11 @@
                             <li>Multi-screen management</li>
                             <li>Auto-discovery on local network</li>
                         </ul>
-                        <button class="cta-button">Download Local App</button>
+                        <button class="cta-button">Download Offline App</button>
                     </div>
 
                     <!-- Online Mode -->
-                    <div class="mode-card online-mode" onclick="selectMode('local')">
+                    <div class="mode-card online-mode" onclick="selectMode('online')">
                         <span class="mode-icon">☁️</span>
                         <h3 class="mode-title">Online Mode</h3>
                         <p class="mode-description">
@@ -454,7 +454,7 @@
                             <li>Cloud coordination</li>
                             <li>Real-time sync everywhere</li>
                         </ul>
-                        <button class="cta-button secondary">Download App</button>
+                        <button class="cta-button secondary">Host Online Session</button>
                     </div>
                 </div>
             </div>
@@ -799,9 +799,11 @@
 
                     const data = await response.json();
                     
-                    if (data.success) {
-                        // Redirect to admin interface with session ID
-                        window.location.href = `/admin?session=${data.data.sessionId}`;
+                    if (data.success && data.data) {
+                        // Store session details in sessionStorage to pass to the next page
+                        sessionStorage.setItem('kj-nomad-session', JSON.stringify(data.data));
+                        // Redirect to the admin dashboard page
+                        window.location.href = `/admin.html`;
                     } else {
                         throw new Error(data.error || 'Unknown error');
                     }

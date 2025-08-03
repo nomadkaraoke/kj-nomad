@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KJ Admin - KJ-Nomad | Nomad Karaoke</title>
-    
-    <!-- Google Fonts -->
+    <title>Session Live - KJ-Nomad</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <style>
         :root {
             --pink: #ff7acc;
@@ -19,568 +17,167 @@
             --dark-card: #1a1a2e;
             --text-primary: #ffffff;
             --text-secondary: #b0b0c4;
-            --success: #4ade80;
-            --error: #ef4444;
-            --warning: #f59e0b;
+            --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Inter', sans-serif;
             background: var(--dark-bg);
             color: var(--text-primary);
-            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
+        .dashboard {
+            background: var(--dark-card);
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 800px;
+            width: 100%;
+            border: 2px solid var(--pink);
+            text-align: center;
         }
-
-        .header {
-            padding: 1rem 0;
-            border-bottom: 1px solid rgba(255, 122, 204, 0.1);
-            margin-bottom: 2rem;
-        }
-
-        .logo {
+        h1 {
             font-family: 'Righteous', cursive;
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
+            font-size: 3rem;
+            background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-        }
-
-        .setup-wizard {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .step {
-            display: none;
-            background: var(--dark-card);
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .step.active {
-            display: block;
-        }
-
-        .step-title {
-            font-family: 'Righteous', cursive;
-            font-size: 2rem;
             margin-bottom: 1rem;
-            color: var(--pink);
         }
-
-        .step-description {
+        p {
             color: var(--text-secondary);
-            margin-bottom: 2rem;
             font-size: 1.1rem;
+            margin-bottom: 2rem;
         }
-
-        .session-info {
-            background: rgba(255, 122, 204, 0.1);
-            border: 1px solid var(--pink);
+        .key-display {
+            background: rgba(0,0,0,0.3);
             border-radius: 10px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        .session-id {
-            font-family: 'Righteous', cursive;
-            font-size: 3rem;
-            color: var(--yellow);
-            margin-bottom: 0.5rem;
-        }
-
-        .form-group {
             margin-bottom: 1.5rem;
         }
-
-        .form-label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--dark-bg);
-            border: 1px solid rgba(255, 122, 204, 0.3);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--pink);
-            box-shadow: 0 0 0 2px rgba(255, 122, 204, 0.2);
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .checkbox {
-            width: 18px;
-            height: 18px;
-        }
-
-        .button {
-            padding: 0.75rem 1.5rem;
-            background: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(255, 122, 204, 0.3);
-        }
-
-        .button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .button.secondary {
-            background: transparent;
-            border: 1px solid var(--text-secondary);
-            color: var(--text-secondary);
-        }
-
-        .status-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .status-connected {
-            background: rgba(74, 222, 128, 0.2);
-            color: var(--success);
-        }
-
-        .status-disconnected {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--error);
-        }
-
-        .status-pending {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--warning);
-        }
-
-        .device-list {
-            list-style: none;
-        }
-
-        .device-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            background: var(--dark-bg);
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            border: 1px solid rgba(255, 122, 204, 0.1);
-        }
-
-        .device-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .device-name {
-            font-weight: 500;
-        }
-
-        .device-ip {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        .instructions {
-            background: rgba(255, 223, 107, 0.1);
-            border: 1px solid var(--yellow);
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin: 2rem 0;
-        }
-
-        .instructions-title {
+        .key-display h2 {
+            font-family: 'Righteous', cursive;
             color: var(--yellow);
-            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .key-display code {
+            font-size: 1.5rem;
+            font-weight: bold;
+            word-break: break-all;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .key-display code:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .instructions {
+            text-align: left;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-top: 1px solid rgba(255, 122, 204, 0.2);
+        }
+        .instructions h3 {
+            font-family: 'Righteous', cursive;
+            color: var(--pink);
             margin-bottom: 1rem;
         }
-
-        .instructions ol {
-            margin-left: 1.5rem;
-            color: var(--text-secondary);
-        }
-
         .instructions li {
             margin-bottom: 0.5rem;
         }
-
-        .copy-button {
-            background: var(--yellow);
-            color: var(--dark-bg);
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            margin-left: 1rem;
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--gradient-primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
         }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-
-        .alert-success {
-            background: rgba(74, 222, 128, 0.2);
-            border: 1px solid var(--success);
-            color: var(--success);
-        }
-
-        .alert-error {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid var(--error);
-            color: var(--error);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 0.5rem;
-            }
-            
-            .step {
-                padding: 1.5rem;
-            }
-            
-            .session-id {
-                font-size: 2rem;
-            }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 122, 204, 0.3);
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="container">
-            <div class="logo">KJ-NOMAD Admin</div>
+    <div class="dashboard">
+        <h1>Your Session is Live!</h1>
+        <p>Your online karaoke session has been created. Use the details below to connect your devices.</p>
+
+        <div class="key-display">
+            <h2>📢 Session ID (for Singers & Players)</h2>
+            <code id="session-id" title="Click to copy">Loading...</code>
         </div>
-    </div>
 
-    <div class="container">
-        <div class="setup-wizard">
-            <!-- Step 1: Session Created -->
-            <div id="step-1" class="step active">
-                <h2 class="step-title">Online Session Created!</h2>
-                <p class="step-description">
-                    Your KJ-Nomad session is ready. Share the session ID with singers and set up your player screens.
-                </p>
-                
-                <div class="session-info">
-                    <div class="session-id" id="session-id">Loading...</div>
-                    <p>Session ID - Share this with singers</p>
-                    <button class="copy-button" onclick="copySessionId()">Copy ID</button>
-                </div>
+        <div class="key-display">
+            <h2>🔑 Admin Key (for your Local Server)</h2>
+            <code id="admin-key" title="Click to copy">Loading...</code>
+        </div>
 
-                <div class="form-group">
-                    <label class="form-label">KJ Name (Optional)</label>
-                    <input type="text" class="form-input" id="kj-name" placeholder="Your name">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Venue (Optional)</label>
-                    <input type="text" class="form-input" id="venue" placeholder="Venue name">
-                </div>
-
-                <button class="button" onclick="nextStep()">Continue Setup</button>
-            </div>
-
-            <!-- Step 2: Local Server Setup -->
-            <div id="step-2" class="step">
-                <h2 class="step-title">Set Up Local Server</h2>
-                <p class="step-description">
-                    Download and run the KJ-Nomad server on your computer to handle video playback and library management.
-                </p>
-
-                <div class="instructions">
-                    <div class="instructions-title">Setup Instructions:</div>
-                    <ol>
-                        <li>Download the KJ-Nomad server for your operating system</li>
-                        <li>Run the executable and enter session ID: <strong id="session-id-2">1234</strong></li>
-                        <li>Select your local media library (optional)</li>
-                        <li>The server will automatically connect to this session</li>
-                    </ol>
-                </div>
-
-                <div id="server-status" class="alert alert-error">
-                    <span class="status-indicator status-disconnected">
-                        ● Local server not connected
-                    </span>
-                    <p>Waiting for local server connection...</p>
-                </div>
-
-                <div style="text-align: center; margin: 2rem 0;">
-                    <button class="button secondary">Download Server (Coming Soon)</button>
-                </div>
-
-                <button class="button" onclick="nextStep()" disabled id="continue-button">
-                    Continue (Local Server Required)
-                </button>
-            </div>
-
-            <!-- Step 3: Player Screens -->
-            <div id="step-3" class="step">
-                <h2 class="step-title">Set Up Player Screens</h2>
-                <p class="step-description">
-                    Connect your player screens (TVs, projectors, monitors) to display karaoke videos with perfect synchronization.
-                </p>
-
-                <div class="instructions">
-                    <div class="instructions-title">Player Setup Instructions:</div>
-                    <ol>
-                        <li>Open a web browser on each player device</li>
-                        <li>Navigate to: <strong>kj.nomadkaraoke.com/player</strong></li>
-                        <li>Enter session ID: <strong id="session-id-3">1234</strong></li>
-                        <li>Set browser to fullscreen mode (F11)</li>
-                        <li>Repeat for each additional screen</li>
-                    </ol>
-                </div>
-
-                <div id="devices-section">
-                    <h3 style="margin-bottom: 1rem;">Connected Devices</h3>
-                    <ul class="device-list" id="device-list">
-                        <li class="device-item">
-                            <div class="device-info">
-                                <div class="device-name">No devices connected</div>
-                                <div class="device-ip">Waiting for player connections...</div>
-                            </div>
-                            <span class="status-indicator status-pending">● Pending</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <button class="button" onclick="nextStep()">Start Hosting</button>
-            </div>
-
-            <!-- Step 4: Session Active -->
-            <div id="step-4" class="step">
-                <h2 class="step-title">Session Active!</h2>
-                <p class="step-description">
-                    Your KJ-Nomad session is now live. Singers can request songs, and you can manage everything from here.
-                </p>
-
-                <div class="session-info">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-size: 1.5rem; color: var(--pink);">Session ID: <span id="session-id-4">1234</span></div>
-                            <div style="color: var(--text-secondary);">Singer URL: sing.nomadkaraoke.com</div>
-                        </div>
-                        <span class="status-indicator status-connected">● Live</span>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin: 2rem 0;">
-                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                        Full admin controls coming soon. For now, manage your queue using the local server interface.
-                    </p>
-                    <button class="button secondary" onclick="endSession()">End Session</button>
-                </div>
+        <div class="instructions">
+            <h3>Next Steps:</h3>
+            <ol>
+                <li><strong>Download and run the KJ-Nomad App</strong> if you haven't already.</li>
+                <li>In the app, choose "Connect to an Online Session".</li>
+                <li>Enter your Session ID and Admin Key when prompted.</li>
+                <li>Tell singers to go to <strong>sing.nomadkaraoke.com</strong> and enter the Session ID.</li>
+                <li>Point your player screens to <strong>kj.nomadkaraoke.com/player</strong> and enter the Session ID.</li>
+            </ol>
+            <div style="text-align:center;">
+                <a href="#" id="download-link" class="cta-button">Download the App</a>
             </div>
         </div>
     </div>
 
     <script>
-        let currentStep = 1;
-        let sessionId = null;
-        let ws = null;
-
-        // Get session ID from URL or create new session
-        async function initializeSession() {
-            const urlParams = new URLSearchParams(window.location.search);
-            sessionId = urlParams.get('session');
-            
-            if (!sessionId) {
-                // Redirect back to landing page
-                window.location.href = '/';
+        document.addEventListener('DOMContentLoaded', () => {
+            const sessionDataString = sessionStorage.getItem('kj-nomad-session');
+            if (!sessionDataString) {
+                document.querySelector('.dashboard').innerHTML = '<h1>Error</h1><p>No session data found. Please <a href="/">create a new session</a>.</p>';
                 return;
             }
 
-            // Display session ID
-            document.querySelectorAll('[id^="session-id"]').forEach(el => {
-                el.textContent = sessionId;
-            });
+            const sessionData = JSON.parse(sessionDataString);
+            const sessionIdEl = document.getElementById('session-id');
+            const adminKeyEl = document.getElementById('admin-key');
 
-            // Try to connect WebSocket for real-time updates
-            connectWebSocket();
-        }
+            sessionIdEl.textContent = sessionData.sessionId;
+            adminKeyEl.textContent = sessionData.adminKey;
 
-        function connectWebSocket() {
-            try {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const host = window.location.host;
-                ws = new WebSocket(`${protocol}//${host}/sessions/${sessionId}/ws?type=admin`);
-                
-                ws.onopen = () => {
-                    console.log('WebSocket connected');
-                };
-                
-                ws.onmessage = (event) => {
-                    const message = JSON.parse(event.data);
-                    handleWebSocketMessage(message);
-                };
-                
-                ws.onclose = () => {
-                    console.log('WebSocket disconnected');
-                    // Try to reconnect after 3 seconds
-                    setTimeout(connectWebSocket, 3000);
-                };
-            } catch (error) {
-                console.error('WebSocket connection failed:', error);
-            }
-        }
-
-        function handleWebSocketMessage(message) {
-            console.log('Received message:', message);
+            sessionIdEl.addEventListener('click', () => copyToClipboard(sessionData.sessionId, 'Session ID'));
+            adminKeyEl.addEventListener('click', () => copyToClipboard(sessionData.adminKey, 'Admin Key'));
             
-            switch (message.type) {
-                case 'client_connected':
-                    if (message.payload.clientType === 'local-server') {
-                        updateServerStatus(true);
-                    } else if (message.payload.clientType === 'player') {
-                        updatePlayerDevices();
-                    }
-                    break;
-                case 'client_disconnected':
-                    if (message.payload.clientType === 'local-server') {
-                        updateServerStatus(false);
-                    }
-                    break;
-            }
-        }
+            // Setup download link
+            const downloadLink = document.getElementById('download-link');
+            downloadLink.onclick = (e) => {
+                e.preventDefault();
+                // This reuses the download logic from the main page.
+                // In a real app, this might be a shared module.
+                showDownloadOptions(); 
+            };
+        });
 
-        function updateServerStatus(connected) {
-            const statusEl = document.getElementById('server-status');
-            const continueBtn = document.getElementById('continue-button');
-            
-            if (connected) {
-                statusEl.className = 'alert alert-success';
-                statusEl.innerHTML = `
-                    <span class="status-indicator status-connected">● Local server connected</span>
-                    <p>Server is ready to handle video playback and library management.</p>
-                `;
-                continueBtn.disabled = false;
-                continueBtn.textContent = 'Continue to Player Setup';
-            } else {
-                statusEl.className = 'alert alert-error';
-                statusEl.innerHTML = `
-                    <span class="status-indicator status-disconnected">● Local server not connected</span>
-                    <p>Waiting for local server connection...</p>
-                `;
-                continueBtn.disabled = true;
-                continueBtn.textContent = 'Continue (Local Server Required)';
-            }
-        }
-
-        function updatePlayerDevices() {
-            // TODO: Get actual device list from WebSocket
-            // For now, just show placeholder
-        }
-
-        function nextStep() {
-            document.getElementById(`step-${currentStep}`).classList.remove('active');
-            currentStep++;
-            document.getElementById(`step-${currentStep}`).classList.add('active');
-        }
-
-        function copySessionId() {
-            navigator.clipboard.writeText(sessionId).then(() => {
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = 'Copied!';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                }, 2000);
+        function copyToClipboard(text, type) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert(`${type} copied to clipboard!`);
+            }, (err) => {
+                console.error('Failed to copy: ', err);
+                alert(`Failed to copy ${type}.`);
             });
         }
-
-        async function saveSessionInfo() {
-            const kjName = document.getElementById('kj-name').value;
-            const venue = document.getElementById('venue').value;
-            
-            try {
-                const response = await fetch(`/api/sessions/${sessionId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        kjName,
-                        venue
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to save session info');
-                }
-            } catch (error) {
-                console.error('Failed to save session info:', error);
-            }
+        
+        // Minimal download logic copied from index.html for demonstration
+        function showDownloadOptions() {
+            alert('This would open the download modal. For this demo, please return to the homepage to download.');
+            // In a full implementation, the download modal logic would be included here or in a shared script.
         }
-
-        async function endSession() {
-            if (confirm('Are you sure you want to end this session?')) {
-                try {
-                    const response = await fetch(`/api/sessions/${sessionId}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response.ok) {
-                        window.location.href = '/';
-                    }
-                } catch (error) {
-                    console.error('Failed to end session:', error);
-                    alert('Failed to end session. Please try again.');
-                }
-            }
-        }
-
-        // Initialize when page loads
-        window.addEventListener('load', initializeSession);
     </script>
 </body>
 </html>

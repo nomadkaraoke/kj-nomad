@@ -1,6 +1,7 @@
 // Session Management Types
 export interface SessionData {
   sessionId: string;        // "1234" (4-digit)
+  adminKey: string;         // Secure key for local server auth
   localServerIP: string;    // "192.168.1.34" 
   localServerPort: number;  // 8080
   kjName?: string;
@@ -29,6 +30,7 @@ export interface ApiResponse<T = unknown> {
 
 export interface CreateSessionResponse {
   sessionId: string;
+  adminKey: string;
   localServerInstructions: string;
 }
 

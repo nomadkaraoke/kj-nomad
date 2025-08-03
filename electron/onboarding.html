@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to KJ-Nomad</title>
+    <style>
+        :root {
+            --pink: #ff7acc;
+            --blue: #230a89;
+            --yellow: #ffdf6b;
+            --dark-bg: #0a0a0f;
+            --dark-card: #1a1a2e;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0c4;
+            --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        p {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+        }
+        .button-grid {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+        }
+        .button {
+            padding: 1.5rem 3rem;
+            border: 2px solid var(--pink);
+            border-radius: 15px;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 300px;
+        }
+        .button:hover {
+            background: var(--pink);
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(255, 122, 204, 0.2);
+        }
+        .button.secondary {
+            border-color: var(--yellow);
+        }
+        .button.secondary:hover {
+            background: var(--yellow);
+            color: var(--dark-bg);
+            box-shadow: 0 10px 20px rgba(255, 223, 107, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to KJ-Nomad</h1>
+        <p>Choose how you want to start your karaoke session.</p>
+        <div class="button-grid">
+            <button id="start-offline" class="button">🏠 Start Offline Session</button>
+            <button id="connect-online" class="button secondary">☁️ Connect to Online Session</button>
+        </div>
+    </div>
+
+    <script>
+        // We need to use a preload script to safely expose ipcRenderer
+        // This will be set up in the main Electron process.
+        document.getElementById('start-offline').addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.send('start-mode', 'offline');
+            }
+        });
+
+        document.getElementById('connect-online').addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.send('start-mode', 'online');
+            }
+        });
+    </script>
+</body>
+</html>

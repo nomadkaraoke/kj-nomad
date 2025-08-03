@@ -88,11 +88,13 @@ async function handleSessionAPI(request: Request, env: Env, path: string): Promi
 async function createSession(request: Request, env: Env): Promise<Response> {
   const body = await request.json() as Partial<SessionData>;
   
-  // Generate unique 4-digit session ID
+  // Generate unique 4-digit session ID and a secure admin key
   const sessionId = await generateUniqueSessionId(env);
+  const adminKey = `kj-admin-${generateSecureRandomString(16)}`;
   
   const sessionData: SessionData = {
     sessionId,
+    adminKey,
     localServerIP: '',
     localServerPort: 8080,
     kjName: body.kjName || '',
@@ -114,7 +116,8 @@ async function createSession(request: Request, env: Env): Promise<Response> {
 
   const response: CreateSessionResponse = {
     sessionId,
-    localServerInstructions: `To connect your local server, run it with session ID ${sessionId} or visit the admin interface at kj.nomadkaraoke.com/admin`
+    adminKey,
+    localServerInstructions: `To connect your local server, run it with session ID ${sessionId} and your admin key.`
   };
 
   return jsonResponse({ success: true, data: response });
@@ -231,6 +234,16 @@ async function handleWebSocket(request: Request, env: Env, path: string): Promis
 }
 
 // Helper functions
+function generateSecureRandomString(length: number): string {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  const charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
+
 async function generateUniqueSessionId(env: Env): Promise<string> {
   let attempts = 0;
   const maxAttempts = 10;

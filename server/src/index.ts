@@ -1422,53 +1422,37 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, async () => {
-  // Check for session ID in command line arguments or environment variables
-  const sessionId = process.argv.find(arg => arg.startsWith('--session='))?.split('=')[1] || 
-                   process.env.SESSION_ID;
-  
-  let cloudMode = false;
-  const localIP = cloudConnector.getStatus().localIP;
-  
-  if (sessionId) {
-    // Auto-connect to cloud session
-    try {
-      const success = await cloudConnector.registerWithSession(sessionId, PORT as number, {
-        kjName: process.env.KJ_NAME || 'Local KJ',
-        venue: process.env.VENUE_NAME,
-        allowYouTube: process.env.ALLOW_YOUTUBE === 'true'
-      });
-      
-      cloudMode = success;
-      if (!success) {
-        console.error(`[Server] ❌ Failed to connect to cloud session ${sessionId}`);
-        console.log(`[Server] Falling back to local mode`);
-      }
-    } catch (error) {
-      console.error('[Server] Cloud connection error:', error);
-      console.log(`[Server] Falling back to local mode`);
-    }
-  }
-  
+  const startMode = process.env.START_MODE || 'offline'; // Default to offline
+  console.log(`[Server] Starting in ${startMode} mode.`);
+
   // Output server ready message for Electron detection
   console.log(`🎤 ===== KJ-NOMAD SERVER READY ===== 🎤`);
   console.log(`🌐 Server listening on port ${PORT}`);
-  
-  // Display enhanced startup instructions
-  displayStartupInstructions(PORT as number, {
-    sessionId: cloudMode ? sessionId : undefined,
-    localIP,
-    cloudMode
-  });
-  
-  // Auto-launch browser for local mode
-  if (shouldAutoLaunch()) {
-    console.log('🚀 Auto-launching admin interface...\n');
-    launchAdminInterface(PORT as number).then((success) => {
-      if (!success) {
-        console.log(`💡 Please manually open: http://localhost:${  PORT}`);
-      }
+
+  if (startMode === 'offline') {
+    // For offline mode, behave as a standard local server
+    const localIP = cloudConnector.getStatus().localIP;
+    
+    displayStartupInstructions(PORT as number, {
+      localIP,
+      cloudMode: false
     });
+
+    if (shouldAutoLaunch()) {
+      console.log('🚀 Auto-launching admin interface for offline mode...\n');
+      launchAdminInterface(PORT as number).then((success) => {
+        if (!success) {
+          console.log(`💡 Please manually open: http://localhost:${PORT}`);
+        }
+      });
+    } else {
+      console.log(`ℹ️  Auto-launch disabled. Manual access: http://localhost:${PORT}\n`);
+    }
   } else {
-    console.log(`ℹ️  Auto-launch disabled. Manual access: http://localhost:${  PORT  }\n`);
+    // For online mode, the server is ready and waiting for connection details
+    // from the Electron app UI (which isn't built yet).
+    // The UI will call the /api/cloud/connect endpoint.
+    console.log('[Server] Online mode initiated. Waiting for connection from the app...');
+    // No auto-launch, as the user flow is different.
   }
 });

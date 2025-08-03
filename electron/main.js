@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog, shell, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -41,11 +41,15 @@ class KJNomadApp {
         nodeIntegration: false,
         contextIsolation: true,
         enableRemoteModule: false,
-        webSecurity: true
+        webSecurity: true,
+        preload: path.join(__dirname, 'preload.js')
       },
-      show: false, // Don't show until server is ready
+      show: true, // Show immediately for onboarding
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default'
     });
+
+    // Load the onboarding HTML file first
+    await mainWindow.loadFile(path.join(__dirname, 'onboarding.html'));
 
     // Set up window events
     mainWindow.on('closed', () => {
@@ -62,9 +66,13 @@ class KJNomadApp {
     // Create system tray
     this.createTray();
 
-    // Start the server and load the app
-    await this.startServer();
-    await this.loadApp();
+    // Listen for the mode selection from the onboarding page
+    ipcMain.on('start-mode', async (event, mode) => {
+      console.log(`Received start-mode event: ${mode}`);
+      // Once a mode is chosen, start the server and load the main app
+      await this.startServer(mode);
+      await this.loadApp();
+    });
   }
 
   getAppIcon() {
@@ -122,9 +130,9 @@ class KJNomadApp {
     }
   }
 
-  async startServer() {
+  async startServer(mode) {
     return new Promise((resolve, reject) => {
-      console.log('🚀 Starting KJ-Nomad server...');
+      console.log(`🚀 Starting KJ-Nomad server in ${mode} mode...`);
       
       // Determine if we're in development or packaged mode
       const isDev = !app.isPackaged;
@@ -132,11 +140,11 @@ class KJNomadApp {
       let nodeExecutable = process.execPath;
       
       if (isDev) {
-        // Development mode - use simple test server
-        serverPath = path.join(__dirname, '..', 'server', 'src', 'index-electron-test-simple.cjs');
+        // Development mode - use the actual server entry point
+        serverPath = path.join(__dirname, '..', 'server', 'src', 'index.ts');
       } else {
         // Packaged mode - extract server file from asar to temp location
-        const asarServerPath = path.join(process.resourcesPath, 'app.asar', 'server', 'src', 'index-electron-test-simple.cjs');
+        const asarServerPath = path.join(process.resourcesPath, 'app.asar', 'server', 'dist', 'index.js');
         const tempDir = os.tmpdir();
         const tempServerPath = path.join(tempDir, `kj-nomad-server-${Date.now()}.cjs`);
         
@@ -231,7 +239,8 @@ class KJNomadApp {
         ELECTRON_MODE: 'true',
         AUTO_LAUNCH: 'false',
         PORT: SERVER_PORT.toString(),
-        HEADLESS: 'true'
+        HEADLESS: 'true',
+        START_MODE: mode // Pass the selected mode to the server
       };
       
       // Start server as child process
