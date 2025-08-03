@@ -1,13 +1,13 @@
 {
-  "version": "1.0.0",
-  "tag": "v1.0.0",
+  "version": "main-4d4f273",
+  "tag": "latest",
   "downloads": {
-    "windows_installer": "https://github.com/nomadkaraoke/kj-nomad/releases/latest/download/KJ-Nomad-Setup-1.0.0.exe",
-    "windows_portable": "https://github.com/nomadkaraoke/kj-nomad/releases/latest/download/KJ-Nomad-1.0.0-win.zip",
-    "macos_intel": "https://github.com/nomadkaraoke/kj-nomad/releases/latest/download/KJ-Nomad-1.0.0.dmg",
-    "macos_apple_silicon": "https://github.com/nomadkaraoke/kj-nomad/releases/latest/download/KJ-Nomad-1.0.0-arm64.dmg",
-    "linux_appimage": "https://github.com/nomadkaraoke/kj-nomad/releases/latest/download/KJ-Nomad-1.0.0.AppImage",
-    "linux_deb": "https://github.com/nomadkaraoke/kj-nomad/releases/latest/download/kj-nomad_1.0.0_amd64.deb"
+    "windows_installer": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad Setup 1.0.0.exe",
+    "windows_portable": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/",
+    "macos_intel": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.dmg",
+    "macos_apple_silicon": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0-arm64.dmg",
+    "linux_appimage": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.AppImage",
+    "linux_deb": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/kj-nomad_1.0.0_amd64.deb"
   },
-  "updated": "2025-08-02T23:11:00Z"
+  "updated": "2025-08-03T20:15:22Z"
 }
