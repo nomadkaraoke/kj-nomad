@@ -1110,6 +1110,10 @@ server.listen(PORT, async () => {
     }
   }
   
+  // Output server ready message for Electron detection
+  console.log(`🎤 ===== KJ-NOMAD SERVER READY ===== 🎤`);
+  console.log(`🌐 Server listening on port ${PORT}`);
+  
   // Display enhanced startup instructions
   displayStartupInstructions(PORT as number, {
     sessionId: cloudMode ? sessionId : undefined,

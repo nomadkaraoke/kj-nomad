@@ -66,6 +66,7 @@
     "files": [
       "electron/**/*",
       "server/dist/**/*",
+      "server/src/**/*",
       "server/public/**/*",
       "server/media/**/*",
       "server/package.json",

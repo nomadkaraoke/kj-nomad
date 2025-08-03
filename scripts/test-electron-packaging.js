@@ -159,7 +159,10 @@ function testServerStartup() {
       // Look for server ready indicators
       if (text.includes('SERVER READY') || 
           text.includes('running on port') || 
-          text.includes('KJ-Nomad is ready')) {
+          text.includes('KJ-Nomad is ready') ||
+          text.includes('🎤 ===== KJ-NOMAD SERVER READY ===== 🎤') ||
+          text.includes('🌐 Server listening on port') ||
+          text.includes('listening on port')) {
         serverReady = true;
         clearTimeout(timeout);
         
