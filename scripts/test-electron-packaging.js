@@ -131,7 +131,7 @@ function testServerStartup() {
     }
     
     // Start the executable
-    const child = spawn(executablePath, [], {
+    const child = spawn(executablePath, ['--no-sandbox'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
@@ -245,14 +245,14 @@ function validatePackageStructure() {
     resourcesDir = path.join(executableDir, 'resources');
     requiredPaths = [
       'app.asar',
-      'electron.asar'
+      // 'electron.asar' // No longer included in modern electron-builder versions
     ];
   } else {
     // Linux
     resourcesDir = path.join(executableDir, 'resources');
     requiredPaths = [
       'app.asar',
-      'electron.asar'
+      // 'electron.asar' // No longer included in modern electron-builder versions
     ];
   }
   
