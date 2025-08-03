@@ -155,7 +155,12 @@ jobs:
       run: cd client && npm ci
       
     - name: Run packaging test
-      run: npm run test:packaging
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:packaging
+        else
+          npm run test:packaging
+        fi
 
   # Build Electron Release (only on main branch or tags)
   build-electron:
