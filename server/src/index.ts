@@ -66,6 +66,7 @@ import { videoSyncEngine } from './videoSyncEngine.js';
 import { deviceManager } from './deviceManager.js';
 import { paperWorkflow } from './paperWorkflow.js';
 import { singerProfileManager } from './singerProfiles.js';
+import { advancedQueueManager } from './advancedQueue.js';
 
 // import { Bonjour } from 'bonjour-service';
 
@@ -908,6 +909,167 @@ app.post('/api/singers/import/data', (req, res) => {
             performancesImported: performances.length 
         }
     });
+});
+
+// Advanced Queue Management endpoints
+app.get('/api/queue/advanced', (req, res) => {
+    console.log('[API] GET /api/queue/advanced - Get advanced queue');
+    const queue = advancedQueueManager.getQueue();
+    res.json({ success: true, data: queue });
+});
+
+app.post('/api/queue/advanced/add', (req, res) => {
+    console.log('[API] POST /api/queue/advanced/add - Add song to advanced queue');
+    const { singerName, songId, priority, singerId } = req.body;
+    
+    if (!singerName || !songId) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Singer name and song ID required' 
+        });
+    }
+    
+    const song = getSongById(songId);
+    if (!song) {
+        return res.status(404).json({ success: false, error: 'Song not found' });
+    }
+    
+    const entry = advancedQueueManager.addToQueue(song, singerName, { priority, singerId });
+    broadcast({ type: 'advanced_queue_updated', payload: advancedQueueManager.getQueue() });
+    
+    res.json({ 
+        success: true, 
+        message: 'Song added to advanced queue',
+        data: entry 
+    });
+});
+
+app.delete('/api/queue/advanced/:entryId', (req, res) => {
+    console.log(`[API] DELETE /api/queue/advanced/${req.params.entryId} - Remove from advanced queue`);
+    
+    const success = advancedQueueManager.removeFromQueue(req.params.entryId);
+    
+    if (success) {
+        broadcast({ type: 'advanced_queue_updated', payload: advancedQueueManager.getQueue() });
+        res.json({ success: true, message: 'Song removed from advanced queue' });
+    } else {
+        res.status(404).json({ success: false, error: 'Queue entry not found' });
+    }
+});
+
+app.post('/api/queue/advanced/reorder', (req, res) => {
+    console.log('[API] POST /api/queue/advanced/reorder - Reorder advanced queue');
+    const { fromIndex, toIndex } = req.body;
+    
+    if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'fromIndex and toIndex must be numbers' 
+        });
+    }
+    
+    const success = advancedQueueManager.reorderQueue(fromIndex, toIndex);
+    
+    if (success) {
+        broadcast({ type: 'advanced_queue_updated', payload: advancedQueueManager.getQueue() });
+        res.json({ 
+            success: true, 
+            message: 'Advanced queue reordered successfully',
+            data: { fromIndex, toIndex }
+        });
+    } else {
+        res.status(400).json({ 
+            success: false, 
+            error: 'Invalid indices for queue reordering' 
+        });
+    }
+});
+
+app.post('/api/queue/advanced/promote/:entryId', (req, res) => {
+    console.log(`[API] POST /api/queue/advanced/promote/${req.params.entryId} - Promote queue entry`);
+    const { priority } = req.body;
+    
+    if (!priority || !['normal', 'high', 'vip'].includes(priority)) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Valid priority required (normal, high, vip)' 
+        });
+    }
+    
+    const success = advancedQueueManager.promoteEntry(req.params.entryId, priority);
+    
+    if (success) {
+        broadcast({ type: 'advanced_queue_updated', payload: advancedQueueManager.getQueue() });
+        res.json({ success: true, message: 'Queue entry promoted successfully' });
+    } else {
+        res.status(404).json({ success: false, error: 'Queue entry not found' });
+    }
+});
+
+app.get('/api/queue/advanced/next', (req, res) => {
+    console.log('[API] GET /api/queue/advanced/next - Get next song from advanced queue');
+    const nextSong = advancedQueueManager.getNextSong();
+    
+    if (nextSong) {
+        res.json({ success: true, data: nextSong });
+    } else {
+        res.json({ success: true, data: null, message: 'No songs in queue' });
+    }
+});
+
+app.post('/api/queue/advanced/play-next', (req, res) => {
+    console.log('[API] POST /api/queue/advanced/play-next - Play next song from advanced queue');
+    const nextSong = advancedQueueManager.getNextSong();
+    
+    if (nextSong) {
+        // Add to regular queue for playback (getNextSong already removes it)
+        addSongToQueue(nextSong.song, nextSong.singerName);
+        
+        broadcast({ type: 'advanced_queue_updated', payload: advancedQueueManager.getQueue() });
+        broadcast({ type: 'queue_updated', payload: getQueue() });
+        
+        res.json({ 
+            success: true, 
+            message: 'Next song moved to playback queue',
+            data: nextSong 
+        });
+    } else {
+        res.json({ success: false, message: 'No songs in advanced queue' });
+    }
+});
+
+app.get('/api/queue/advanced/settings', (req, res) => {
+    console.log('[API] GET /api/queue/advanced/settings - Get advanced queue settings');
+    const settings = advancedQueueManager.getSettings();
+    res.json({ success: true, data: settings });
+});
+
+app.put('/api/queue/advanced/settings', (req, res) => {
+    console.log('[API] PUT /api/queue/advanced/settings - Update advanced queue settings');
+    const settings = req.body;
+    
+    advancedQueueManager.updateSettings(settings);
+    broadcast({ type: 'advanced_queue_settings_updated', payload: advancedQueueManager.getSettings() });
+    
+    res.json({ 
+        success: true, 
+        message: 'Advanced queue settings updated',
+        data: advancedQueueManager.getSettings() 
+    });
+});
+
+app.get('/api/queue/advanced/stats', (req, res) => {
+    console.log('[API] GET /api/queue/advanced/stats - Get advanced queue statistics');
+    const stats = advancedQueueManager.getQueueStats();
+    res.json({ success: true, data: stats });
+});
+
+app.post('/api/queue/advanced/clear', (req, res) => {
+    console.log('[API] POST /api/queue/advanced/clear - Clear advanced queue');
+    advancedQueueManager.clearQueue();
+    broadcast({ type: 'advanced_queue_updated', payload: advancedQueueManager.getQueue() });
+    
+    res.json({ success: true, message: 'Advanced queue cleared' });
 });
 
 // Helper function to determine content type
