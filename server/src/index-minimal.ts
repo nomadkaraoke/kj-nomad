@@ -7,11 +7,14 @@ import { WebSocketServer } from 'ws';
 import fs from 'fs';
 import path from 'path';
 
-import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
-import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong } from './songQueue';
-import { scanFillerMusic, getNextFillerSong } from './fillerMusic';
+import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary.js';
+import { addSongToQueue, getQueue, removeSongFromQueue, getNextSong } from './songQueue.js';
+import { scanFillerMusic, getNextFillerSong } from './fillerMusic.js';
 
-// __dirname is automatically available in CommonJS modules
+// Get __dirname equivalent for ES modules
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);

@@ -5,7 +5,7 @@
 
 import { EventEmitter } from 'events';
 import Fuse from 'fuse.js';
-import { Song } from './mediaLibrary';
+import { Song } from './mediaLibrary.js';
 
 export interface PaperSlip {
   id: string;

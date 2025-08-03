@@ -1,10 +1,13 @@
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
-import { Song } from './mediaLibrary';
+import { Song } from './mediaLibrary.js';
 
-// __dirname is automatically available in CommonJS modules
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface YouTubeVideo {
   id: string;

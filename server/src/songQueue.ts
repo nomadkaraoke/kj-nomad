@@ -1,4 +1,4 @@
-import { Song } from './mediaLibrary';
+import { Song } from './mediaLibrary.js';
 
 interface QueueEntry {
   song: Song;

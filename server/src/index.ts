@@ -21,9 +21,14 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 
-import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary';
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import { scanMediaLibrary, searchSongs, getSongById } from './mediaLibrary.js';
 import { 
   addSongToQueue, 
   getQueue, 
@@ -38,14 +43,14 @@ import {
   pausePlayback,
   resumePlayback,
   stopPlayback
-} from './songQueue';
-import { scanFillerMusic, getNextFillerSong } from './fillerMusic';
-import { cloudConnector } from './cloudConnector';
+} from './songQueue.js';
+import { scanFillerMusic, getNextFillerSong } from './fillerMusic.js';
+import { cloudConnector } from './cloudConnector.js';
 import { 
   launchAdminInterface, 
   shouldAutoLaunch, 
   displayStartupInstructions 
-} from './browserLauncher';
+} from './browserLauncher.js';
 import {
   loadSetupConfig,
   saveSetupConfig,
@@ -56,10 +61,10 @@ import {
   validateMediaDirectory,
   getNetworkInfo,
   getMediaDirectorySuggestions
-} from './setupWizard';
-import { videoSyncEngine } from './videoSyncEngine';
-import { deviceManager } from './deviceManager';
-import { paperWorkflow } from './paperWorkflow';
+} from './setupWizard.js';
+import { videoSyncEngine } from './videoSyncEngine.js';
+import { deviceManager } from './deviceManager.js';
+import { paperWorkflow } from './paperWorkflow.js';
 
 // import { Bonjour } from 'bonjour-service';
 
