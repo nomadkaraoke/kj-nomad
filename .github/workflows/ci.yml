@@ -169,19 +169,10 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            arch: x64
-          - os: ubuntu-latest
-            platform: linux
-            arch: arm64
           - os: windows-latest
             platform: win32
-            arch: x64
           - os: macos-latest
             platform: darwin
-            arch: x64
-          - os: macos-latest
-            platform: darwin
-            arch: arm64
         
     steps:
     - name: Checkout code
@@ -220,7 +211,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: electron-${{ matrix.platform }}-${{ matrix.arch }}
+        name: electron-${{ matrix.platform }}
         path: |
           dist-electron/*.dmg
           dist-electron/*.zip
@@ -253,30 +244,16 @@ jobs:
       
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
-        release_name: KJ-Nomad v${{ steps.get_version.outputs.version }}
+        name: KJ-Nomad v${{ steps.get_version.outputs.version }}
         body: |
           ## 🎤 KJ-Nomad v${{ steps.get_version.outputs.version }}
           
           Professional karaoke hosting software with multi-screen synchronization and mobile control.
-          
-          ### 📦 Downloads
-          
-          **Windows:**
-          - `KJ-Nomad-Setup-${{ steps.get_version.outputs.version }}.exe` - Windows Installer
-          - `KJ-Nomad-${{ steps.get_version.outputs.version }}-win.zip` - Portable Version
-          
-          **macOS:**
-          - `KJ-Nomad-${{ steps.get_version.outputs.version }}.dmg` - macOS Installer (Intel)
-          - `KJ-Nomad-${{ steps.get_version.outputs.version }}-arm64.dmg` - macOS Installer (Apple Silicon)
-          
-          **Linux:**
-          - `KJ-Nomad-${{ steps.get_version.outputs.version }}.AppImage` - Universal Linux App
-          - `kj-nomad_${{ steps.get_version.outputs.version }}_amd64.deb` - Debian/Ubuntu Package
           
           ### 🚀 Quick Start
           1. Download the appropriate installer for your operating system
@@ -296,21 +273,8 @@ jobs:
           See the [Documentation](https://kj.nomadkaraoke.com) for full setup instructions.
         draft: false
         prerelease: false
-        
-    - name: Upload Release Assets
-      run: |
-        # Upload all built artifacts to the release
-        for artifact_dir in ./artifacts/*/; do
-          for file in "$artifact_dir"*; do
-            if [ -f "$file" ]; then
-              filename=$(basename "$file")
-              echo "Uploading $filename..."
-              gh release upload ${{ github.ref }} "$file" --clobber
-            fi
-          done
-        done
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        files: |
+          ./artifacts/**/*
 
   # Update Latest Release Links (for consistent download URLs)
   update-latest-links:

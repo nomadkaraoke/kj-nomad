@@ -2,6 +2,12 @@
   "name": "kj-nomad",
   "version": "1.0.0",
   "description": "Modern, offline-first, beautiful karaoke hosting software",
+  "author": {
+    "name": "Nomad Karaoke",
+    "email": "support@nomadkaraoke.com",
+    "url": "https://nomadkaraoke.com"
+  },
+  "license": "MIT",
   "private": true,
   "main": "electron/main.js",
   "homepage": "./",
@@ -75,6 +81,7 @@
     "mac": {
       "category": "public.app-category.entertainment",
       "icon": "electron/assets/icon.icns",
+      "identity": null,
       "target": [
         {
           "target": "dmg",
@@ -102,6 +109,7 @@
     "linux": {
       "icon": "electron/assets/icon.png",
       "category": "AudioVideo",
+      "maintainer": "Nomad Karaoke <support@nomadkaraoke.com>",
       "target": [
         {
           "target": "AppImage",
