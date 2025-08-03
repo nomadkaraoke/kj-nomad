@@ -154,13 +154,32 @@ jobs:
     - name: Install frontend dependencies
       run: cd client && npm ci
       
-    - name: Run packaging test
+    - name: Debug Information
+      shell: bash
       run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:packaging
-        else
-          npm run test:packaging
-        fi
+        echo "Runner OS: ${{ runner.os }}"
+        echo "Node version: $(node -v)"
+        echo "NPM version: $(npm -v)"
+        
+    - name: List files (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: ls -laR
+      
+    - name: List files (Windows)
+      if: runner.os == 'Windows'
+      run: dir /s
+      
+    - name: Run packaging test (Linux)
+      if: runner.os == 'Linux'
+      env:
+        DEBUG: "electron-builder,electron-updater"
+      run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:packaging
+      
+    - name: Run packaging test (Windows & macOS)
+      if: runner.os != 'Linux'
+      env:
+        DEBUG: "electron-builder,electron-updater"
+      run: npm run test:packaging
 
   # Build Electron Release (only on main branch or tags)
   build-electron:
