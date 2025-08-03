@@ -133,6 +133,7 @@ jobs:
     # needs: [backend-test, frontend-test, lint-and-typecheck]
     
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         

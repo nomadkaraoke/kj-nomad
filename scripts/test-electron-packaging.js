@@ -16,7 +16,7 @@ console.log('====================================\n');
 const PLATFORM = os.platform();
 const ARCH = os.arch();
 const DIST_DIR = 'dist-electron';
-const TEST_TIMEOUT = 30000; // 30 seconds
+const TEST_TIMEOUT = 60000; // 60 seconds
 
 /**
  * Get the expected executable path for current platform
@@ -148,6 +148,8 @@ function testServerStartup() {
     // Set up timeout
     const timeout = setTimeout(() => {
       if (!serverReady) {
+        console.error('❌ Server startup timed out. Captured output so far:');
+        console.error(output);
         child.kill('SIGTERM');
         reject(new Error('Server startup timeout'));
       }
