@@ -6,7 +6,7 @@ This document outlines the technical architecture and implementation roadmap for
 
 KJ-Nomad provides professional KJs with two deployment modes:
 
-**Local Mode**: "Modern, offline-first, beautiful but reliable KJ software. Multiple screens in perfect sync, scrolling ticker, automated rotation tracking. All KJ controls accessible from your phone, freeing you up to be a great host!"
+**Offline Mode**: "Modern, offline-first, beautiful but reliable KJ software. Multiple screens in perfect sync, scrolling ticker, automated rotation tracking. All KJ controls accessible from your phone, freeing you up to be a great host!"
 
 **Online Mode**: "Cloud-coordinated karaoke with singer self-service. Uses local media library AND YouTube together. Singers request songs from their phones, videos sync perfectly across screens, zero-config setup."
 
@@ -14,7 +14,7 @@ KJ-Nomad provides professional KJs with two deployment modes:
 
 KJ-Nomad operates in two distinct modes, each optimized for different venue scenarios:
 
-### 1.1 Local Mode (Offline-First)
+### 1.1 Offline Mode
 - **Target**: Venues with unreliable internet or KJs preferring traditional paper-based requests
 - **Architecture**: Self-contained executable + local network PWA
 - **Discovery**: Manual IP address entry for player screens
@@ -28,7 +28,7 @@ KJ-Nomad operates in two distinct modes, each optimized for different venue scen
 - **Requests**: Singer self-service via mobile web app
 - **Media**: Local library + YouTube on-demand downloads
 
-## 2. Local Mode Architecture
+## 2. Offline Mode Architecture
 
 ### 2.1 Components Overview
 ```
@@ -52,7 +52,7 @@ KJ-Nomad operates in two distinct modes, each optimized for different venue scen
 └─────────────────┘
 ```
 
-### 2.2 Local Mode Application (Electron Desktop App)
+### 2.2 Offline Mode Application (Electron Desktop App)
 
 **Technology Stack:**
 - **Runtime:** Electron (Node.js + Chromium)
@@ -69,7 +69,7 @@ KJ-Nomad operates in two distinct modes, each optimized for different venue scen
 - **Device Management:** Track connected player screens, individual control toggles
 - **Paper Request Workflow:** Optimized UI for manual singer/song entry
 
-### 2.3 Local Mode Setup Flow
+### 2.3 Offline Mode Setup Flow
 
 1. **Launch:** KJ double-clicks Electron app → opens integrated admin UI (no browser required)
 2. **Setup Wizard:**
@@ -228,7 +228,7 @@ export class SessionRelay {
 - Build session creation API endpoint
 - Configure automated deployment from GitHub
 
-### Phase 2: Local Mode MVP ✅ **COMPLETED**
+### Phase 2: Offline Mode MVP ✅ **COMPLETED**
 **Goal:** Create fully functional offline karaoke system
 
 **Deliverables:**
@@ -473,7 +473,7 @@ kj-nomad/
 
 **End-to-End Tests (Cypress):**
 1. **Setup Wizard Flow**: Media directory selection → Library scan → Network setup
-2. **Local Mode Operations**: Paper slip entry → Song matching → Queue management
+2. **Offline Mode Operations**: Paper slip entry → Song matching → Queue management
 3. **Multi-Screen Sync**: Player screen connection → Video synchronization testing
 4. **Device Management**: Screen grouping → Individual controls → Status monitoring
 5. **Paper Workflow**: Request processing → Duplicate detection → Priority handling
@@ -549,7 +549,7 @@ kj-nomad/
 - **Dependency Scanning**: Automated vulnerability detection
 
 **Privacy by Design:**
-- **Local Mode**: Zero external data transmission
+- **Offline Mode**: Zero external data transmission
 - **Online Mode**: Session-only data, no persistent user storage
 - **YouTube Integration**: No user data sent to third parties
 - **Logging**: No PII in logs, sanitized error messages

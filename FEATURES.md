@@ -6,7 +6,7 @@ This document provides an accurate overview of what features have actually been 
 
 KJ-Nomad supports two distinct deployment modes:
 
-**🏠 Local Mode**: Offline-first system for venues with unreliable internet. KJ runs a self-contained executable, manages paper requests manually, and controls multiple synchronized player screens via local network.
+**🏠 Offline Mode**: Offline-first system for venues with unreliable internet. KJ runs a self-contained executable, manages paper requests manually, and controls multiple synchronized player screens via local network.
 
 **☁️ Online Mode**: Cloud-coordinated system leveraging Cloudflare infrastructure. Singers request songs via mobile web app, KJ manages remotely via cloud admin interface, with local server handling video delivery and YouTube integration.
 
@@ -91,7 +91,7 @@ KJ-Nomad supports two distinct deployment modes:
 - **✅ GitHub Actions CI/CD**: Automated deployment pipeline with quality gates
 - **✅ Domain Setup**: kj.nomadkaraoke.com and sing.nomadkaraoke.com operational
 
-### Local Mode Features (Phase 2 Complete)
+### Offline Mode Features (Phase 2 Complete)
 - **✅ Self-Contained Executable**: Multi-platform packaging (Windows/Mac/Linux) with `pkg`
 - **✅ Auto-Launch Browser**: Cross-platform browser detection and auto-launch
 - **✅ Setup Wizard**: Complete guided setup with 8 API endpoints for configuration
@@ -206,7 +206,7 @@ KJ-Nomad supports two distinct deployment modes:
 - [x] Domain setup: kj.nomadkaraoke.com, sing.nomadkaraoke.com
 - [x] Session management API (Workers + KV + Durable Objects)
 
-### Phase 2: Local Mode MVP ✅ (Complete)
+### Phase 2: Offline Mode MVP ✅ (Complete)
 **Goal:** Create fully functional offline karaoke system
 - [x] Self-contained executable (Windows/Mac/Linux) - `pkg` packaging with installation scripts
 - [x] Auto-browser launch on server startup - Cross-platform detection and launch
@@ -242,7 +242,7 @@ KJ-Nomad supports two distinct deployment modes:
 
 **🏆 Production-Ready Systems (Complete):**
 
-**Local Mode (Offline Karaoke System):**
+**Offline Mode:**
 - ✅ **Self-contained executables** for Windows/Mac/Linux with `pkg` packaging
 - ✅ **Auto-browser launch** with cross-platform detection and professional startup UI
 - ✅ **Setup wizard** with 8 API endpoints for guided media library configuration
@@ -268,7 +268,7 @@ KJ-Nomad supports two distinct deployment modes:
 - ✅ **Filler music system** with automatic background music management
 
 **🚀 Ready for Production Distribution:**
-- **Local Mode**: Complete offline karaoke system ready for download and distribution
+- **Offline Mode**: Complete offline karaoke system ready for download and distribution
 - **Online Mode**: Cloud infrastructure operational and tested (session 7132 working)
 - **Dual-mode architecture**: Seamless switching between offline and online operation
 - **Professional packaging**: Installation scripts, executables, and documentation complete
@@ -289,7 +289,7 @@ KJ-Nomad supports two distinct deployment modes:
 3. ✅ Build landing page with Local vs Online mode selection
 4. ✅ Set up domains: kj.nomadkaraoke.com, sing.nomadkaraoke.com
 
-**Phase 2: Local Mode MVP** ✅
+**Phase 2: Offline Mode MVP** ✅
 1. ✅ Implement self-contained executable packaging (`pkg` with installation scripts)
 2. ✅ Add auto-browser launch on server startup (cross-platform detection)
 3. ✅ Build setup wizard for local library selection (8 API endpoints)
@@ -370,4 +370,4 @@ Significant testing infrastructure improvements completed:
 **Implementation Status:** **Phases 1, 2, 3 COMPLETE** - Professional-grade karaoke system ready for distribution  
 **API Endpoints:** 60+ REST endpoints across setup, sync, devices, paper workflow, and cloud connectivity  
 **Test Status:** 238 tests passing + **MAJOR PROGRESS**: 3 critical modules (164 tests) now meeting 80%+ coverage requirement  
-**Current Capability:** Production-ready Local Mode + Online Mode with cloud infrastructure operational
+**Current Capability:** Production-ready Offline Mode + Online Mode with cloud infrastructure operational

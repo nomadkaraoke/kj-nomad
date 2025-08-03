@@ -234,7 +234,7 @@ function createInstallationPackages() {
 
 ## Features
 
-✅ **Local Mode MVP** - Complete offline karaoke system
+✅ **Offline Mode MVP** - Complete offline karaoke system
 ✅ **Auto Browser Launch** - One-click startup
 ✅ **Setup Wizard** - Easy media library configuration  
 ✅ **Perfect Video Sync** - <100ms synchronization across screens
@@ -261,7 +261,7 @@ Filler music should start with "filler-":
 
 ## Usage
 
-### Local Mode (Offline)
+### Offline Mode
 1. Run the executable
 2. Open \`http://localhost:8080\` for admin interface
 3. Connect player screens to \`http://[your-ip]:8080/player\`
