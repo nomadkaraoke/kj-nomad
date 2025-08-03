@@ -1,5 +1,5 @@
 {
-  "version": "main-4d4f273",
+  "version": "main-6bdabab",
   "tag": "latest",
   "downloads": {
     "windows_installer": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad Setup 1.0.0.exe",
@@ -9,5 +9,5 @@
     "linux_appimage": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.AppImage",
     "linux_deb": "https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/kj-nomad_1.0.0_amd64.deb"
   },
-  "updated": "2025-08-03T20:15:22Z"
+  "updated": "2025-08-03T20:58:13Z"
 }
