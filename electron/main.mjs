@@ -386,10 +386,16 @@ class KJNomadApp {
         ELECTRON_MODE: 'true',
         AUTO_LAUNCH: 'false',
         PORT: serverPort.toString(),
-        HEADLESS: 'true',
+        HEADLESS: process.env.HEADLESS || 'false',
         START_MODE: mode,
         KJ_NOMAD_USER_DATA_PATH: app.getPath('userData')
       };
+      
+      // Override port if provided in environment
+      if (process.env.PORT) {
+        serverEnv.PORT = process.env.PORT;
+        serverPort = parseInt(process.env.PORT, 10);
+      }
       
       serverProcess = utilityProcess.fork(serverPath, [], {
         env: serverEnv,

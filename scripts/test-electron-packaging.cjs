@@ -22,6 +22,14 @@ const TEST_TIMEOUT = 60000; // 60 seconds
  * Get the expected executable path for current platform
  */
 function getExecutablePath() {
+  // For arm64 macs, we might have a native executable
+  if (PLATFORM === 'darwin' && ARCH === 'arm64') {
+    const arm64Path = path.join(DIST_DIR, 'mac-arm64', 'KJ-Nomad.app', 'Contents', 'MacOS', 'KJ-Nomad');
+    if (fs.existsSync(arm64Path)) {
+      return arm64Path;
+    }
+  }
+
   const platformPaths = {
     'darwin': path.join(DIST_DIR, 'mac', 'KJ-Nomad.app', 'Contents', 'MacOS', 'KJ-Nomad'),
     'win32': path.join(DIST_DIR, 'win-unpacked', 'KJ-Nomad.exe'),
@@ -37,6 +45,23 @@ function getExecutablePath() {
 function getInstallerPath() {
   const version = require('../package.json').version;
   
+  // For arm64 macs, we might have a native installer
+  if (PLATFORM === 'darwin' && ARCH === 'arm64') {
+    const arm64Dmg = path.join(DIST_DIR, `KJ-Nomad-${version}-arm64.dmg`);
+    const arm64Zip = path.join(DIST_DIR, `KJ-Nomad-${version}-arm64-mac.zip`);
+    
+    const armPaths = [];
+    if (fs.existsSync(arm64Dmg)) {
+      armPaths.push(arm64Dmg);
+    }
+    if (fs.existsSync(arm64Zip)) {
+      armPaths.push(arm64Zip);
+    }
+    if (armPaths.length > 0) {
+      return armPaths;
+    }
+  }
+
   const installerPaths = {
     'darwin': [
       path.join(DIST_DIR, `KJ-Nomad-${version}.dmg`),
