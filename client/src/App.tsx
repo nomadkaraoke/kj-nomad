@@ -7,7 +7,9 @@ import { websocketService } from './services/websocketService';
 import { useAppStore } from './store/appStore';
 
 // Import page components
+import SetupWizardPage from './pages/SetupWizardPage';
 import OnlineSessionConnectPage from './pages/OnlineSessionConnectPage';
+import OnlineSessionConnectedPage from './pages/OnlineSessionConnectedPage';
 import PlayerPage from './pages/PlayerPage';
 import ControllerPage from './pages/ControllerPage';
 import SingerPage from './pages/SingerPage';
@@ -16,18 +18,27 @@ import SingerProfilesPage from './pages/SingerProfilesPage';
 import './App.css';
 
 const AppContent: React.FC = () => {
-  const { mode, connectionStatus } = useAppStore();
+  const { mode, isSessionConnected, isSetupComplete, onlineSessionRequiresLibrary } = useAppStore();
+
+  if (mode === 'online') {
+    if (!isSessionConnected) {
+      return <OnlineSessionConnectPage />;
+    }
+    if (!onlineSessionRequiresLibrary) {
+      return <OnlineSessionConnectedPage />;
+    }
+  }
+
+  if (!isSetupComplete) {
+    return <SetupWizardPage />;
+  }
 
   if (mode === 'unknown') {
     // We could show a loading spinner here while waiting for Electron to send the mode
     return <div className="flex items-center justify-center h-screen bg-gray-900 text-white">Loading...</div>;
   }
 
-  if (mode === 'online' && connectionStatus !== 'connected') {
-    return <OnlineSessionConnectPage />;
-  }
-
-  // For both 'offline' mode and 'online' mode once connected
+  // For both 'offline' mode and 'online' mode once connected and setup is complete
   return (
     <Layout>
       <div className="flex flex-col min-h-screen">
@@ -49,6 +60,7 @@ const AppContent: React.FC = () => {
 function App() {
   useEffect(() => {
     websocketService.connect();
+    useAppStore.getState().checkSetupStatus();
 
     let cleanup: (() => void) | undefined;
 

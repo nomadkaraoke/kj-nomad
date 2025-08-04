@@ -184,6 +184,17 @@ class WebSocketService {
         console.log('[WebSocketService] Setting ticker text:', payload);
         store.setTickerText(payload as string);
         break;
+
+      case 'online_session_connected':
+        if (payload && typeof payload === 'object') {
+          const { requiresLocalLibrary } = payload as { requiresLocalLibrary: boolean };
+          store.setIsSessionConnected(true);
+          store.setOnlineSessionRequiresLibrary(requiresLocalLibrary);
+          if (!requiresLocalLibrary) {
+            store.setIsSetupComplete(true);
+          }
+        }
+        break;
         
       default:
         console.log('Unhandled message type:', type, payload);

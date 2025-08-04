@@ -277,7 +277,9 @@ export class SessionRelay {
 - **Enhanced startup UI:** Professional console output with network info and instructions
 - **Graceful fallback:** Manual URL display if auto-launch fails
 
-**🧙‍♂️ Setup Wizard (`setupWizard.ts`)**
+**🧙‍♂️ Setup Wizard (`setupWizard.ts` & `SetupWizardPage.tsx`)**
+- **Interactive UI:** Multi-step wizard for first-time setup.
+- **Electron Dialogs:** Uses native file dialogs for directory selection.
 - **8 REST API endpoints:** `/api/setup/*` for configuration management
 - **Directory validation:** Real-time checking with file count, permissions, and format detection
 - **Network discovery:** Auto-detection of local IP addresses for player screen setup
@@ -313,12 +315,12 @@ export class SessionRelay {
 - **Desktop integration:** Native app icons, file associations, auto-updater support
 - **Complete packaging:** Desktop shortcuts, system tray, native menus, uninstaller included
 
-**Current Status (2025-08-02):** ✅ **PHASE 2 COMPLETE!** Professional offline karaoke system ready for production distribution. All 6 major deliverables implemented with comprehensive backend APIs (60+ endpoints), real-time synchronization, and cross-platform packaging. System tested with auto-browser launch, perfect video sync, and efficient paper workflow management.
+**Current Status (2025-08-04):** ✅ **PHASE 2 COMPLETE!** Professional offline karaoke system ready for production distribution. All 6 major deliverables implemented with comprehensive backend APIs (60+ endpoints), real-time synchronization, and cross-platform packaging. System tested with auto-browser launch, perfect video sync, and efficient paper workflow management.
 
-**🔧 PACKAGING SYSTEM FULLY OPERATIONAL** ✅
+**🔧 ELECTRON PACKAGING SYSTEM FULLY OPERATIONAL** ✅
 - **✅ CI/CD Pipeline Fixed**: GitHub Actions now correctly runs packaging from root directory
-- **✅ pkg Configuration Resolved**: Added missing `bin` field to server/package.json for CI compatibility
-- **✅ Runtime Issues Fixed**: Corrected pkg.json configuration to use proper entry point
+- **✅ Electron Builder Configuration**: Correctly configured for multi-platform builds.
+- **✅ Runtime Issues Fixed**: Correctly configured to copy client build to server.
 - **✅ Asset Bundling**: Public directory assets properly included in executables
 - **✅ Cross-Platform Testing**: All executables (Windows/Mac/Linux) build and run successfully
 - **✅ Installation Scripts**: Complete packaging with README, start scripts, and desktop shortcuts

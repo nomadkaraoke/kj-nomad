@@ -55,12 +55,15 @@ export interface AppState {
   sessionState: SessionState | null;
   sessionHistory: PlayedSong[];
   playbackState: 'playing' | 'paused' | 'stopped';
+  onlineSessionRequiresLibrary: boolean;
+  isSessionConnected: boolean;
   
   // UI state
   tickerText: string;
   currentView: 'home' | 'player' | 'controller' | 'singer';
   isLoading: boolean;
   showHistory: boolean;
+  isSetupComplete: boolean;
   
   // Search state
   searchQuery: string;
@@ -86,8 +89,12 @@ export interface AppState {
   setSessionHistory: (history: PlayedSong[]) => void;
   setPlaybackState: (state: 'playing' | 'paused' | 'stopped') => void;
   setShowHistory: (show: boolean) => void;
+  setIsSetupComplete: (isComplete: boolean) => void;
+  setOnlineSessionRequiresLibrary: (requiresLibrary: boolean) => void;
+  setIsSessionConnected: (isConnected: boolean) => void;
   
   // Complex actions
+  checkSetupStatus: () => Promise<void>;
   connectToOnlineSession: (sessionId: string, adminKey: string) => void;
   requestSong: (songId: string, singerName: string) => void;
   playNext: () => void;
@@ -115,12 +122,15 @@ export const useAppStore = create<AppState>()(
       sessionState: null,
       sessionHistory: [],
       playbackState: 'stopped',
+      onlineSessionRequiresLibrary: false,
+      isSessionConnected: false,
       
       // UI state
       tickerText: 'Welcome to KJ-Nomad! 🎤 Professional Karaoke System',
       currentView: 'home',
       isLoading: false,
       showHistory: false,
+      isSetupComplete: false,
       
       // Search state
       searchQuery: '',
@@ -150,8 +160,22 @@ export const useAppStore = create<AppState>()(
       setSessionHistory: (sessionHistory) => set({ sessionHistory }),
       setPlaybackState: (playbackState) => set({ playbackState }),
       setShowHistory: (showHistory) => set({ showHistory }),
+      setIsSetupComplete: (isSetupComplete) => set({ isSetupComplete }),
+      setOnlineSessionRequiresLibrary: (onlineSessionRequiresLibrary) => set({ onlineSessionRequiresLibrary }),
+      setIsSessionConnected: (isSessionConnected) => set({ isSessionConnected }),
       
-      // Complex actions that send WebSocket messages
+      // Complex actions
+      checkSetupStatus: async () => {
+        try {
+          const response = await fetch('/api/setup/status');
+          const data = await response.json();
+          set({ isSetupComplete: data.isConfigured });
+        } catch (error) {
+          console.error('Failed to check setup status:', error);
+          set({ isSetupComplete: false });
+        }
+      },
+
       connectToOnlineSession: (sessionId, adminKey) => {
         const { socket } = get();
         if (socket && socket.readyState === WebSocket.OPEN) {

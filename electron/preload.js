@@ -18,5 +18,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => {
       ipcRenderer.removeListener('mode-selected', handler);
     };
-  }
+  },
+  selectDirectory: () => ipcRenderer.invoke('select-directory')
 });

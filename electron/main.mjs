@@ -87,6 +87,17 @@ class KJNomadApp {
       await this.startServer(mode);
       await this.loadApp(mode); // Pass mode to loadApp
     });
+
+    ipcMain.handle('select-directory', async () => {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openDirectory']
+      });
+      if (result.canceled) {
+        return null;
+      } else {
+        return result.filePaths[0];
+      }
+    });
   }
 
   getAppIcon() {

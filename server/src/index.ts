@@ -1399,6 +1399,29 @@ wss.on('connection', (ws) => {
             console.log('[WebSocket] Ticker update:', payload);
             broadcast({ type: 'ticker_updated', payload });
             break;
+        case 'connect_online_session': {
+            const { sessionId, adminKey } = payload as { sessionId: string; adminKey: string };
+            console.log(`[WebSocket] Attempting to connect to online session ${sessionId} with key ${adminKey}`);
+            // This is a simplified connection logic. In a real app, you'd validate the adminKey.
+            cloudConnector.registerWithSession(sessionId, PORT as number, {})
+              .then(success => {
+                if (success) {
+                  const config = loadSetupConfig();
+                  ws.send(JSON.stringify({
+                    type: 'online_session_connected',
+                    payload: {
+                      requiresLocalLibrary: !!config.mediaDirectory,
+                    }
+                  }));
+                } else {
+                  ws.send(JSON.stringify({
+                    type: 'connection_error',
+                    payload: 'Failed to connect to online session.'
+                  }));
+                }
+              });
+            break;
+        }
         default:
             // For playback controls, broadcast to all clients except the sender
             wss.clients.forEach((client) => {
