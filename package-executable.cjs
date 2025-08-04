@@ -365,7 +365,7 @@ function main() {
   
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
-Usage: node package-executable.js [options]
+Usage: node package-executable.cjs [options]
 
 Options:
   --skip-deps     Skip dependency check
@@ -374,9 +374,9 @@ Options:
   --help, -h      Show this help message
 
 Examples:
-  node package-executable.js
-  node package-executable.js --platforms win-x64,macos-x64
-  node package-executable.js --skip-build
+  node package-executable.cjs
+  node package-executable.cjs --platforms win-x64,macos-x64
+  node package-executable.cjs --skip-build
 `);
     return;
   }

@@ -18,11 +18,8 @@ coverage/
 .nyc_output
 
 # Testing artifacts
-# Cypress
-client/cypress/screenshots/
-client/cypress/videos/
-cypress/screenshots/
-cypress/videos/
+#Playwright
+test-results
 
 # Environment variables
 .env
@@ -110,3 +107,12 @@ storybook-static/
 *.bak
 *~
 
+# Playwright-BDD generated files
+.features-gen/
+
+# Playwright reports
+e2e/report/
+e2e/report-electron/
+
+# Application data
+server/data/

@@ -123,7 +123,7 @@ class KJNomadApp {
       autoHideMenuBar: true,
     });
 
-    // We will create a new route in the React app for this
+    // Load the main app URL and the router will handle the rest
     playerWindow.loadURL(`http://${SERVER_HOST}:${serverPort}/player-setup`);
 
     this.findServers(playerWindow);

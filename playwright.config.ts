@@ -8,9 +8,9 @@ const testDir = defineBddConfig({
 
 export default defineConfig({
   testDir,
-  reporter: [['html', { outputFolder: 'e2e/report' }]],
+  reporter: [['html', { outputFolder: 'e2e/report', open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,4 +19,9 @@ export default defineConfig({
       use: { browserName: 'chromium' },
     },
   ],
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+  },
 });

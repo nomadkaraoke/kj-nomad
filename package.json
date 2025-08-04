@@ -26,6 +26,7 @@
     "test:server": "cd server && npm run test",
     "test:client": "cd client && npm run test",
     "test:e2e": "npx bddgen && npx playwright test",
+    "test:e2e:headless": "npx bddgen && npx playwright test",
     "test:e2e:report": "npx playwright show-report e2e/report",
     "test:e2e:open": "cd client && npm run cypress:open",
     "lint": "npm run lint:server && npm run lint:client",

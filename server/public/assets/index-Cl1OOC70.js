@@ -30363,7 +30363,7 @@ const OnlineSessionConnectPage = () => {
   ] }) }) }) });
 };
 const OnlineSessionConnectedPage = () => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-screen w-screen bg-gray-900 text-white flex items-center justify-center font-sans", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { size: "sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { className: "bg-gray-800 border border-gray-700 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 text-center", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-screen w-screen bg-gray-900 text-white flex items-center justify-center font-sans", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { size: "md", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { className: "bg-gray-800 border border-gray-700 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 text-center", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-100 dark:bg-green-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-12 w-12 text-green-500" }) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white mb-4", children: "Successfully Connected" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 mb-8", children: "This app is now connected to your online session. You can now manage your show from the web admin interface." }),
@@ -30866,4 +30866,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-CBvYkerk.js.map
+//# sourceMappingURL=index-Cl1OOC70.js.map
