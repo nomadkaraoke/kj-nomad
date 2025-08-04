@@ -11,11 +11,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   // Receive-only channel from main to renderer
-  on: (channel, func) => {
-    const validChannels = ['mode-selected'];
-    if (validChannels.includes(channel)) {
-      // Deliberately strip event as it includes `sender` 
-      ipcRenderer.on(channel, (event, ...args) => func(...args));
-    }
+  onMode: (callback) => {
+    const handler = (event, ...args) => callback(...args);
+    ipcRenderer.on('mode-selected', handler);
+    // Return a cleanup function
+    return () => {
+      ipcRenderer.removeListener('mode-selected', handler);
+    };
   }
 });

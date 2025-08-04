@@ -19,8 +19,8 @@ class WebSocketService {
         
         // Update store
         useAppStore.getState().setSocket(this.ws);
-        useAppStore.getState().setIsConnected(true);
-        useAppStore.getState().setConnectionError(null);
+        useAppStore.getState().setConnectionStatus('connected');
+        useAppStore.getState().setError(null);
         
         // Request initial state
         this.send({ type: 'get_session_state' });
@@ -35,13 +35,14 @@ class WebSocketService {
         
         // Update store
         useAppStore.getState().setSocket(null);
-        useAppStore.getState().setIsConnected(false);
+        useAppStore.getState().setConnectionStatus('idle');
         
         // Don't reconnect on page unload (1001) or normal close (1000)
         if (event.code !== 1000 && event.code !== 1001 && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
         } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          useAppStore.getState().setConnectionError('Failed to connect after multiple attempts');
+          useAppStore.getState().setConnectionStatus('error');
+          useAppStore.getState().setError('Failed to connect after multiple attempts');
         }
       };
       
@@ -50,7 +51,8 @@ class WebSocketService {
         if (this.ws?.readyState !== WebSocket.CONNECTING) {
           console.error('WebSocket error:', error);
         }
-        useAppStore.getState().setConnectionError('Connection error occurred');
+        useAppStore.getState().setConnectionStatus('error');
+        useAppStore.getState().setError('Connection error occurred');
       };
       
       this.ws.onmessage = (event) => {
@@ -67,7 +69,8 @@ class WebSocketService {
       if (this.reconnectAttempts === 0) {
         console.error('Failed to create WebSocket connection:', error);
       }
-      useAppStore.getState().setConnectionError('Failed to create connection');
+      useAppStore.getState().setConnectionStatus('error');
+      useAppStore.getState().setError('Failed to create connection');
     }
   }
   
@@ -82,7 +85,8 @@ class WebSocketService {
       console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${this.reconnectInterval}ms`);
     }
     
-    useAppStore.getState().setConnectionError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    useAppStore.getState().setConnectionStatus('connecting');
+    useAppStore.getState().setError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
     
     this.reconnectTimer = setTimeout(() => {
       this.connect();
@@ -208,7 +212,7 @@ class WebSocketService {
     }
     
     useAppStore.getState().setSocket(null);
-    useAppStore.getState().setIsConnected(false);
+    useAppStore.getState().setConnectionStatus('idle');
   }
   
   getConnectionState() {

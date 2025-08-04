@@ -16,7 +16,7 @@ import {
 
 export const Navigation: React.FC = () => {
   const location = useLocation();
-  const { isConnected, connectionError } = useAppStore();
+  const { connectionStatus, error } = useAppStore();
   
   const navItems = [
     { 
@@ -64,7 +64,7 @@ export const Navigation: React.FC = () => {
             
             {/* Connection Status */}
             <div className="flex items-center space-x-2">
-              {isConnected ? (
+              {connectionStatus === 'connected' ? (
                 <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
                   <WifiIcon className="h-4 w-4" />
                   <span className="text-xs font-medium hidden sm:inline">Connected</span>
@@ -73,7 +73,7 @@ export const Navigation: React.FC = () => {
                 <div className="flex items-center space-x-1 text-red-600 dark:text-red-400">
                   <ExclamationTriangleIcon className="h-4 w-4" />
                   <span className="text-xs font-medium hidden sm:inline">
-                    {connectionError || 'Disconnected'}
+                    {error || 'Disconnected'}
                   </span>
                 </div>
               )}

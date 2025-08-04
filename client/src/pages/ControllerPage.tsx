@@ -21,7 +21,7 @@ const ControllerPage: React.FC = () => {
     queue, 
     nowPlaying, 
     tickerText, 
-    isConnected,
+    connectionStatus,
     sessionState,
     sessionHistory,
     playbackState,
@@ -77,6 +77,7 @@ const ControllerPage: React.FC = () => {
   };
   
   const currentlyPlaying = nowPlaying && !nowPlaying.isFiller;
+  const isConnected = connectionStatus === 'connected';
   
   return (
     <Container size="xl" className="py-6 space-y-6">

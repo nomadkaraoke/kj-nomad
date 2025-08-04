@@ -85,7 +85,7 @@ class KJNomadApp {
       console.log(`Received start-mode event: ${mode}`);
       // Once a mode is chosen, start the server and load the main app
       await this.startServer(mode);
-      await this.loadApp();
+      await this.loadApp(mode); // Pass mode to loadApp
     });
   }
 
@@ -237,7 +237,7 @@ class KJNomadApp {
     });
   }
 
-  async loadApp() {
+  async loadApp(mode) { // Receive mode here
     if (this.isCleaningUp) return;
     
     const url = `http://${SERVER_HOST}:${SERVER_PORT}`;
@@ -246,6 +246,9 @@ class KJNomadApp {
       if (!this.isCleaningUp) console.log(`🌐 Loading app from ${url}`);
       await mainWindow.loadURL(url);
       if (this.isCleaningUp) return;
+
+      // Send the selected mode to the renderer process
+      mainWindow.webContents.send('mode-selected', mode);
       
       mainWindow.show();
       mainWindow.focus();

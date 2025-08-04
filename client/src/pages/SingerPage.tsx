@@ -21,7 +21,7 @@ interface Song {
 }
 
 const SingerPage: React.FC = () => {
-  const { isConnected, requestSong, queue } = useAppStore();
+  const { connectionStatus, requestSong, queue } = useAppStore();
   const [singerName, setSingerName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [songs, setSongs] = useState<Song[]>([]);
@@ -74,6 +74,8 @@ const SingerPage: React.FC = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
   
+  const isConnected = connectionStatus === 'connected';
+
   const handleRequestSong = (songId: string, songTitle: string, artist: string) => {
     if (!singerName.trim()) {
       setRequestStatus({

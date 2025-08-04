@@ -38,11 +38,14 @@ export interface SessionState {
   queueLength: number;
 }
 
-interface AppState {
+export interface AppState {
+  // App mode
+  mode: 'offline' | 'online' | 'unknown';
+
   // Connection state
   socket: WebSocket | null;
-  isConnected: boolean;
-  connectionError: string | null;
+  connectionStatus: 'idle' | 'connecting' | 'connected' | 'error';
+  error: string | null;
   
   // Queue state
   queue: QueueEntry[];
@@ -64,9 +67,10 @@ interface AppState {
   searchResults: Song[];
   
   // Actions
+  setMode: (mode: 'offline' | 'online') => void;
   setSocket: (socket: WebSocket | null) => void;
-  setIsConnected: (connected: boolean) => void;
-  setConnectionError: (error: string | null) => void;
+  setConnectionStatus: (status: 'idle' | 'connecting' | 'connected' | 'error') => void;
+  setError: (error: string | null) => void;
   setQueue: (queue: QueueEntry[]) => void;
   addToQueue: (entry: QueueEntry) => void;
   removeFromQueue: (songId: string) => void;
@@ -84,6 +88,7 @@ interface AppState {
   setShowHistory: (show: boolean) => void;
   
   // Complex actions
+  connectToOnlineSession: (sessionId: string, adminKey: string) => void;
   requestSong: (songId: string, singerName: string) => void;
   playNext: () => void;
   pausePlayback: () => void;
@@ -99,9 +104,10 @@ export const useAppStore = create<AppState>()(
   devtools(
     (set, get) => ({
       // Initial state
+      mode: 'unknown',
       socket: null,
-      isConnected: false,
-      connectionError: null,
+      connectionStatus: 'idle',
+      error: null,
       queue: [],
       nowPlaying: null,
       
@@ -121,11 +127,12 @@ export const useAppStore = create<AppState>()(
       searchResults: [],
       
       // Basic setters
+      setMode: (mode) => set({ mode }),
       setSocket: (socket) => set({ socket }),
-      setIsConnected: (isConnected) => set({ isConnected }),
-      setConnectionError: (connectionError) => set({ connectionError }),
+      setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
+      setError: (error) => set({ error }),
       setQueue: (queue) => set({ queue }),
-      addToQueue: (entry) => set((state) => ({ 
+      addToQueue: (entry) => set((state) => ({
         queue: [...state.queue, entry] 
       })),
       removeFromQueue: (songId) => set((state) => ({
@@ -145,6 +152,19 @@ export const useAppStore = create<AppState>()(
       setShowHistory: (showHistory) => set({ showHistory }),
       
       // Complex actions that send WebSocket messages
+      connectToOnlineSession: (sessionId, adminKey) => {
+        const { socket } = get();
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          set({ connectionStatus: 'connecting', error: null });
+          socket.send(JSON.stringify({
+            type: 'connect_online_session',
+            payload: { sessionId, adminKey }
+          }));
+        } else {
+          set({ connectionStatus: 'error', error: 'WebSocket is not connected.' });
+        }
+      },
+
       requestSong: (songId, singerName) => {
         const { socket } = get();
         if (socket && socket.readyState === WebSocket.OPEN) {
