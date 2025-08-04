@@ -5,14 +5,12 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { networkInterfaces } from 'os';
 import express, { Request, Response } from 'express';
-import { getDataPath, ensureDataDirExists } from './dataPath.js';
+import { getDataPath, ensureDataDirExists, getMediaDefaultPath } from './dataPath.js';
+import { scanMediaLibrary } from './mediaLibrary.js';
 
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Get __filename equivalent for ES modules
 
 export interface SetupConfig {
   mediaDirectory: string;
@@ -46,7 +44,7 @@ export interface NetworkInfo {
 }
 
 const CONFIG_FILE = getDataPath('setup.json');
-const DEFAULT_MEDIA_DIR = path.join(__dirname, '../media');
+const DEFAULT_MEDIA_DIR = getMediaDefaultPath();
 const DEFAULT_CONFIG: SetupConfig = {
   mediaDirectory: DEFAULT_MEDIA_DIR,
   fillerMusicDirectory: DEFAULT_MEDIA_DIR,
@@ -448,6 +446,37 @@ export function applySetupRoutes(app: express.Application): void {
     console.log('[API] GET /api/setup/network - Get network information');
     const networkInfo = getNetworkInfo();
     res.json({ success: true, data: networkInfo });
+  });
+
+  // Set media directory
+  app.post('/api/setup/media-directory', (req, res) => {
+    const { path } = req.body;
+    if (!path) {
+      return res.status(400).json({ error: 'Path is required' });
+    }
+    const config = loadSetupConfig();
+    config.mediaDirectory = path;
+    if (saveSetupConfig(config)) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ error: 'Failed to save configuration' });
+    }
+  });
+
+  // Start library scan
+  app.post('/api/setup/scan', (req, res) => {
+    try {
+      const config = loadSetupConfig();
+      if (!config.mediaDirectory) {
+        return res.status(400).json({ success: false, error: 'Media directory not configured.' });
+      }
+      const library = scanMediaLibrary(config.mediaDirectory);
+      res.json({ success: true, data: { songCount: library.length } });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during scan.';
+      console.error('[API] /api/setup/scan failed:', error);
+      res.status(500).json({ success: false, error: errorMessage });
+    }
   });
 }
 

@@ -35,6 +35,7 @@ class KJNomadApp {
       });
     } else {
       // Normal GUI startup
+      this.setupProtocolHandler();
       app.whenReady().then(() => this.createWindow());
     }
     
@@ -43,7 +44,47 @@ class KJNomadApp {
     app.on('before-quit', () => this.handleBeforeQuit());
   }
 
+  setupProtocolHandler() {
+    if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient('kj-nomad', process.execPath, [path.resolve(process.argv[1])]);
+      }
+    } else {
+      app.setAsDefaultProtocolClient('kj-nomad');
+    }
+
+    app.on('open-url', (event, url) => {
+      event.preventDefault();
+      this.handleUrl(url);
+    });
+
+    const gotTheLock = app.requestSingleInstanceLock();
+    if (!gotTheLock) {
+      app.quit();
+    } else {
+      app.on('second-instance', (event, commandLine, workingDirectory) => {
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+        }
+        this.handleUrl(commandLine.pop());
+      });
+    }
+  }
+
+  handleUrl(url) {
+    if (!url || !url.startsWith('kj-nomad://')) return;
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'connect') {
+      const adminKey = urlObj.searchParams.get('adminKey');
+      if (adminKey && mainWindow) {
+        mainWindow.webContents.send('connect-with-admin-key', adminKey);
+      }
+    }
+  }
+
   async createWindow() {
+    this.createMenu();
     // Create the browser window
     mainWindow = new BrowserWindow({
       width: 1200,
@@ -98,6 +139,110 @@ class KJNomadApp {
         return result.filePaths[0];
       }
     });
+  }
+
+  createMenu() {
+    const template = [
+      {
+        label: 'File',
+        submenu: [
+          {
+            label: 'Download Debug Logs',
+            click: async () => {
+              if (mainWindow) {
+                const { filePath } = await dialog.showSaveDialog(mainWindow, {
+                  title: 'Save Debug Logs',
+                  defaultPath: `kj-nomad-debug-logs-${Date.now()}.zip`,
+                  filters: [{ name: 'Zip Files', extensions: ['zip'] }]
+                });
+
+                if (filePath) {
+                  // This is a bit of a hack, but it's the easiest way to trigger the download
+                  // without a lot of extra IPC communication.
+                  mainWindow.webContents.downloadURL(`http://${SERVER_HOST}:${SERVER_PORT}/api/debug/download`);
+                  mainWindow.webContents.session.once('will-download', (event, item, webContents) => {
+                    item.setSavePath(filePath);
+                  });
+                }
+              }
+            }
+          },
+          { type: 'separator' },
+          process.platform === 'darwin' ? { role: 'close' } : { role: 'quit' }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          ...(process.platform === 'darwin' ? [
+            { role: 'pasteAndMatchStyle' },
+            { role: 'delete' },
+            { role: 'selectAll' },
+            { type: 'separator' },
+            {
+              label: 'Speech',
+              submenu: [
+                { role: 'startSpeaking' },
+                { role: 'stopSpeaking' }
+              ]
+            }
+          ] : [
+            { role: 'delete' },
+            { type: 'separator' },
+            { role: 'selectAll' }
+          ])
+        ]
+      },
+      {
+        label: 'View',
+        submenu: [
+          { role: 'reload' },
+          { role: 'forceReload' },
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+          { role: 'resetZoom' },
+          { role: 'zoomIn' },
+          { role: 'zoomOut' },
+          { type: 'separator' },
+          { role: 'togglefullscreen' }
+        ]
+      },
+      {
+        label: 'Window',
+        submenu: [
+          { role: 'minimize' },
+          { role: 'zoom' },
+          ...(process.platform === 'darwin' ? [
+            { type: 'separator' },
+            { role: 'front' },
+            { type: 'separator' },
+            { role: 'window' }
+          ] : [
+            { role: 'close' }
+          ])
+        ]
+      },
+      {
+        role: 'help',
+        submenu: [
+          {
+            label: 'Learn More',
+            click: async () => {
+              await shell.openExternal('https://github.com/nomadkaraoke/kj-nomad');
+            }
+          }
+        ]
+      }
+    ];
+
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
   }
 
   getAppIcon() {

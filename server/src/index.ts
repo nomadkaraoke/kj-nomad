@@ -67,6 +67,7 @@ import { deviceManager } from './deviceManager.js';
 import { paperWorkflow } from './paperWorkflow.js';
 import { singerProfileManager } from './singerProfiles.js';
 import { advancedQueueManager } from './advancedQueue.js';
+import { applyDebugRoutes } from './debug.js';
 
 // import { Bonjour } from 'bonjour-service';
 
@@ -113,6 +114,9 @@ console.log('Using client path:', clientPath);
 // Enable static file serving
 app.use(express.static(clientPath));
 app.use(express.json());
+
+// Apply debug routes
+applyDebugRoutes(app);
 
 // TEMP: Simple test endpoint
 app.get('/api/test', (req, res) => {

@@ -19,5 +19,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('mode-selected', handler);
     };
   },
-  selectDirectory: () => ipcRenderer.invoke('select-directory')
+  selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  onConnectWithAdminKey: (callback) => {
+    const handler = (event, ...args) => callback(...args);
+    ipcRenderer.on('connect-with-admin-key', handler);
+    return () => {
+      ipcRenderer.removeListener('connect-with-admin-key', handler);
+    };
+  }
 });

@@ -130,8 +130,9 @@
                 <li>Tell singers to go to <strong>sing.nomadkaraoke.com</strong> and enter the Session ID.</li>
                 <li>Point your player screens to <strong>kj.nomadkaraoke.com/player</strong> and enter the Session ID.</li>
             </ol>
-            <div style="text-align:center;">
-                <a href="#" id="download-link" class="cta-button">Download the App</a>
+            <div style="text-align:center; display: flex; gap: 1rem; justify-content: center;">
+                <a href="#" id="launch-app-link" class="cta-button">🚀 Launch App</a>
+                <a href="#" id="download-link" class="cta-button" style="background: var(--dark-card); border: 2px solid var(--pink);">Download App</a>
             </div>
         </div>
     </div>
@@ -162,6 +163,10 @@
                 // In a real app, this might be a shared module.
                 showDownloadOptions(); 
             };
+
+            // Setup launch app link
+            const launchAppLink = document.getElementById('launch-app-link');
+            launchAppLink.href = `kj-nomad://connect?adminKey=${encodeURIComponent(sessionData.adminKey)}`;
         });
 
         function copyToClipboard(text, type) {

@@ -23,3 +23,8 @@ export const ensureDataDirExists = () => {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
 };
+
+export const getMediaDefaultPath = () => {
+  const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+  return path.join(homeDir, 'Music', 'KJ-Nomad');
+};

@@ -16,10 +16,15 @@ vi.mock('url', () => ({
 }));
 
 // Mock the new dataPath module
-vi.mock('../dataPath.js', () => ({
-  ensureDataDirExists: mockEnsureDataDirExists,
-  getDataPath: mockGetDataPath,
-}));
+vi.mock('../dataPath.js', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    ensureDataDirExists: mockEnsureDataDirExists,
+    getDataPath: mockGetDataPath,
+    getMediaDefaultPath: () => '/mock/media',
+  };
+});
 
 import fs from 'fs';
 import path from 'path';

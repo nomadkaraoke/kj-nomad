@@ -29,7 +29,7 @@ const parseFileName = (fileName: string): { artist: string, title: string } => {
   return { artist: artist.trim(), title: title.trim() };
 };
 
-export const scanMediaLibrary = (customDirectory?: string) => {
+export const scanMediaLibrary = (customDirectory?: string): Song[] => {
   const scanDir = customDirectory || mediaDir;
   console.log(`Scanning media library in: ${scanDir}`);
   
@@ -39,7 +39,7 @@ export const scanMediaLibrary = (customDirectory?: string) => {
       console.error(`Media directory does not exist: ${scanDir}`);
       songLibrary = [];
       fuse = new Fuse([], { keys: ['artist', 'title'], threshold: 0.4 });
-      return;
+      return songLibrary;
     }
 
     const files = fs.readdirSync(scanDir);
@@ -69,6 +69,7 @@ export const scanMediaLibrary = (customDirectory?: string) => {
     console.error('Error scanning media library:', error);
     songLibrary = [];
   }
+  return songLibrary;
 };
 
 export const searchSongs = (query: string): Song[] => {

@@ -79,14 +79,14 @@ describe('OnlineSessionConnectPage', () => {
   it('renders the connection form correctly', () => {
     render(<OnlineSessionConnectPage />);
     expect(screen.getByText('Connect to Online Session')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Session ID (e.g., 1234)')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Session ID (optional if using Admin Key)')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Admin Key')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Connect/i })).toBeInTheDocument();
   });
 
   it('allows users to input session ID and admin key', () => {
     render(<OnlineSessionConnectPage />);
-    const sessionIdInput = screen.getByPlaceholderText('Session ID (e.g., 1234)');
+    const sessionIdInput = screen.getByPlaceholderText('Session ID (optional if using Admin Key)');
     const adminKeyInput = screen.getByPlaceholderText('Admin Key');
 
     fireEvent.change(sessionIdInput, { target: { value: '5678' } });
@@ -98,7 +98,7 @@ describe('OnlineSessionConnectPage', () => {
 
   it('calls connectToOnlineSession with the correct credentials on submit', () => {
     render(<OnlineSessionConnectPage />);
-    const sessionIdInput = screen.getByPlaceholderText('Session ID (e.g., 1234)');
+    const sessionIdInput = screen.getByPlaceholderText('Session ID (optional if using Admin Key)');
     const adminKeyInput = screen.getByPlaceholderText('Admin Key');
     const connectButton = screen.getByRole('button', { name: /Connect/i });
 

@@ -29,9 +29,6 @@ const SetupWizardPage: React.FC = () => {
     if (!mediaDirectory) return;
     setScanStatus({ scanning: true, progress: 0, total: 0, complete: false, songCount: 0 });
     setError(null);
-    if (!mediaDirectory) return;
-    setScanStatus({ scanning: true, progress: 0, total: 0, complete: false, songCount: 0 });
-    setError(null);
 
     try {
       // 1. Set the media directory
@@ -48,26 +45,21 @@ const SetupWizardPage: React.FC = () => {
 
       // 2. Start the scan
       const scanResponse = await fetch('/api/setup/scan', { method: 'POST' });
-      if (!scanResponse.ok) throw new Error('Failed to start scan.');
+      const result = await scanResponse.json();
 
-      // 3. Poll for status
-      const interval = setInterval(async () => {
-        const statusResponse = await fetch('/api/setup/scan-status');
-        const status = await statusResponse.json();
-        
-        setScanStatus({
-          scanning: status.scanning,
-          progress: status.progress,
-          total: status.totalFiles,
-          complete: status.isComplete,
-          songCount: status.songCount,
-        });
+      if (!scanResponse.ok || !result.success) {
+        throw new Error(result.error || 'Failed to scan library.');
+      }
+      
+      setScanStatus({
+        scanning: false,
+        progress: 100,
+        total: 100,
+        complete: true,
+        songCount: result.data.songCount,
+      });
 
-        if (status.isComplete) {
-          clearInterval(interval);
-          setTimeout(() => setStep('complete'), 1000);
-        }
-      }, 1000);
+      setTimeout(() => setStep('complete'), 1000);
 
     } catch (err) {
       if (err instanceof Error) {
@@ -198,11 +190,19 @@ const SetupWizardPage: React.FC = () => {
               {scanStatus.progress} / {scanStatus.total} files scanned
             </p>
             {error && (
-              <div className="mt-4 text-red-500">
-                <p>An error occurred: {error}</p>
-                <Button variant="ghost" onClick={() => setStep('select_media')}>
-                  Go Back
-                </Button>
+              <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-700 dark:text-red-300">
+                <p className="font-bold">An error occurred:</p>
+                <p className="text-sm mb-4">{error}</p>
+                <div className="flex justify-center space-x-4">
+                  <Button variant="ghost" onClick={() => setStep('select_media')}>
+                    Go Back
+                  </Button>
+                  <a href="/api/debug/download" download>
+                    <Button variant="secondary">
+                      Download Debug Log
+                    </Button>
+                  </a>
+                </div>
               </div>
             )}
           </div>

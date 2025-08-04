@@ -59,6 +59,12 @@ async function handleSessionAPI(request: Request, env: Env, path: string): Promi
     } else if (request.method === 'GET') {
       return listActiveSessions(env);
     }
+  } else if (segments[3] === 'by-admin-key') {
+    // /api/sessions/by-admin-key/{adminKey}
+    const adminKey = segments[4];
+    if (request.method === 'GET') {
+      return getSessionByAdminKey(adminKey, env);
+    }
   } else {
     const sessionId = segments[3];
     
@@ -108,6 +114,7 @@ async function createSession(request: Request, env: Env): Promise<Response> {
 
   // Store in KV
   await env.SESSIONS_KV.put(`session:${sessionId}`, JSON.stringify(sessionData));
+  await env.SESSIONS_KV.put(`adminKey:${adminKey}`, sessionId);
   
   // Add to active sessions list
   const activeSessions = await getActiveSessionsList(env);
@@ -121,6 +128,14 @@ async function createSession(request: Request, env: Env): Promise<Response> {
   };
 
   return jsonResponse({ success: true, data: response });
+}
+
+async function getSessionByAdminKey(adminKey: string, env: Env): Promise<Response> {
+  const sessionId = await env.SESSIONS_KV.get(`adminKey:${adminKey}`);
+  if (!sessionId) {
+    return jsonResponse({ success: false, error: 'Session not found for this admin key' }, 404);
+  }
+  return getSession(sessionId, env);
 }
 
 async function getSession(sessionId: string, env: Env): Promise<Response> {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Container } from '../components/ui/Layout';
@@ -11,10 +11,37 @@ const OnlineSessionConnectPage: React.FC = () => {
   const connectToOnlineSession = useAppStore((state) => state.connectToOnlineSession);
   const { connectionStatus, error } = useAppStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (window.electronAPI) {
+      window.electronAPI.onConnectWithAdminKey((key: string) => {
+        setAdminKey(key);
+      });
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (sessionId && adminKey) {
-      connectToOnlineSession(sessionId, adminKey);
+    if (adminKey) {
+      if (sessionId) {
+        connectToOnlineSession(sessionId, adminKey);
+      } else {
+        // If only admin key is provided, fetch session id first
+        try {
+          const response = await fetch(`https://kj.nomadkaraoke.com/api/sessions/by-admin-key/${adminKey}`);
+          const data = await response.json();
+          if (data.success) {
+            connectToOnlineSession(data.data.sessionId, adminKey);
+          } else {
+            useAppStore.setState({ error: data.error || 'Failed to find session for this admin key.' });
+          }
+        } catch (err: unknown) {
+          if (err instanceof Error) {
+            useAppStore.setState({ error: err.message });
+          } else {
+            useAppStore.setState({ error: 'Failed to connect to the server.' });
+          }
+        }
+      }
     }
   };
 
@@ -33,11 +60,10 @@ const OnlineSessionConnectPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <Input
                 type="text"
-                placeholder="Session ID (e.g., 1234)"
+                placeholder="Session ID (optional if using Admin Key)"
                 value={sessionId}
                 onChange={(e) => setSessionId(e.target.value)}
                 className="text-center text-lg"
-                required
               />
               <Input
                 type="password"

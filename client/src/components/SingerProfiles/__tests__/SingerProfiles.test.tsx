@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { SingerProfiles } from '../SingerProfiles';
 
@@ -164,7 +164,9 @@ describe('SingerProfiles', () => {
     render(<SingerProfiles />);
 
     const addButton = screen.getByRole('button', { name: 'Add New Singer' });
-    fireEvent.click(addButton);
+    await act(async () => {
+      fireEvent.click(addButton);
+    });
 
     expect(screen.getByPlaceholderText('Singer Name *')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
@@ -293,7 +295,9 @@ describe('SingerProfiles', () => {
     });
 
     // Click VIP toggle
-    fireEvent.click(screen.getByText('Remove VIP'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Remove VIP'));
+    });
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith('/api/singers/1', {
