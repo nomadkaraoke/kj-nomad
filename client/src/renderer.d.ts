@@ -8,6 +8,7 @@ declare global {
       selectDirectory: () => Promise<string | null>;
       onConnectWithAdminKey: (callback: (key: string) => void) => () => void;
       onSetModeOnline: (callback: () => void) => () => void;
+      onServerDiscovered: (callback: (serverUrl: string) => void) => () => void;
     };
   }
 }

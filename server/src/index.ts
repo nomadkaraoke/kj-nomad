@@ -52,15 +52,8 @@ import {
   displayStartupInstructions 
 } from './browserLauncher.js';
 import {
+  applySetupRoutes,
   loadSetupConfig,
-  saveSetupConfig,
-  getSetupSteps,
-  isSetupRequired,
-  markSetupComplete,
-  resetSetup,
-  validateMediaDirectory,
-  getNetworkInfo,
-  getMediaDirectorySuggestions
 } from './setupWizard.js';
 import { videoSyncEngine } from './videoSyncEngine.js';
 import { deviceManager } from './deviceManager.js';
@@ -69,7 +62,7 @@ import { singerProfileManager } from './singerProfiles.js';
 import { advancedQueueManager } from './advancedQueue.js';
 import { applyDebugRoutes } from './debug.js';
 
-// import { Bonjour } from 'bonjour-service';
+import { Bonjour } from 'bonjour-service';
 
 // __dirname is automatically available in CommonJS modules
 
@@ -87,8 +80,7 @@ server.on('error', (e: Error & { code?: string }) => {
 const wss = new WebSocketServer({ server });
 
 // Publish the server on the network
-// const bonjour = new Bonjour();
-// bonjour.publish({ name: 'KJ-Nomad Server', type: 'http', port: 8080 });
+const bonjour = new Bonjour();
 
 
 // Initialize paper workflow with song library
@@ -102,6 +94,8 @@ updatePaperWorkflow();
 const args = process.argv.slice(2);
 const portArg = args.find(arg => arg.startsWith('--port='))?.split('=')[1];
 const PORT = portArg ? parseInt(portArg, 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 8080);
+
+bonjour.publish({ name: 'KJ-Nomad Server', type: 'http', port: PORT });
 
 // Serve static files from the React client
 // Try production path first (when frontend is copied to server/public), then development path
@@ -228,131 +222,8 @@ app.post('/api/cloud/disconnect', (req, res) => {
     });
 });
 
-// Setup Wizard endpoints
-app.get('/api/setup/status', (req, res) => {
-    console.log('[API] GET /api/setup/status - Get setup status');
-    const config = loadSetupConfig();
-    const steps = getSetupSteps(config);
-    const required = isSetupRequired();
-    const networkInfo = getNetworkInfo();
-    
-    res.json({
-        success: true,
-        data: {
-            config,
-            steps,
-            setupRequired: required,
-            networkInfo
-        }
-    });
-});
-
-app.get('/api/setup/config', (req, res) => {
-    console.log('[API] GET /api/setup/config - Get setup configuration');
-    const config = loadSetupConfig();
-    res.json({ success: true, data: config });
-});
-
-app.post('/api/setup/config', (req, res) => {
-    console.log('[API] POST /api/setup/config - Update setup configuration');
-    try {
-        const newConfig = req.body;
-        
-        // Validate and save configuration first
-        const configSaved = saveSetupConfig(newConfig);
-        if (!configSaved) {
-            return res.status(500).json({ success: false, error: 'Failed to save configuration' });
-        }
-
-        let songCount = 0;
-        // If media directory is provided, attempt to scan it
-        if (newConfig.mediaDirectory) {
-            console.log('[Setup] Media directory updated, attempting to rescan...');
-            try {
-                const library = scanMediaLibrary(newConfig.mediaDirectory);
-                songCount = library.length;
-                if (newConfig.fillerMusicDirectory) {
-                    scanFillerMusic(newConfig.fillerMusicDirectory);
-                }
-            } catch (scanError) {
-                const errorMessage = scanError instanceof Error ? scanError.message : String(scanError);
-                console.error(`[API] Media scan failed: ${errorMessage}`);
-                // Return a specific error for the failed scan
-                return res.status(400).json({ 
-                    success: false, 
-                    error: `Media library scan failed: ${errorMessage}` 
-                });
-            }
-        }
-        
-        // If everything succeeded, return a success response
-        const updatedConfig = loadSetupConfig();
-        res.json({ 
-            success: true, 
-            message: 'Configuration updated successfully',
-            data: { ...updatedConfig, songCount }
-        });
-
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[API] Setup config error: ${errorMessage}`);
-        res.status(500).json({ success: false, error: 'An unexpected error occurred while saving the configuration.' });
-    }
-});
-
-app.post('/api/setup/validate-directory', (req, res) => {
-    console.log('[API] POST /api/setup/validate-directory - Validate media directory');
-    const { directory } = req.body;
-    
-    if (!directory) {
-        return res.status(400).json({ success: false, error: 'Directory path required' });
-    }
-    
-    const validation = validateMediaDirectory(directory);
-    res.json({ success: true, data: validation });
-});
-
-app.get('/api/setup/directory-suggestions', (req, res) => {
-    console.log('[API] GET /api/setup/directory-suggestions - Get directory suggestions');
-    const suggestions = getMediaDirectorySuggestions();
-    res.json({ success: true, data: suggestions });
-});
-
-app.post('/api/setup/complete', (req, res) => {
-    console.log('[API] POST /api/setup/complete - Mark setup as complete');
-    const success = markSetupComplete();
-    
-    if (success) {
-        res.json({ 
-            success: true, 
-            message: 'Setup completed successfully',
-            data: { setupComplete: true }
-        });
-    } else {
-        res.status(500).json({ success: false, error: 'Failed to mark setup as complete' });
-    }
-});
-
-app.post('/api/setup/reset', (req, res) => {
-    console.log('[API] POST /api/setup/reset - Reset setup wizard');
-    const success = resetSetup();
-    
-    if (success) {
-        res.json({ 
-            success: true, 
-            message: 'Setup reset successfully',
-            data: { setupComplete: false }
-        });
-    } else {
-        res.status(500).json({ success: false, error: 'Failed to reset setup' });
-    }
-});
-
-app.get('/api/setup/network-info', (req, res) => {
-    console.log('[API] GET /api/setup/network-info - Get network information');
-    const networkInfo = getNetworkInfo();
-    res.json({ success: true, data: networkInfo });
-});
+// Apply setup routes
+applySetupRoutes(app);
 
 // Video Sync endpoints
 app.get('/api/sync/status', (req, res) => {
@@ -1119,7 +990,8 @@ function getContentType(fileName: string): string {
 app.get('/api/media/:fileName', (req, res) => {
     console.log('[API] GET /api/media/:fileName - Media streaming endpoint hit, file:', req.params.fileName);
     const fileName = req.params.fileName;
-    const mediaPath = path.join(__dirname, '../media', fileName);
+    const config = loadSetupConfig();
+    const mediaPath = path.join(config.mediaDirectory, fileName);
 
     try {
         const stat = fs.statSync(mediaPath);

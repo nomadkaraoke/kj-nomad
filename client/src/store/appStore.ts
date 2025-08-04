@@ -65,6 +65,10 @@ export interface AppState {
   isLoading: boolean;
   showHistory: boolean;
   isSetupComplete: boolean;
+  serverInfo: {
+    port: number;
+    localIps: string[];
+  };
   
   // Search state
   searchQuery: string;
@@ -86,6 +90,7 @@ export interface AppState {
   setSearchResults: (results: Song[]) => void;
   
   // Session state actions
+  setServerInfo: (serverInfo: AppState['serverInfo']) => void;
   setSessionState: (sessionState: SessionState) => void;
   setSessionHistory: (history: PlayedSong[]) => void;
   setPlaybackState: (state: 'playing' | 'paused' | 'stopped') => void;
@@ -96,6 +101,7 @@ export interface AppState {
   setOnlineSessionId: (sessionId: string | null) => void;
   
   // Complex actions
+  checkServerInfo: () => Promise<void>;
   checkSetupStatus: () => Promise<void>;
   connectToOnlineSession: (sessionId: string, adminKey: string) => void;
   requestSong: (songId: string, singerName: string) => void;
@@ -134,6 +140,7 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       showHistory: false,
       isSetupComplete: false,
+      serverInfo: { port: 0, localIps: [] },
       
       // Search state
       searchQuery: '',
@@ -159,6 +166,7 @@ export const useAppStore = create<AppState>()(
       setSearchResults: (searchResults) => set({ searchResults }),
       
       // Session state setters
+      setServerInfo: (serverInfo) => set({ serverInfo }),
       setSessionState: (sessionState) => set({ sessionState }),
       setSessionHistory: (sessionHistory) => set({ sessionHistory }),
       setPlaybackState: (playbackState) => set({ playbackState }),
@@ -169,6 +177,17 @@ export const useAppStore = create<AppState>()(
       setOnlineSessionId: (onlineSessionId) => set({ onlineSessionId }),
       
       // Complex actions
+      checkServerInfo: async () => {
+        try {
+          const response = await fetch('/api/setup/server-info');
+          const data = await response.json();
+          if (data.success) {
+            set({ serverInfo: data.data });
+          }
+        } catch (error) {
+          console.error('Failed to check server info:', error);
+        }
+      },
       checkSetupStatus: async () => {
         try {
           const response = await fetch('/api/setup/status');

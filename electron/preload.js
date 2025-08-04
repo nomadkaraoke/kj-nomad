@@ -33,5 +33,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => {
       ipcRenderer.removeListener('set-mode-online', handler);
     };
+  },
+  onServerDiscovered: (callback) => {
+    const handler = (event, ...args) => callback(...args);
+    ipcRenderer.on('server-discovered', handler);
+    return () => {
+      ipcRenderer.removeListener('server-discovered', handler);
+    };
   }
 });

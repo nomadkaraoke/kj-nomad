@@ -24,7 +24,7 @@ KJ-Nomad supports two distinct deployment modes:
 
 ### Frontend Core Architecture  
 - **✅ React/TypeScript Application**: Complete PWA structure with TypeScript
-- **✅ Multi-Page Routing**: Four distinct interfaces (Home, Player, Controller, Singer)
+- **✅ Multi-Page Routing**: Refactored routing with distinct flows for KJ Admin, Player, and Singer.
 - **✅ Zustand State Management**: Centralized state management with real-time WebSocket integration
 - **✅ Theme System**: Dark/light mode toggle with persistent preferences
 - **✅ Responsive Design**: Mobile-first design with Tailwind CSS
@@ -35,7 +35,8 @@ KJ-Nomad supports two distinct deployment modes:
 - **✅ KJ Controller Interface**: Complete management interface for queue, playback, and ticker control
 - **✅ Singer Request Interface**: Self-service song request system with search and queue visibility
 - **✅ Player Interface**: Video display interface with scrolling ticker
-- **✅ Navigation System**: Consistent navigation across all interfaces
+- **✅ Navigation System**: Simplified navigation in the main KJ admin interface.
+- **✅ Player Setup Interface**: New UI for dedicated player devices to discover and connect to a KJ's server.
 
 ### Real-Time Features
 - **✅ Live Queue Updates**: Real-time synchronization of song queue across all clients
@@ -74,6 +75,7 @@ KJ-Nomad supports two distinct deployment modes:
 - **✅ Professional Installers**: Uses Electron Builder for MSI/DMG/AppImage packages.
 - **✅ Desktop Integration**: Includes native app icons and system tray functionality.
 - **✅ Enhanced UX**: Native file dialogs for media selection.
+- **✅ Dedicated Player Mode**: The app can be launched in a dedicated player mode for zero-configuration screen setup.
 
 ## ✅ **Major Features Implemented**
 
@@ -136,7 +138,7 @@ KJ-Nomad supports two distinct deployment modes:
 - **❌ Automated Payouts**: The logic for nightly automated payouts via Direct Deposit or Debit Card is not implemented.
 
 ### Professional Features
-- **❌ Service Discovery (mDNS/Bonjour)**: Zero-configuration networking not implemented
+- **🟡 Service Discovery (mDNS/Bonjour)**: Foundational work started for player-mode discovery.
 - **❌ QR Code Generation**: Automatic QR codes for easy device access not implemented
 - **❌ Progressive Web App**: Service Worker and offline caching not implemented
 - **❌ Key/Tempo Controls**: Advanced audio manipulation not implemented
@@ -321,7 +323,9 @@ Significant testing infrastructure improvements completed:
 **Goal:** Implement the user onboarding flow as described in the documentation.
 
 **Implementation Details:**
+- **Mode Selection UI**: The app now starts with a clear choice between "Offline Session", "Online Session", and "Player Mode".
 - **Setup Wizard UI**: Created a new multi-step `SetupWizardPage` component to guide users through the initial configuration.
+- **Offline Ready UI**: A new screen is shown after offline setup, displaying the server's IP address for easy player connection.
 - **Online Connection UI**: Created new `OnlineSessionConnectPage` and `OnlineSessionConnectedPage` components to handle the online session connection flow.
 - **State Management**: Updated the Zustand store to manage the application's mode, setup status, and session connection state.
 - **Routing Logic**: Refactored the main `App.tsx` to correctly route users to the appropriate screen based on the application's state.

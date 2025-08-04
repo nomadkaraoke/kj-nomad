@@ -83,6 +83,7 @@
         <div class="button-grid">
             <button id="start-offline" class="button">🏠 Start Offline Session</button>
             <button id="connect-online" class="button secondary">☁️ Connect to Online Session</button>
+            <button id="setup-player" class="button">🖥️ Set up as Player</button>
         </div>
     </div>
 
@@ -98,6 +99,12 @@
         document.getElementById('connect-online').addEventListener('click', () => {
             if (window.electronAPI) {
                 window.electronAPI.send('start-mode', 'online');
+            }
+        });
+
+        document.getElementById('setup-player').addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.send('start-mode', 'player');
             }
         });
     </script>

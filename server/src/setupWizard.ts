@@ -448,6 +448,26 @@ export function applySetupRoutes(app: express.Application): void {
     res.json({ success: true, data: networkInfo });
   });
 
+  app.get('/api/setup/server-info', (req, res) => {
+    const config = loadSetupConfig();
+    const networkInfo = getNetworkInfo();
+    const localIps = networkInfo.interfaces
+      .filter(iface => !iface.internal)
+      .map(iface => iface.address);
+
+    if (localIps.length === 0) {
+      localIps.push(networkInfo.localIP);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        port: config.defaultPort,
+        localIps,
+      }
+    });
+  });
+
   // Set media directory
   app.post('/api/setup/media-directory', (req, res) => {
     const { path } = req.body;

@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { useAppStore } from '../store/appStore';
 import SessionHistory from '../components/SessionHistory/SessionHistory';
 import DraggableQueue from '../components/QueueManager/DraggableQueue';
+import { ManualRequestForm } from '../components/KjController/ManualRequestForm';
 import { 
   PlayIcon, 
   PauseIcon,
@@ -102,89 +103,92 @@ const ControllerPage: React.FC = () => {
       )}
       
       {/* Quick Controls */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold flex items-center space-x-2">
-            <Cog6ToothIcon className="h-5 w-5" />
-            <span>Playback Controls</span>
-          </h2>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Button
-              onClick={playNext}
-              disabled={!isConnected || queue.length === 0}
-              variant="primary"
-              size="lg"
-              className="flex flex-col items-center space-y-1 h-20"
-              data-testid="play-next-button"
-            >
-              <PlayIcon className="h-6 w-6" />
-              <span className="text-xs">Play Next</span>
-            </Button>
-            
-            <Button
-              onClick={playbackState === 'paused' ? resumePlayback : pausePlayback}
-              disabled={!isConnected || !nowPlaying}
-              variant="secondary"
-              size="lg"
-              className="flex flex-col items-center space-y-1 h-20"
-            >
-              <PauseIcon className="h-6 w-6" />
-              <span className="text-xs">{playbackState === 'paused' ? 'Resume' : 'Pause'}</span>
-            </Button>
-            
-            <Button
-              onClick={restartSong}
-              disabled={!isConnected || !nowPlaying}
-              variant="accent"
-              size="lg"
-              className="flex flex-col items-center space-y-1 h-20"
-            >
-              <ArrowPathIcon className="h-6 w-6" />
-              <span className="text-xs">Restart</span>
-            </Button>
-            
-            <Button
-              onClick={skipSong}
-              disabled={!isConnected || !nowPlaying}
-              variant="ghost"
-              size="lg"
-              className="flex flex-col items-center space-y-1 h-20"
-            >
-              <ForwardIcon className="h-6 w-6" />
-              <span className="text-xs">Skip</span>
-            </Button>
-            
-            <Button
-              onClick={stopPlayback}
-              disabled={!isConnected || !nowPlaying}
-              variant="ghost"
-              size="lg"
-              className="flex flex-col items-center space-y-1 h-20 text-red-600 hover:text-red-700"
-            >
-              <StopIcon className="h-6 w-6" />
-              <span className="text-xs">Stop</span>
-            </Button>
-            
-            <Button
-              onClick={() => setShowHistory(true)}
-              disabled={!isConnected}
-              variant="ghost"
-              size="lg"
-              className="flex flex-col items-center space-y-1 h-20"
-            >
-              <ClockIcon className="h-6 w-6" />
-              <span className="text-xs">History</span>
-              {sessionHistory.length > 0 && (
-                <span className="text-xs bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
-                  {sessionHistory.length}
-                </span>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ManualRequestForm />
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl font-semibold flex items-center space-x-2">
+              <Cog6ToothIcon className="h-5 w-5" />
+              <span>Playback Controls</span>
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <Button
+                onClick={playNext}
+                disabled={!isConnected || queue.length === 0}
+                variant="primary"
+                size="lg"
+                className="flex flex-col items-center space-y-1 h-20"
+                data-testid="play-next-button"
+              >
+                <PlayIcon className="h-6 w-6" />
+                <span className="text-xs">Play Next</span>
+              </Button>
+              
+              <Button
+                onClick={playbackState === 'paused' ? resumePlayback : pausePlayback}
+                disabled={!isConnected || !nowPlaying}
+                variant="secondary"
+                size="lg"
+                className="flex flex-col items-center space-y-1 h-20"
+              >
+                <PauseIcon className="h-6 w-6" />
+                <span className="text-xs">{playbackState === 'paused' ? 'Resume' : 'Pause'}</span>
+              </Button>
+              
+              <Button
+                onClick={restartSong}
+                disabled={!isConnected || !nowPlaying}
+                variant="accent"
+                size="lg"
+                className="flex flex-col items-center space-y-1 h-20"
+              >
+                <ArrowPathIcon className="h-6 w-6" />
+                <span className="text-xs">Restart</span>
+              </Button>
+              
+              <Button
+                onClick={skipSong}
+                disabled={!isConnected || !nowPlaying}
+                variant="ghost"
+                size="lg"
+                className="flex flex-col items-center space-y-1 h-20"
+              >
+                <ForwardIcon className="h-6 w-6" />
+                <span className="text-xs">Skip</span>
+              </Button>
+              
+              <Button
+                onClick={stopPlayback}
+                disabled={!isConnected || !nowPlaying}
+                variant="ghost"
+                size="lg"
+                className="flex flex-col items-center space-y-1 h-20 text-red-600 hover:text-red-700"
+              >
+                <StopIcon className="h-6 w-6" />
+                <span className="text-xs">Stop</span>
+              </Button>
+              
+              <Button
+                onClick={() => setShowHistory(true)}
+                disabled={!isConnected}
+                variant="ghost"
+                size="lg"
+                className="flex flex-col items-center space-y-1 h-20"
+              >
+                <ClockIcon className="h-6 w-6" />
+                <span className="text-xs">History</span>
+                {sessionHistory.length > 0 && (
+                  <span className="text-xs bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                    {sessionHistory.length}
+                  </span>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
       {/* Now Playing */}
       {nowPlaying && (

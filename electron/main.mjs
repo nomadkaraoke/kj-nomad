@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, dialog, shell, ipcMain, utilityProcess } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { Bonjour } from 'bonjour-service';
 import os from 'os';
 import { fileURLToPath } from 'url';
 
@@ -106,6 +107,40 @@ class KJNomadApp {
     }
   }
 
+  createPlayerWindow() {
+    const playerWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 800,
+      minHeight: 600,
+      icon: this.getAppIcon(),
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js')
+      },
+      fullscreen: true,
+      autoHideMenuBar: true,
+    });
+
+    // We will create a new route in the React app for this
+    playerWindow.loadURL(`http://${SERVER_HOST}:${serverPort}/player-setup`);
+
+    this.findServers(playerWindow);
+  }
+
+  findServers(window) {
+    const bonjour = new Bonjour();
+    const browser = bonjour.find({ type: 'http' });
+
+    browser.on('up', (service) => {
+      if (service.name === 'KJ-Nomad Server') {
+        const serverUrl = `http://${service.referer.address}:${service.port}`;
+        window.webContents.send('server-discovered', serverUrl);
+      }
+    });
+  }
+
   async createWindow() {
     this.createMenu();
     // Create the browser window
@@ -147,12 +182,16 @@ class KJNomadApp {
     // Listen for the mode selection from the onboarding page
     ipcMain.on('start-mode', async (event, mode) => {
       console.log(`Received start-mode event: ${mode}`);
-      // Find an available port before starting
-      serverPort = await findAvailablePort(DEFAULT_PORT);
-      console.log(`Using port: ${serverPort}`);
-      // Once a mode is chosen, start the server and load the main app
-      await this.startServer(mode);
-      await this.loadApp(mode); // Pass mode to loadApp
+      if (mode === 'player') {
+        this.createPlayerWindow();
+      } else {
+        // Find an available port before starting
+        serverPort = await findAvailablePort(DEFAULT_PORT);
+        console.log(`Using port: ${serverPort}`);
+        // Once a mode is chosen, start the server and load the main app
+        await this.startServer(mode);
+        await this.loadApp(mode); // Pass mode to loadApp
+      }
     });
 
     ipcMain.handle('select-directory', async () => {

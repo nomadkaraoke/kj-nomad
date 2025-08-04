@@ -71,14 +71,19 @@ KJ-Nomad operates in two distinct modes, each optimized for different venue scen
 
 ### 2.3 Offline Mode Setup Flow
 
-1. **Launch:** KJ double-clicks Electron app → opens integrated admin UI (no browser required)
-2. **Setup Wizard:**
-   - Select local media directory
-   - Scan and index video library
-   - Display server IP address (e.g., 192.168.1.34:8080)
-3. **Player Setup:** Navigate player devices to `http://[IP]:8080/player`
-4. **Device Controls:** Toggle audio output, ticker, sidebar per screen
-5. **Paper Requests:** Search library, add singers to queue manually
+1.  **Launch & Mode Selection:** The KJ launches the Electron app and is presented with a choice:
+    *   **Start Offline Session:** Begins the setup for a local server.
+    *   **Connect to Online Session:** Connects to a cloud-based session.
+    *   **Set up as Player:** Configures the device as a dedicated player screen.
+2.  **Setup Wizard (for Offline Session):**
+    *   Select local media directory.
+    *   Scan and index video library.
+    *   The app displays a "Ready" screen with the server's IP address (e.g., `192.168.1.34:8080`).
+3.  **Player Setup (Two Options):**
+    *   **Option A (Manual):** Navigate a separate device's web browser to `http://[IP]:8080/player`.
+    *   **Option B (Zero-Config):** Launch the KJ-Nomad app on another computer, select "Set up as Player," and it will automatically discover and connect to the server on the local network.
+4.  **Device Controls:** Toggle audio output, ticker, and sidebar for each connected screen.
+5.  **Paper Requests:** Search the library and add singers to the queue manually via the admin UI.
 
 ## 3. Online Mode Architecture  
 

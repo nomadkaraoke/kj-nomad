@@ -6,7 +6,6 @@ import { ThemeToggle } from './ui/ThemeToggle';
 import { useAppStore } from '../store/appStore';
 import { 
   HomeIcon, 
-  PlayIcon, 
   Cog6ToothIcon, 
   MicrophoneIcon,
   WifiIcon,
@@ -26,22 +25,10 @@ export const Navigation: React.FC = () => {
       description: 'Welcome & Setup'
     },
     { 
-      path: '/player', 
-      label: 'Player', 
-      icon: PlayIcon,
-      description: 'Main Display'
-    },
-    { 
       path: '/controller', 
       label: 'KJ Control', 
       icon: Cog6ToothIcon,
       description: 'Host Interface'
-    },
-    { 
-      path: '/singer', 
-      label: 'Song Request', 
-      icon: MicrophoneIcon,
-      description: 'Singer Portal'
     },
     { 
       path: '/profiles', 
