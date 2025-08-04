@@ -81,10 +81,6 @@ const wss = new WebSocketServer({ server });
 // bonjour.publish({ name: 'KJ-Nomad Server', type: 'http', port: 8080 });
 
 
-// Scan the media library on startup
-scanMediaLibrary();
-scanFillerMusic();
-
 // Initialize paper workflow with song library
 const updatePaperWorkflow = () => {
   const allSongs = searchSongs(''); // Get all songs
@@ -1422,6 +1418,22 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, async () => {
+  // Load config first
+  const config = loadSetupConfig();
+
+  // Now scan libraries using configured paths
+  console.log('[Server] Initializing media libraries from config...');
+  scanMediaLibrary(config.mediaDirectory);
+  if (config.fillerMusicDirectory) {
+      scanFillerMusic(config.fillerMusicDirectory);
+  } else {
+      // Fallback or default behavior if filler music dir isn't set
+      scanFillerMusic(config.mediaDirectory);
+  }
+  
+  // Update paper workflow after scanning
+  updatePaperWorkflow();
+
   const startMode = process.env.START_MODE || 'offline'; // Default to offline
   console.log(`[Server] Starting in ${startMode} mode.`);
 

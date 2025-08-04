@@ -155,7 +155,8 @@ class KJNomadApp {
         AUTO_LAUNCH: 'false',
         PORT: SERVER_PORT.toString(),
         HEADLESS: 'true',
-        START_MODE: mode
+        START_MODE: mode,
+        KJ_NOMAD_USER_DATA_PATH: app.getPath('userData')
       };
       
       serverProcess = utilityProcess.fork(serverPath, [], {

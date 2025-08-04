@@ -1,16 +1,18 @@
-import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-const isPackaged = app ? app.isPackaged : process.env.NODE_ENV === 'production';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const DATA_DIR = isPackaged
-  ? path.join(app.getPath('userData'), 'data')
+// Determine the data directory path.
+// In production/packaged mode, the path is provided by the main Electron process
+// via an environment variable. In development, it's a local folder.
+const userDataPath = process.env.KJ_NOMAD_USER_DATA_PATH;
+
+const DATA_DIR = userDataPath
+  ? path.join(userDataPath, 'data')
   : path.join(__dirname, '..', 'data');
-
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
 
 export const getDataPath = (fileName: string) => {
   return path.join(DATA_DIR, fileName);
