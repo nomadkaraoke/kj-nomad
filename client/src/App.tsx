@@ -14,6 +14,7 @@ import PlayerPage from './pages/PlayerPage';
 import ControllerPage from './pages/ControllerPage';
 import SingerPage from './pages/SingerPage';
 import SingerProfilesPage from './pages/SingerProfilesPage';
+import { DebugOverlay } from './components/DebugOverlay';
 
 import './App.css';
 
@@ -52,6 +53,7 @@ const AppContent: React.FC = () => {
             <Route path="/profiles" element={<SingerProfilesPage />} />
           </Routes>
         </main>
+        <DebugOverlay />
       </div>
     </Layout>
   );

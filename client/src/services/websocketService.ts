@@ -194,6 +194,7 @@ class WebSocketService {
         if (payload && typeof payload === 'object') {
           const { requiresLocalLibrary } = payload as { requiresLocalLibrary: boolean };
           store.setIsSessionConnected(true);
+          store.setConnectionStatus('connected');
           store.setOnlineSessionRequiresLibrary(requiresLocalLibrary);
           if (!requiresLocalLibrary) {
             store.setIsSetupComplete(true);
@@ -205,8 +206,10 @@ class WebSocketService {
         if (payload && typeof payload === 'object') {
           const { clientId, sessionId, connectedClients } = payload as { clientId: string; sessionId: string; connectedClients: number };
           console.log(`[WebSocketService] Confirmed connection to session ${sessionId} with client ID ${clientId}. Total clients: ${connectedClients}`);
-          // You might want to update the store with this information if needed
-          // For now, we'll just log it, as the main connection status is handled by 'onopen'
+          // Update the store with the session information
+          store.setIsSessionConnected(true);
+          store.setOnlineSessionId(sessionId);
+          store.setConnectionStatus('connected');
         }
         break;
         

@@ -185,7 +185,7 @@ class KJNomadApp {
                 if (filePath) {
                   // This is a bit of a hack, but it's the easiest way to trigger the download
                   // without a lot of extra IPC communication.
-                  mainWindow.webContents.downloadURL(`http://${SERVER_HOST}:${SERVER_PORT}/api/debug/download`);
+                  mainWindow.webContents.downloadURL(`http://${SERVER_HOST}:${serverPort}/api/debug/download`);
                   mainWindow.webContents.session.once('will-download', (event, item, webContents) => {
                     item.setSavePath(filePath);
                   });
@@ -298,11 +298,11 @@ class KJNomadApp {
         },
         {
           label: 'Open Admin Interface',
-          click: () => shell.openExternal(`http://${SERVER_HOST}:${SERVER_PORT}`)
+          click: () => shell.openExternal(`http://${SERVER_HOST}:${serverPort}`)
         },
         {
           label: 'Open Player Screen',
-          click: () => shell.openExternal(`http://${SERVER_HOST}:${SERVER_PORT}/player`)
+          click: () => shell.openExternal(`http://${SERVER_HOST}:${serverPort}/player`)
         },
         { type: 'separator' },
         {
