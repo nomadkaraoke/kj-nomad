@@ -11,10 +11,13 @@ export interface PlayerDevice {
   name: string;
   ipAddress: string;
   userAgent: string;
-  screenResolution?: {
+  viewport: {
     width: number;
     height: number;
   };
+  os: string;
+  browser: string;
+  isApp: boolean;
   connectionTime: number;
   lastActivity: number;
   status: 'connected' | 'disconnected' | 'playing' | 'paused' | 'buffering' | 'error';
@@ -39,6 +42,10 @@ export interface PlayerDevice {
     lastSyncError?: number; // ms off from ideal
   };
   ws: WSWebSocket;
+  isAudioEnabled: boolean;
+  isTickerVisible: boolean;
+  isSidebarVisible: boolean;
+  isVideoPlayerVisible: boolean;
 }
 
 export interface DeviceGroup {
@@ -113,13 +120,16 @@ export class DeviceManager extends EventEmitter {
    * Register a new player device
    */
   registerDevice(
-    id: string, 
-    ws: WSWebSocket, 
+    id: string,
+    ws: WSWebSocket,
     deviceInfo: {
       name?: string;
       ipAddress: string;
       userAgent: string;
-      screenResolution?: { width: number; height: number };
+      viewport: { width: number; height: number };
+      os: string;
+      browser: string;
+      isApp: boolean;
       capabilities: Partial<PlayerDevice['capabilities']>;
     }
   ): PlayerDevice {
@@ -128,7 +138,10 @@ export class DeviceManager extends EventEmitter {
       name: deviceInfo.name || `Player ${this.devices.size + 1}`,
       ipAddress: deviceInfo.ipAddress,
       userAgent: deviceInfo.userAgent,
-      screenResolution: deviceInfo.screenResolution,
+      viewport: deviceInfo.viewport,
+      os: deviceInfo.os,
+      browser: deviceInfo.browser,
+      isApp: deviceInfo.isApp,
       connectionTime: Date.now(),
       lastActivity: Date.now(),
       status: 'connected',
@@ -141,7 +154,11 @@ export class DeviceManager extends EventEmitter {
         audioOutputs: ['default'],
         ...deviceInfo.capabilities
       },
-      ws
+      ws,
+      isAudioEnabled: true,
+      isTickerVisible: true,
+      isSidebarVisible: false,
+      isVideoPlayerVisible: true,
     };
 
     this.devices.set(id, device);
@@ -167,7 +184,7 @@ export class DeviceManager extends EventEmitter {
   /**
    * Unregister a device
    */
-  unregisterDevice(id: string): void {
+  unregisterDevice(id: string, immediate = false): void {
     const device = this.devices.get(id);
     if (device) {
       device.isOnline = false;
@@ -178,13 +195,17 @@ export class DeviceManager extends EventEmitter {
       // Remove from groups
       this.removeDeviceFromAllGroups(id);
       
-      // Emit device disconnected event
-      this.emit('deviceDisconnected', device);
-      
-      // Remove after a delay (keep for historical data)
-      setTimeout(() => {
+      if (immediate) {
         this.devices.delete(id);
-      }, 300000); // 5 minutes
+      } else {
+        // Remove after a delay (keep for historical data)
+        setTimeout(() => {
+          this.devices.delete(id);
+        }, 300000); // 5 minutes
+      }
+      
+      // Emit device disconnected event AFTER potential immediate deletion
+      this.emit('deviceDisconnected', device);
     }
   }
 

@@ -225,6 +225,41 @@ app.post('/api/cloud/disconnect', (req, res) => {
 // Apply setup routes
 applySetupRoutes(app);
 
+// A helper function to get and map the devices for broadcasting
+const getMappedDevices = () => {
+  return deviceManager.getDevices().map(d => ({
+    id: d.id,
+    name: d.name,
+    ipAddress: d.ipAddress,
+    viewport: d.viewport,
+    os: d.os,
+    browser: d.browser,
+    isApp: d.isApp,
+    isOnline: d.isOnline,
+    lastActivity: d.lastActivity,
+    isAudioEnabled: d.isAudioEnabled,
+    isTickerVisible: d.isTickerVisible,
+    isSidebarVisible: d.isSidebarVisible,
+    isVideoPlayerVisible: d.isVideoPlayerVisible,
+  }));
+};
+
+// Listen for device manager events and broadcast updates
+deviceManager.on('deviceConnected', (device) => {
+  console.log(`[Event] Device connected: ${device.id}. Broadcasting updated device list.`);
+  broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+});
+
+deviceManager.on('deviceDisconnected', (device) => {
+  console.log(`[Event] Device disconnected: ${device.id}. Broadcasting updated device list.`);
+  broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+});
+
+deviceManager.on('deviceStatusChanged', (device) => {
+    console.log(`[Event] Device status changed: ${device.id}. Broadcasting updated device list.`);
+    broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+});
+
 // Video Sync endpoints
 app.get('/api/sync/status', (req, res) => {
     console.log('[API] GET /api/sync/status - Get sync engine status');
@@ -275,16 +310,82 @@ app.post('/api/sync/pause', async (req, res) => {
 // Device Management endpoints
 app.get('/api/devices', (req, res) => {
     console.log('[API] GET /api/devices - Get all devices');
-    const devices = deviceManager.getDevices();
-    const stats = deviceManager.getStats();
-    
     res.json({ 
         success: true, 
-        data: { 
-            devices, 
-            stats 
-        } 
+        data: getMappedDevices(),
     });
+});
+
+app.post('/api/devices/:deviceId/toggle-audio', (req, res) => {
+    const device = deviceManager.getDevice(req.params.deviceId);
+    if (device) {
+        device.isAudioEnabled = !device.isAudioEnabled;
+        broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+        res.json({ success: true, isAudioEnabled: device.isAudioEnabled });
+    } else {
+        res.status(404).json({ success: false, error: 'Device not found' });
+    }
+});
+
+app.post('/api/devices/:deviceId/toggle-ticker', (req, res) => {
+    const device = deviceManager.getDevice(req.params.deviceId);
+    if (device) {
+        device.isTickerVisible = !device.isTickerVisible;
+        broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+        res.json({ success: true, isTickerVisible: device.isTickerVisible });
+    } else {
+        res.status(404).json({ success: false, error: 'Device not found' });
+    }
+});
+
+app.post('/api/devices/:deviceId/toggle-sidebar', (req, res) => {
+    const device = deviceManager.getDevice(req.params.deviceId);
+    if (device) {
+        device.isSidebarVisible = !device.isSidebarVisible;
+        broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+        res.json({ success: true, isSidebarVisible: device.isSidebarVisible });
+    } else {
+        res.status(404).json({ success: false, error: 'Device not found' });
+    }
+});
+
+app.post('/api/devices/:deviceId/toggle-video', (req, res) => {
+    const device = deviceManager.getDevice(req.params.deviceId);
+    if (device) {
+        device.isVideoPlayerVisible = !device.isVideoPlayerVisible;
+        broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+        res.json({ success: true, isVideoPlayerVisible: device.isVideoPlayerVisible });
+    } else {
+        res.status(404).json({ success: false, error: 'Device not found' });
+    }
+});
+
+app.post('/api/devices/:deviceId/identify', (req, res) => {
+    const deviceId = req.params.deviceId;
+    const success = deviceManager.sendToDevice(deviceId, {
+        type: 'identify_screen',
+        payload: { deviceId },
+    });
+    if (success) {
+        res.json({ success: true, message: 'Identify command sent' });
+    } else {
+        res.status(404).json({ success: false, error: 'Device not found or offline' });
+    }
+});
+
+app.delete('/api/devices/:deviceId', (req, res) => {
+    const deviceId = req.params.deviceId;
+    const device = deviceManager.getDevice(deviceId);
+    if (device) {
+        deviceManager.sendToDevice(deviceId, {
+            type: 'disconnect_screen',
+            payload: { deviceId },
+        });
+        deviceManager.unregisterDevice(deviceId, true); // Immediate removal
+        res.json({ success: true, message: 'Device disconnected' });
+    } else {
+        res.status(404).json({ success: false, error: 'Device not found' });
+    }
 });
 
 app.get('/api/devices/online', (req, res) => {
@@ -1122,7 +1223,10 @@ wss.on('connection', (ws) => {
                     name: clientName,
                     ipAddress: payload.ipAddress || 'unknown',
                     userAgent: payload.userAgent || 'unknown',
-                    screenResolution: payload.screenResolution,
+                    viewport: payload.viewport || { width: 0, height: 0 },
+                    os: payload.os || 'unknown',
+                    browser: payload.browser || 'unknown',
+                    isApp: payload.isApp || false,
                     capabilities: payload.capabilities || {}
                 };
                 

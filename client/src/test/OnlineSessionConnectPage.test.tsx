@@ -21,6 +21,7 @@ const mockState: AppState = {
   searchQuery: '',
   searchResults: [],
   serverInfo: { port: 8080, localIps: ['192.168.1.100'] },
+  devices: [],
   onlineSessionRequiresLibrary: false,
   isSetupComplete: false,
   setIsSetupComplete: vi.fn(),
@@ -59,6 +60,14 @@ const mockState: AppState = {
   replaySong: vi.fn(),
   skipSong: vi.fn(),
   updateTicker: vi.fn(),
+  setDevices: vi.fn(),
+  fetchDevices: vi.fn(),
+  toggleDeviceAudio: vi.fn(),
+  toggleDeviceTicker: vi.fn(),
+  toggleDeviceSidebar: vi.fn(),
+  toggleDeviceVideoPlayer: vi.fn(),
+  identifyDevice: vi.fn(),
+  disconnectDevice: vi.fn(),
 };
 
 vi.mock('../store/appStore', () => ({

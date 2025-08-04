@@ -1,16 +1,81 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { UAParser } from 'ua-parser-js';
 import { useAppStore } from '../store/appStore';
+import type { Device } from '../store/appStore';
 import Ticker from '../components/Player/Ticker';
-import { 
-  PlayIcon
-} from '@heroicons/react/24/outline';
+import { websocketService } from '../services/websocketService';
+import { PlayIcon } from '@heroicons/react/24/outline';
 
 const PlayerPage: React.FC = () => {
-  const { nowPlaying, tickerText, queue } = useAppStore();
+  const { nowPlaying, tickerText, queue, devices, connectionStatus } = useAppStore();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deviceSettings, setDeviceSettings] = useState<Partial<Device>>({
+    isAudioEnabled: true,
+    isTickerVisible: true,
+    isSidebarVisible: false,
+    isVideoPlayerVisible: true,
+  });
+  const [showIdentify, setShowIdentify] = useState(false);
+  const [isDisconnected, setIsDisconnected] = useState(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      const parser = new UAParser(navigator.userAgent);
+      const result = parser.getResult();
+      
+      websocketService.send({
+        type: 'client_identify',
+        payload: {
+          type: 'player',
+          userAgent: navigator.userAgent,
+          viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight,
+          },
+          os: `${result.os.name} ${result.os.version}`,
+          browser: `${result.browser.name} ${result.browser.version}`,
+          isApp: 'kj-nomad' in window,
+        },
+      });
+    }
+  }, [connectionStatus]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'device_registered') {
+        setDeviceId(message.payload.deviceId);
+      } else if (message.type === 'identify_screen' && message.payload.deviceId === deviceId) {
+        setShowIdentify(true);
+        setTimeout(() => setShowIdentify(false), 5000);
+      } else if (message.type === 'disconnect_screen' && message.payload.deviceId === deviceId) {
+        setIsDisconnected(true);
+        websocketService.disconnect();
+      }
+    };
+
+    const socket = useAppStore.getState().socket;
+    socket?.addEventListener('message', handleMessage);
+    return () => {
+      socket?.removeEventListener('message', handleMessage);
+    };
+  }, [deviceId]);
+
+  useEffect(() => {
+    const myDevice = devices.find(d => d.id === deviceId);
+    if (myDevice) {
+      setDeviceSettings({
+        isAudioEnabled: myDevice.isAudioEnabled,
+        isTickerVisible: myDevice.isTickerVisible,
+        isSidebarVisible: myDevice.isSidebarVisible,
+        isVideoPlayerVisible: myDevice.isVideoPlayerVisible,
+      });
+    }
+  }, [devices, deviceId]);
   
   useEffect(() => {
     const video = videoRef.current;
@@ -67,23 +132,59 @@ const PlayerPage: React.FC = () => {
   
   // Get next few singers for display
   const upcomingSingers = queue.slice(0, 3);
+
+  if (isDisconnected) {
+    return (
+      <div className="player-container bg-gray-800 flex items-center justify-center text-white text-center">
+        <div>
+          <h1 className="text-4xl font-bold mb-4">Player Screen Disconnected</h1>
+          <p className="text-xl">Thanks for using KJ-Nomad.</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div className="player-container">
+    <div className="player-container bg-gradient-to-br from-blue-900 to-slate-900">
+      {showIdentify && (
+        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="text-white text-9xl font-bold">
+            {devices.findIndex(d => d.id === deviceId) + 1}
+          </div>
+        </div>
+      )}
       {/* Video Element */}
-      <video 
-        ref={videoRef} 
-        className="player-video"
-        onEnded={onEnded}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        playsInline
-        muted={false}
-        data-testid="video"
-      />
+      {deviceSettings.isVideoPlayerVisible && (
+        <video 
+          ref={videoRef} 
+          className="player-video"
+          onEnded={onEnded}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          playsInline
+          muted={!deviceSettings.isAudioEnabled}
+          data-testid="video"
+        />
+      )}
       
+      {/* Sidebar */}
+      {deviceSettings.isSidebarVisible && (
+        <div className="absolute top-0 right-0 h-full w-1/4 bg-black/50 backdrop-blur-md p-4 text-white overflow-y-auto">
+          <h2 className="text-2xl font-bold mb-4">Up Next</h2>
+          <div className="space-y-3">
+            {upcomingSingers.map((entry) => (
+              <div key={entry.song.id} className="bg-white/10 p-3 rounded-lg">
+                <p className="font-bold text-lg">{entry.singerName}</p>
+                <p className="text-sm opacity-80">{entry.song.title}</p>
+              </div>
+            ))}
+            {upcomingSingers.length === 0 && <p>Queue is empty</p>}
+          </div>
+        </div>
+      )}
+
       {/* Overlay for when no video is playing */}
-      {!nowPlaying && (
+      {(!nowPlaying || !deviceSettings.isVideoPlayerVisible) && (
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="mb-8">
@@ -102,7 +203,7 @@ const PlayerPage: React.FC = () => {
               <div className="max-w-md mx-auto">
                 <h2 className="text-2xl font-semibold mb-4">Up Next:</h2>
                 <div className="space-y-2">
-                  {upcomingSingers.map((entry, index) => (
+                  {upcomingSingers.map((entry) => (
                     <div 
                       key={entry.song.id}
                       className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-left"
@@ -115,9 +216,6 @@ const PlayerPage: React.FC = () => {
                           <div className="text-white/80">
                             {entry.song.artist} - {entry.song.title}
                           </div>
-                        </div>
-                        <div className="text-2xl font-bold text-yellow-400">
-                          #{index + 1}
                         </div>
                       </div>
                     </div>
@@ -194,7 +292,7 @@ const PlayerPage: React.FC = () => {
       )}
       
       {/* Ticker */}
-      <Ticker text={tickerText} />
+      {deviceSettings.isTickerVisible && <Ticker text={tickerText} />}
     </div>
   );
 };

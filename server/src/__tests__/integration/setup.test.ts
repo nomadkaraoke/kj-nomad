@@ -253,7 +253,7 @@ describe('Setup API Integration Tests', () => {
         throw new Error('Permission denied');
       });
 
-      const response = await request(app)
+      const response = await request.agent(app)
         .post('/api/setup/validate-media')
         .send({ path: '/restricted' })
         .expect(200);

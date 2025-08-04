@@ -27,7 +27,27 @@ export interface PlayedSong extends QueueEntry {
   completedAt?: number;
 }
 
+export interface Device {
+  id: string;
+  name: string;
+  ipAddress: string;
+  viewport: {
+    width: number;
+    height: number;
+  };
+  os: string;
+  browser: string;
+  isApp: boolean;
+  isOnline: boolean;
+  lastActivity: number;
+  isAudioEnabled: boolean;
+  isTickerVisible: boolean;
+  isSidebarVisible: boolean;
+  isVideoPlayerVisible: boolean;
+}
+
 export interface SessionState {
+  serverAddress: string;
   startedAt: number;
   queue: QueueEntry[];
   nowPlaying: QueueEntry | null;
@@ -69,6 +89,7 @@ export interface AppState {
     port: number;
     localIps: string[];
   };
+  devices: Device[];
   
   // Search state
   searchQuery: string;
@@ -91,6 +112,7 @@ export interface AppState {
   
   // Session state actions
   setServerInfo: (serverInfo: AppState['serverInfo']) => void;
+  setDevices: (devices: Device[]) => void;
   setSessionState: (sessionState: SessionState) => void;
   setSessionHistory: (history: PlayedSong[]) => void;
   setPlaybackState: (state: 'playing' | 'paused' | 'stopped') => void;
@@ -103,6 +125,13 @@ export interface AppState {
   // Complex actions
   checkServerInfo: () => Promise<void>;
   checkSetupStatus: () => Promise<void>;
+  fetchDevices: () => Promise<void>;
+  toggleDeviceAudio: (deviceId: string) => Promise<void>;
+  toggleDeviceTicker: (deviceId: string) => Promise<void>;
+  toggleDeviceSidebar: (deviceId: string) => Promise<void>;
+  toggleDeviceVideoPlayer: (deviceId: string) => Promise<void>;
+  identifyDevice: (deviceId: string) => Promise<void>;
+  disconnectDevice: (deviceId: string) => Promise<void>;
   connectToOnlineSession: (sessionId: string, adminKey: string) => void;
   requestSong: (songId: string, singerName: string) => void;
   playNext: () => void;
@@ -141,6 +170,7 @@ export const useAppStore = create<AppState>()(
       showHistory: false,
       isSetupComplete: false,
       serverInfo: { port: 0, localIps: [] },
+      devices: [],
       
       // Search state
       searchQuery: '',
@@ -167,6 +197,7 @@ export const useAppStore = create<AppState>()(
       
       // Session state setters
       setServerInfo: (serverInfo) => set({ serverInfo }),
+      setDevices: (devices) => set({ devices }),
       setSessionState: (sessionState) => set({ sessionState }),
       setSessionHistory: (sessionHistory) => set({ sessionHistory }),
       setPlaybackState: (playbackState) => set({ playbackState }),
@@ -200,6 +231,74 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           console.error('Failed to check setup status:', error);
           set({ isSetupComplete: false });
+        }
+      },
+
+      fetchDevices: async () => {
+        try {
+          const response = await fetch('/api/devices');
+          const data = await response.json();
+          if (data.success && Array.isArray(data.data)) {
+            set({ devices: data.data });
+          } else {
+            set({ devices: [] });
+          }
+        } catch (error) {
+          console.error('Failed to fetch devices:', error);
+          set({ devices: [] });
+        }
+      },
+
+      toggleDeviceAudio: async (deviceId: string) => {
+        try {
+          await fetch(`/api/devices/${deviceId}/toggle-audio`, { method: 'POST' });
+          get().fetchDevices();
+        } catch (error) {
+          console.error(`Failed to toggle audio for device ${deviceId}:`, error);
+        }
+      },
+
+      toggleDeviceTicker: async (deviceId: string) => {
+        try {
+          await fetch(`/api/devices/${deviceId}/toggle-ticker`, { method: 'POST' });
+          get().fetchDevices();
+        } catch (error) {
+          console.error(`Failed to toggle ticker for device ${deviceId}:`, error);
+        }
+      },
+
+      toggleDeviceSidebar: async (deviceId: string) => {
+        try {
+          await fetch(`/api/devices/${deviceId}/toggle-sidebar`, { method: 'POST' });
+          get().fetchDevices();
+        } catch (error) {
+          console.error(`Failed to toggle sidebar for device ${deviceId}:`, error);
+        }
+      },
+
+      toggleDeviceVideoPlayer: async (deviceId: string) => {
+        try {
+          await fetch(`/api/devices/${deviceId}/toggle-video`, { method: 'POST' });
+          get().fetchDevices();
+        } catch (error) {
+          console.error(`Failed to toggle video player for device ${deviceId}:`, error);
+        }
+      },
+
+      identifyDevice: async (deviceId: string) => {
+        try {
+          await fetch(`/api/devices/${deviceId}/identify`, { method: 'POST' });
+        } catch (error) {
+          console.error(`Failed to identify device ${deviceId}:`, error);
+        }
+      },
+
+      disconnectDevice: async (deviceId: string) => {
+        try {
+          await fetch(`/api/devices/${deviceId}`, { method: 'DELETE' });
+          get().fetchDevices();
+        } catch (error) {
+          console.error(`Failed to disconnect device ${deviceId}:`, error);
         }
       },
 

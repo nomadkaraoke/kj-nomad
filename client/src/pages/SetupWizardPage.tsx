@@ -86,6 +86,12 @@ const SetupWizardPage: React.FC = () => {
     }
   };
 
+  const handleSkip = () => {
+    setMediaDirectory(null);
+    // Directly go to the complete step, as no scanning is needed
+    setStep('complete');
+  };
+
   const renderStep = () => {
     switch (step) {
       case 'welcome':
@@ -146,17 +152,22 @@ const SetupWizardPage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <Button variant="ghost" onClick={() => setStep('welcome')}>
                 Back
               </Button>
-              <Button
-                variant="primary"
-                onClick={() => setStep('scan_media')}
-                disabled={!mediaDirectory}
-              >
-                Next: Scan Library
-              </Button>
+              <div className="flex items-center space-x-4">
+                <Button variant="ghost" onClick={handleSkip}>
+                  Skip for now
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => setStep('scan_media')}
+                  disabled={!mediaDirectory}
+                >
+                  Next: Scan Library
+                </Button>
+              </div>
             </div>
           </div>
         );
@@ -213,9 +224,20 @@ const SetupWizardPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Setup Complete!
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-8">
-              We found <span className="font-bold text-green-500">{scanStatus.songCount}</span> songs in your library. You're all set to start your show.
-            </p>
+            <div className="text-gray-600 dark:text-gray-300 mb-8">
+              {mediaDirectory ? (
+                <p>
+                  We found <span className="font-bold text-green-500">{scanStatus.songCount}</span> songs in your library. You're all set to start your show.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <p>You've skipped selecting a local media library.</p>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                    <strong>Note:</strong> No local files will be available for playback. You can add a library later in the application settings.
+                  </p>
+                </div>
+              )}
+            </div>
             <Button
               variant="primary"
               size="lg"

@@ -34,6 +34,16 @@ class MockWebSocket {
   }
 }
 
+const baseDeviceInfo = {
+  ipAddress: '192.168.1.100',
+  userAgent: 'Chrome/91.0',
+  viewport: { width: 1920, height: 1080 },
+  os: 'Test OS',
+  browser: 'Test Browser',
+  isApp: false,
+  capabilities: {},
+};
+
 describe('DeviceManager', () => {
   let deviceManager: DeviceManager;
 
@@ -57,8 +67,7 @@ describe('DeviceManager', () => {
     it('should register a new device correctly', () => {
       const ws = new MockWebSocket() as any;
       const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
+        ...baseDeviceInfo,
         capabilities: {
           canFullscreen: true,
           supportsHD: true
@@ -79,10 +88,8 @@ describe('DeviceManager', () => {
     it('should use provided device name', () => {
       const ws = new MockWebSocket() as any;
       const deviceInfo = {
+        ...baseDeviceInfo,
         name: 'Main Screen',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
       };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
@@ -92,11 +99,7 @@ describe('DeviceManager', () => {
 
     it('should assign default capabilities', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -112,8 +115,7 @@ describe('DeviceManager', () => {
     it('should merge provided capabilities with defaults', () => {
       const ws = new MockWebSocket() as any;
       const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
+        ...baseDeviceInfo,
         capabilities: {
           supportsHD: false,
           audioOutputs: ['HDMI', 'USB']
@@ -129,11 +131,7 @@ describe('DeviceManager', () => {
 
     it('should send registration confirmation', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -146,11 +144,7 @@ describe('DeviceManager', () => {
 
     it('should emit deviceConnected event', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const eventSpy = vi.fn();
       deviceManager.on('deviceConnected', eventSpy);
@@ -160,29 +154,32 @@ describe('DeviceManager', () => {
       expect(eventSpy).toHaveBeenCalledWith(device);
     });
 
-    it('should handle screen resolution information', () => {
+    it('should handle viewport information', () => {
       const ws = new MockWebSocket() as any;
       const deviceInfo = {
+        ...baseDeviceInfo,
         ipAddress: '192.168.1.100',
         userAgent: 'Chrome/91.0',
-        screenResolution: { width: 1920, height: 1080 },
+        viewport: { width: 1920, height: 1080 },
+        os: 'Windows 10',
+        browser: 'Chrome 91',
+        isApp: false,
         capabilities: {}
       };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       
-      expect(device.screenResolution).toEqual({ width: 1920, height: 1080 });
+      expect(device.viewport).toEqual({ width: 1920, height: 1080 });
+      expect(device.os).toBe('Windows 10');
+      expect(device.browser).toBe('Chrome 91');
+      expect(device.isApp).toBe(false);
     });
   });
 
   describe('Device Unregistration', () => {
     it('should unregister an existing device', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       deviceManager.unregisterDevice('device-1');
@@ -194,11 +191,7 @@ describe('DeviceManager', () => {
 
     it('should emit deviceDisconnected event', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -218,11 +211,7 @@ describe('DeviceManager', () => {
 
     it('should remove device from all groups on unregistration', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       const groupId = deviceManager.createGroup('Test Group', ['device-1']);
@@ -235,11 +224,7 @@ describe('DeviceManager', () => {
 
     it('should permanently delete device after timeout', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       deviceManager.unregisterDevice('device-1');
@@ -257,11 +242,7 @@ describe('DeviceManager', () => {
   describe('Device Status Updates', () => {
     it('should update device status', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -272,11 +253,7 @@ describe('DeviceManager', () => {
 
     it('should update video data when status is playing', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -298,11 +275,7 @@ describe('DeviceManager', () => {
 
     it('should update sync stats when provided', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -321,11 +294,7 @@ describe('DeviceManager', () => {
 
     it('should emit deviceStatusChanged event', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -345,11 +314,7 @@ describe('DeviceManager', () => {
 
     it('should update lastActivity timestamp', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       const originalActivity = device.lastActivity;
@@ -366,11 +331,7 @@ describe('DeviceManager', () => {
   describe('Message Sending', () => {
     it('should send message to device successfully', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       ws.clearMessages(); // Clear registration message
@@ -390,11 +351,7 @@ describe('DeviceManager', () => {
 
     it('should fail to send to offline device', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       deviceManager.unregisterDevice('device-1');
@@ -418,11 +375,7 @@ describe('DeviceManager', () => {
         throw new Error('WebSocket error');
       });
       
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -437,11 +390,7 @@ describe('DeviceManager', () => {
     it('should send to multiple devices', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -460,11 +409,7 @@ describe('DeviceManager', () => {
     it('should handle partial failures when sending to multiple devices', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -480,11 +425,7 @@ describe('DeviceManager', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
       const ws3 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -509,11 +450,7 @@ describe('DeviceManager', () => {
     it('should create a new group', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -530,11 +467,7 @@ describe('DeviceManager', () => {
 
     it('should create group with default layout', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -546,11 +479,7 @@ describe('DeviceManager', () => {
 
     it('should create group with all provided device IDs (no filtering)', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -564,11 +493,7 @@ describe('DeviceManager', () => {
     it('should add device to existing group', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -584,11 +509,7 @@ describe('DeviceManager', () => {
 
     it('should return true but not duplicate device when adding existing device to group', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -604,11 +525,7 @@ describe('DeviceManager', () => {
 
     it('should fail to add non-existent device to group', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -621,11 +538,7 @@ describe('DeviceManager', () => {
     it('should remove device from group', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -642,11 +555,7 @@ describe('DeviceManager', () => {
 
     it('should handle removing non-existent device from group', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -658,11 +567,7 @@ describe('DeviceManager', () => {
 
     it('should delete group', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -680,11 +585,7 @@ describe('DeviceManager', () => {
 
     it('should update group settings', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -706,11 +607,7 @@ describe('DeviceManager', () => {
     it('should send play command to group devices', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -733,11 +630,7 @@ describe('DeviceManager', () => {
 
     it('should send control command with data', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -763,11 +656,7 @@ describe('DeviceManager', () => {
     it('should return all devices', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -780,11 +669,7 @@ describe('DeviceManager', () => {
     it('should return only online devices', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -798,10 +683,8 @@ describe('DeviceManager', () => {
     it('should return specific device by id', () => {
       const ws = new MockWebSocket() as any;
       const deviceInfo = {
+        ...baseDeviceInfo,
         name: 'Test Device',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
       };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
@@ -817,11 +700,7 @@ describe('DeviceManager', () => {
 
     it('should return all groups', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -842,11 +721,7 @@ describe('DeviceManager', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
       const ws3 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws1, deviceInfo);
       deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -866,11 +741,7 @@ describe('DeviceManager', () => {
 
     it('should calculate sync quality based on average latency', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -901,11 +772,7 @@ describe('DeviceManager', () => {
   describe('Heartbeat Mechanism', () => {
     it('should handle heartbeat response', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -921,11 +788,7 @@ describe('DeviceManager', () => {
 
     it('should initialize sync stats if not present', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       expect(device.syncStats).toBeUndefined();
@@ -943,11 +806,7 @@ describe('DeviceManager', () => {
 
     it('should update existing sync stats with exponential moving average', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device = deviceManager.registerDevice('device-1', ws, deviceInfo);
       
@@ -982,11 +841,7 @@ describe('DeviceManager', () => {
     it('should send heartbeats and detect timeouts', () => {
       const ws1 = new MockWebSocket() as any;
       const ws2 = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       const device1 = deviceManager.registerDevice('device-1', ws1, deviceInfo);
       const device2 = deviceManager.registerDevice('device-2', ws2, { ...deviceInfo, ipAddress: '192.168.1.101' });
@@ -1018,11 +873,7 @@ describe('DeviceManager', () => {
   describe('Error Handling and Edge Cases', () => {
     it('should handle closed WebSocket connection', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       ws.close();
@@ -1046,9 +897,8 @@ describe('DeviceManager', () => {
       for (let i = 0; i < 100; i++) {
         const ws = new MockWebSocket() as any;
         const deviceInfo = {
+          ...baseDeviceInfo,
           ipAddress: `192.168.1.${i + 1}`,
-          userAgent: 'Chrome/91.0',
-          capabilities: {}
         };
         devices.push(deviceManager.registerDevice(`device-${i}`, ws, deviceInfo));
       }
@@ -1072,11 +922,7 @@ describe('DeviceManager', () => {
 
     it('should clear all devices and groups on destroy', () => {
       const ws = new MockWebSocket() as any;
-      const deviceInfo = {
-        ipAddress: '192.168.1.100',
-        userAgent: 'Chrome/91.0',
-        capabilities: {}
-      };
+      const deviceInfo = { ...baseDeviceInfo };
       
       deviceManager.registerDevice('device-1', ws, deviceInfo);
       deviceManager.createGroup('Test Group', ['device-1']);

@@ -279,6 +279,10 @@ describe('SingerProfiles', () => {
       .mockResolvedValueOnce({ // For the PUT request to update VIP status
         ok: true,
         json: async () => ({ success: true, data: updatedProfile })
+      })
+      .mockResolvedValueOnce({ // For the refetch of stats
+        ok: true,
+        json: async () => ({ success: true, data: mockStats })
       });
 
     render(<SingerProfiles />);

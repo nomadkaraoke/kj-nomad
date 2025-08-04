@@ -1,4 +1,4 @@
-import { useAppStore, type QueueEntry, type SessionState, type PlayedSong } from '../store/appStore';
+import { useAppStore, type QueueEntry, type SessionState, type PlayedSong, type Device } from '../store/appStore';
 
 class WebSocketService {
   private ws: WebSocket | null = null;
@@ -112,6 +112,12 @@ class WebSocketService {
     switch (type) {
       case 'queue_updated':
         store.setQueue(payload as QueueEntry[]);
+        break;
+
+      case 'devices_updated':
+        if (payload && Array.isArray(payload)) {
+          store.setDevices(payload as Device[]);
+        }
         break;
         
       case 'session_state_updated':

@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { Header, Container } from './ui/Layout';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useAppStore } from '../store/appStore';
 import { 
-  HomeIcon, 
   Cog6ToothIcon, 
   MicrophoneIcon,
   WifiIcon,
@@ -15,17 +14,17 @@ import {
 
 export const Navigation: React.FC = () => {
   const location = useLocation();
-  const { connectionStatus, error } = useAppStore();
+  const { connectionStatus, error, serverInfo, checkServerInfo } = useAppStore();
+
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      checkServerInfo();
+    }
+  }, [connectionStatus, checkServerInfo]);
   
   const navItems = [
     { 
       path: '/', 
-      label: 'Home', 
-      icon: HomeIcon,
-      description: 'Welcome & Setup'
-    },
-    { 
-      path: '/controller', 
       label: 'KJ Control', 
       icon: Cog6ToothIcon,
       description: 'Host Interface'
@@ -52,9 +51,16 @@ export const Navigation: React.FC = () => {
             {/* Connection Status */}
             <div className="flex items-center space-x-2">
               {connectionStatus === 'connected' ? (
-                <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
-                  <WifiIcon className="h-4 w-4" />
-                  <span className="text-xs font-medium hidden sm:inline">Connected</span>
+                <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                  <WifiIcon className="h-5 w-5" />
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-xs font-medium">Connected</span>
+                    {serverInfo.localIps.length > 0 && (
+                      <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
+                        {serverInfo.localIps[0]}:{serverInfo.port}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1 text-red-600 dark:text-red-400">
