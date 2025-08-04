@@ -62,18 +62,29 @@ function App() {
     websocketService.connect();
     useAppStore.getState().checkSetupStatus();
 
-    let cleanup: (() => void) | undefined;
+    let modeCleanup: (() => void) | undefined;
+    let onlineModeCleanup: (() => void) | undefined;
 
-    if (window.electronAPI && window.electronAPI.onMode) {
-      cleanup = window.electronAPI.onMode((mode) => {
-        useAppStore.getState().setMode(mode);
-      });
+    if (window.electronAPI) {
+      if (window.electronAPI.onMode) {
+        modeCleanup = window.electronAPI.onMode((mode) => {
+          useAppStore.getState().setMode(mode);
+        });
+      }
+      if (window.electronAPI.onSetModeOnline) {
+        onlineModeCleanup = window.electronAPI.onSetModeOnline(() => {
+          useAppStore.getState().setMode('online');
+        });
+      }
     }
 
     return () => {
       websocketService.disconnect();
-      if (cleanup) {
-        cleanup();
+      if (modeCleanup) {
+        modeCleanup();
+      }
+      if (onlineModeCleanup) {
+        onlineModeCleanup();
       }
     };
   }, []);

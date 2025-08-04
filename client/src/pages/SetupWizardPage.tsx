@@ -31,32 +31,27 @@ const SetupWizardPage: React.FC = () => {
     setError(null);
 
     try {
-      // 1. Set the media directory
-      const setDirResponse = await fetch('/api/setup/media-directory', {
+      // Call the single endpoint to set the directory and trigger a scan
+      const response = await fetch('/api/setup/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: mediaDirectory }),
+        body: JSON.stringify({ mediaDirectory }),
       });
 
-      if (!setDirResponse.ok) {
-        const { error } = await setDirResponse.json();
-        throw new Error(error || 'Failed to set media directory.');
-      }
+      const result = await response.json();
 
-      // 2. Start the scan
-      const scanResponse = await fetch('/api/setup/scan', { method: 'POST' });
-      const result = await scanResponse.json();
-
-      if (!scanResponse.ok || !result.success) {
+      if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to scan library.');
       }
       
+      // Since the backend doesn't provide progress, we'll just show completion
+      // A more advanced implementation would use WebSockets for progress
       setScanStatus({
         scanning: false,
         progress: 100,
         total: 100,
         complete: true,
-        songCount: result.data.songCount,
+        songCount: result.data.songCount || 0, // Assuming the backend returns this
       });
 
       setTimeout(() => setStep('complete'), 1000);
@@ -237,7 +232,7 @@ const SetupWizardPage: React.FC = () => {
 
   return (
     <div className="h-screen w-screen bg-gray-100 dark:bg-dark-900 flex items-center justify-center font-sans">
-      <Container size="sm">
+      <Container size="xl">
         <Card className="shadow-2xl">
           <div className="p-8">
             {renderStep()}

@@ -257,29 +257,43 @@ app.post('/api/setup/config', (req, res) => {
     console.log('[API] POST /api/setup/config - Update setup configuration');
     try {
         const newConfig = req.body;
-        const success = saveSetupConfig(newConfig);
         
-        if (success) {
-            // If media directory changed, trigger rescan
-            if (newConfig.mediaDirectory) {
-                console.log('[Setup] Media directory updated, rescanning...');
+        // Validate and save configuration first
+        const configSaved = saveSetupConfig(newConfig);
+        if (!configSaved) {
+            return res.status(500).json({ success: false, error: 'Failed to save configuration' });
+        }
+
+        // If media directory is provided, attempt to scan it
+        if (newConfig.mediaDirectory) {
+            console.log('[Setup] Media directory updated, attempting to rescan...');
+            try {
                 scanMediaLibrary(newConfig.mediaDirectory);
                 if (newConfig.fillerMusicDirectory) {
                     scanFillerMusic(newConfig.fillerMusicDirectory);
                 }
+            } catch (scanError) {
+                const errorMessage = scanError instanceof Error ? scanError.message : String(scanError);
+                console.error(`[API] Media scan failed: ${errorMessage}`);
+                // Return a specific error for the failed scan
+                return res.status(400).json({ 
+                    success: false, 
+                    error: `Media library scan failed: ${errorMessage}` 
+                });
             }
-            
-            res.json({ 
-                success: true, 
-                message: 'Configuration updated successfully',
-                data: loadSetupConfig()
-            });
-        } else {
-            res.status(500).json({ success: false, error: 'Failed to save configuration' });
         }
+        
+        // If everything succeeded, return a success response
+        res.json({ 
+            success: true, 
+            message: 'Configuration updated successfully',
+            data: loadSetupConfig()
+        });
+
     } catch (error) {
-        console.error('[API] Setup config error:', error);
-        res.status(500).json({ success: false, error: 'Invalid configuration data' });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[API] Setup config error: ${errorMessage}`);
+        res.status(500).json({ success: false, error: 'An unexpected error occurred while saving the configuration.' });
     }
 });
 
@@ -1459,12 +1473,19 @@ server.listen(PORT, async () => {
 
   // Now scan libraries using configured paths
   console.log('[Server] Initializing media libraries from config...');
-  scanMediaLibrary(config.mediaDirectory);
-  if (config.fillerMusicDirectory) {
-      scanFillerMusic(config.fillerMusicDirectory);
-  } else {
-      // Fallback or default behavior if filler music dir isn't set
-      scanFillerMusic(config.mediaDirectory);
+  try {
+    scanMediaLibrary(config.mediaDirectory);
+    if (config.fillerMusicDirectory) {
+        scanFillerMusic(config.fillerMusicDirectory);
+    } else {
+        // Fallback or default behavior if filler music dir isn't set
+        scanFillerMusic(config.mediaDirectory);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[Server Startup] Failed to scan media libraries: ${errorMessage}`);
+    // Continue starting the server, but with an empty library.
+    // The user will be prompted to fix this in the setup wizard.
   }
   
   // Update paper workflow after scanning

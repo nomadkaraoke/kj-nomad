@@ -36,10 +36,8 @@ export const scanMediaLibrary = (customDirectory?: string): Song[] => {
   try {
     // Ensure directory exists
     if (!fs.existsSync(scanDir)) {
-      console.error(`Media directory does not exist: ${scanDir}`);
-      songLibrary = [];
-      fuse = new Fuse([], { keys: ['artist', 'title'], threshold: 0.4 });
-      return songLibrary;
+      // Throw an error that can be caught by the API layer
+      throw new Error(`Media directory not found: ${scanDir}`);
     }
 
     const files = fs.readdirSync(scanDir);
@@ -65,11 +63,13 @@ export const scanMediaLibrary = (customDirectory?: string): Song[] => {
       threshold: 0.4,
     });
     console.log(`Scan complete. Found ${songLibrary.length} songs.`);
+    return songLibrary;
   } catch (error) {
     console.error('Error scanning media library:', error);
     songLibrary = [];
+    // Re-throw the error to be handled by the caller
+    throw error;
   }
-  return songLibrary;
 };
 
 export const searchSongs = (query: string): Song[] => {

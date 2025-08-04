@@ -7,6 +7,7 @@ declare global {
       onMode: (callback: (mode: 'offline' | 'online') => void) => () => void;
       selectDirectory: () => Promise<string | null>;
       onConnectWithAdminKey: (callback: (key: string) => void) => () => void;
+      onSetModeOnline: (callback: () => void) => () => void;
     };
   }
 }

@@ -132,22 +132,26 @@ describe('mediaLibrary', () => {
       expect(allSongs).toHaveLength(0);
     });
 
-    it('should handle non-existent media directory gracefully', () => {
+    it('should throw an error for a non-existent media directory', () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      expect(() => scanMediaLibrary()).not.toThrow();
+      // Expect the function to throw an error
+      expect(() => scanMediaLibrary('non-existent-dir')).toThrow('Media directory not found: non-existent-dir');
       
+      // Ensure the library remains empty
       const allSongs = searchSongs('');
       expect(allSongs).toHaveLength(0);
     });
 
-    it('should handle media directory read error gracefully', () => {
+    it('should throw an error on media directory read error', () => {
       mockFs.readdirSync.mockImplementation(() => {
         throw new Error('Directory not found');
       });
 
-      expect(() => scanMediaLibrary()).not.toThrow();
+      // Expect the function to throw an error
+      expect(() => scanMediaLibrary()).toThrow('Directory not found');
       
+      // Ensure the library remains empty
       const allSongs = searchSongs('');
       expect(allSongs).toHaveLength(0);
     });

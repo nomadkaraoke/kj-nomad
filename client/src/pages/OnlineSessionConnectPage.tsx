@@ -47,7 +47,7 @@ const OnlineSessionConnectPage: React.FC = () => {
 
   return (
     <div className="h-screen w-screen bg-gray-900 text-white flex items-center justify-center font-sans">
-      <Container size="sm">
+      <Container size="md">
         <Card className="bg-gray-800 border border-gray-700 shadow-2xl">
           <div className="p-8 text-center">
             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-blue-500 mb-4">

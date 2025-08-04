@@ -26,5 +26,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => {
       ipcRenderer.removeListener('connect-with-admin-key', handler);
     };
+  },
+  onSetModeOnline: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('set-mode-online', handler);
+    return () => {
+      ipcRenderer.removeListener('set-mode-online', handler);
+    };
   }
 });

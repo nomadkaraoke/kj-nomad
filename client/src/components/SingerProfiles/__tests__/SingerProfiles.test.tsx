@@ -268,15 +268,15 @@ describe('SingerProfiles', () => {
     const updatedProfile = { ...mockProfiles[0], vipStatus: false };
 
     mockFetch
-      .mockResolvedValueOnce({
+      .mockResolvedValueOnce({ // For initial profile load
         ok: true,
         json: async () => ({ success: true, data: mockProfiles })
       })
-      .mockResolvedValueOnce({
+      .mockResolvedValueOnce({ // For fetchStats after selection
         ok: true,
         json: async () => ({ success: true, data: mockStats })
       })
-      .mockResolvedValueOnce({
+      .mockResolvedValueOnce({ // For the PUT request to update VIP status
         ok: true,
         json: async () => ({ success: true, data: updatedProfile })
       });

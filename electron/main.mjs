@@ -78,6 +78,9 @@ class KJNomadApp {
     if (urlObj.hostname === 'connect') {
       const adminKey = urlObj.searchParams.get('adminKey');
       if (adminKey && mainWindow) {
+        // When the app is launched via URL, we want to go straight to the online connect page
+        // and pre-fill the key.
+        mainWindow.webContents.send('set-mode-online');
         mainWindow.webContents.send('connect-with-admin-key', adminKey);
       }
     }
