@@ -30467,7 +30467,7 @@ const PlayerPage = () => {
   if (playerIsDisconnected) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "player-container bg-gray-800 flex items-center justify-center text-white text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl font-bold mb-4", children: "Player Screen Disconnected" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl", children: "Thanks for using KJ-Nomad." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl", children: "Thank you for using KJ-Nomad!" })
     ] }) });
   }
   const ConnectionStatusIndicator = () => {
@@ -30866,4 +30866,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BwdqcAwz.js.map
+//# sourceMappingURL=index-Bd4g6KOr.js.map
