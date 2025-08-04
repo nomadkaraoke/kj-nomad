@@ -13,9 +13,29 @@ let serverProcess;
 let tray;
 let isQuitting = false;
 
-// Server configuration - match the server's port logic
-const SERVER_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
+import net from 'net';
+
+// Server configuration
+const DEFAULT_PORT = 8080;
 const SERVER_HOST = 'localhost';
+let serverPort = DEFAULT_PORT;
+
+async function findAvailablePort(startPort) {
+  let port = startPort;
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', () => {
+      port++;
+      findAvailablePort(port).then(resolve).catch(reject);
+    });
+    server.listen({ port, host: '127.0.0.1' }, () => {
+      server.close(() => {
+        resolve(port);
+      });
+    });
+  });
+}
 
 class KJNomadApp {
   constructor() {
@@ -127,6 +147,9 @@ class KJNomadApp {
     // Listen for the mode selection from the onboarding page
     ipcMain.on('start-mode', async (event, mode) => {
       console.log(`Received start-mode event: ${mode}`);
+      // Find an available port before starting
+      serverPort = await findAvailablePort(DEFAULT_PORT);
+      console.log(`Using port: ${serverPort}`);
       // Once a mode is chosen, start the server and load the main app
       await this.startServer(mode);
       await this.loadApp(mode); // Pass mode to loadApp
@@ -323,7 +346,7 @@ class KJNomadApp {
         NODE_ENV: 'production',
         ELECTRON_MODE: 'true',
         AUTO_LAUNCH: 'false',
-        PORT: SERVER_PORT.toString(),
+        PORT: serverPort.toString(),
         HEADLESS: 'true',
         START_MODE: mode,
         KJ_NOMAD_USER_DATA_PATH: app.getPath('userData')
@@ -399,7 +422,7 @@ class KJNomadApp {
   async loadApp(mode) { // Receive mode here
     if (this.isCleaningUp) return;
     
-    const url = `http://${SERVER_HOST}:${SERVER_PORT}`;
+    const url = `http://${SERVER_HOST}:${serverPort}`;
     
     try {
       if (!this.isCleaningUp) console.log(`🌐 Loading app from ${url}`);
@@ -428,7 +451,7 @@ class KJNomadApp {
   showErrorDialog(title, message, details = null) {
     let fullMessage = message;
     if (details) fullMessage += `\n\n--- Debug Information ---\n${JSON.stringify(details, null, 2)}`;
-    fullMessage += `\n\n--- System Information ---\nPlatform: ${process.platform}\nArchitecture: ${process.arch}\nElectron Version: ${process.versions.electron}\nNode Version: ${process.versions.node}\nApp Version: ${app.getVersion()}\nPackaged: ${app.isPackaged}\nServer Port: ${SERVER_PORT}\nServer Ready: ${this.serverReady}`;
+    fullMessage += `\n\n--- System Information ---\nPlatform: ${process.platform}\nArchitecture: ${process.arch}\nElectron Version: ${process.versions.electron}\nNode Version: ${process.versions.node}\nApp Version: ${app.getVersion()}\nPackaged: ${app.isPackaged}\nServer Port: ${serverPort}\nServer Ready: ${this.serverReady}`;
     if (serverProcess) fullMessage += `\nServer PID: ${serverProcess.pid}\nServer Killed: ${serverProcess.killed}`;
     
     console.error(`❌ ${title}: ${message}`);

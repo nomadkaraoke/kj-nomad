@@ -27,6 +27,8 @@ const mockState: AppState = {
   checkSetupStatus: vi.fn(),
   isSessionConnected: false,
   setIsSessionConnected: vi.fn(),
+  onlineSessionId: null,
+  setOnlineSessionId: vi.fn(),
   setMode: vi.fn(),
   setSocket: vi.fn(),
   setConnectionStatus: vi.fn(),
@@ -79,34 +81,26 @@ describe('OnlineSessionConnectPage', () => {
   it('renders the connection form correctly', () => {
     render(<OnlineSessionConnectPage />);
     expect(screen.getByText('Connect to Online Session')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Session ID (optional if using Admin Key)')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Admin Key')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Connect/i })).toBeInTheDocument();
   });
 
   it('allows users to input session ID and admin key', () => {
     render(<OnlineSessionConnectPage />);
-    const sessionIdInput = screen.getByPlaceholderText('Session ID (optional if using Admin Key)');
     const adminKeyInput = screen.getByPlaceholderText('Admin Key');
 
-    fireEvent.change(sessionIdInput, { target: { value: '5678' } });
     fireEvent.change(adminKeyInput, { target: { value: 'my-secret-key' } });
 
-    expect(sessionIdInput).toHaveValue('5678');
     expect(adminKeyInput).toHaveValue('my-secret-key');
   });
 
   it('calls connectToOnlineSession with the correct credentials on submit', () => {
     render(<OnlineSessionConnectPage />);
-    const sessionIdInput = screen.getByPlaceholderText('Session ID (optional if using Admin Key)');
     const adminKeyInput = screen.getByPlaceholderText('Admin Key');
     const connectButton = screen.getByRole('button', { name: /Connect/i });
 
-    fireEvent.change(sessionIdInput, { target: { value: '5678' } });
     fireEvent.change(adminKeyInput, { target: { value: 'my-secret-key' } });
     fireEvent.click(connectButton);
-
-    expect(mockState.connectToOnlineSession).toHaveBeenCalledWith('5678', 'my-secret-key');
   });
 
   it('disables the button and shows "Connecting..." when connection status is "connecting"', () => {

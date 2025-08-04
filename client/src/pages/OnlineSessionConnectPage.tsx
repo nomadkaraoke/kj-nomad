@@ -6,7 +6,7 @@ import { Input } from '../components/ui/Input';
 import { useAppStore } from '../store/appStore';
 
 const OnlineSessionConnectPage: React.FC = () => {
-  const [sessionId, setSessionId] = useState('');
+  const [sessionId] = useState('');
   const [adminKey, setAdminKey] = useState('');
   const connectToOnlineSession = useAppStore((state) => state.connectToOnlineSession);
   const { connectionStatus, error } = useAppStore();
@@ -58,13 +58,6 @@ const OnlineSessionConnectPage: React.FC = () => {
             </p>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              <Input
-                type="text"
-                placeholder="Session ID (optional if using Admin Key)"
-                value={sessionId}
-                onChange={(e) => setSessionId(e.target.value)}
-                className="text-center text-lg"
-              />
               <Input
                 type="password"
                 placeholder="Admin Key"

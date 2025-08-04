@@ -57,6 +57,7 @@ export interface AppState {
   playbackState: 'playing' | 'paused' | 'stopped';
   onlineSessionRequiresLibrary: boolean;
   isSessionConnected: boolean;
+  onlineSessionId: string | null;
   
   // UI state
   tickerText: string;
@@ -92,6 +93,7 @@ export interface AppState {
   setIsSetupComplete: (isComplete: boolean) => void;
   setOnlineSessionRequiresLibrary: (requiresLibrary: boolean) => void;
   setIsSessionConnected: (isConnected: boolean) => void;
+  setOnlineSessionId: (sessionId: string | null) => void;
   
   // Complex actions
   checkSetupStatus: () => Promise<void>;
@@ -124,6 +126,7 @@ export const useAppStore = create<AppState>()(
       playbackState: 'stopped',
       onlineSessionRequiresLibrary: false,
       isSessionConnected: false,
+      onlineSessionId: null,
       
       // UI state
       tickerText: 'Welcome to KJ-Nomad! 🎤 Professional Karaoke System',
@@ -163,13 +166,18 @@ export const useAppStore = create<AppState>()(
       setIsSetupComplete: (isSetupComplete) => set({ isSetupComplete }),
       setOnlineSessionRequiresLibrary: (onlineSessionRequiresLibrary) => set({ onlineSessionRequiresLibrary }),
       setIsSessionConnected: (isSessionConnected) => set({ isSessionConnected }),
+      setOnlineSessionId: (onlineSessionId) => set({ onlineSessionId }),
       
       // Complex actions
       checkSetupStatus: async () => {
         try {
           const response = await fetch('/api/setup/status');
           const data = await response.json();
-          set({ isSetupComplete: data.isConfigured });
+          if (data.success) {
+            set({ isSetupComplete: !data.data.setupRequired });
+          } else {
+            set({ isSetupComplete: false });
+          }
         } catch (error) {
           console.error('Failed to check setup status:', error);
           set({ isSetupComplete: false });

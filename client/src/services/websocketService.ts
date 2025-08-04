@@ -8,8 +8,13 @@ class WebSocketService {
   private maxReconnectInterval = 30000; // Max 30 seconds
   private reconnectTimer: NodeJS.Timeout | null = null;
   
-  connect(url: string = 'ws://localhost:8080') {
+  connect() {
     try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      const url = `${protocol}//${host}${port}`;
+      
       this.ws = new WebSocket(url);
       
       this.ws.onopen = () => {
@@ -193,6 +198,15 @@ class WebSocketService {
           if (!requiresLocalLibrary) {
             store.setIsSetupComplete(true);
           }
+        }
+        break;
+      
+      case 'connected':
+        if (payload && typeof payload === 'object') {
+          const { clientId, sessionId, connectedClients } = payload as { clientId: string; sessionId: string; connectedClients: number };
+          console.log(`[WebSocketService] Confirmed connection to session ${sessionId} with client ID ${clientId}. Total clients: ${connectedClients}`);
+          // You might want to update the store with this information if needed
+          // For now, we'll just log it, as the main connection status is handled by 'onopen'
         }
         break;
         

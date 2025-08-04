@@ -264,11 +264,13 @@ app.post('/api/setup/config', (req, res) => {
             return res.status(500).json({ success: false, error: 'Failed to save configuration' });
         }
 
+        let songCount = 0;
         // If media directory is provided, attempt to scan it
         if (newConfig.mediaDirectory) {
             console.log('[Setup] Media directory updated, attempting to rescan...');
             try {
-                scanMediaLibrary(newConfig.mediaDirectory);
+                const library = scanMediaLibrary(newConfig.mediaDirectory);
+                songCount = library.length;
                 if (newConfig.fillerMusicDirectory) {
                     scanFillerMusic(newConfig.fillerMusicDirectory);
                 }
@@ -284,10 +286,11 @@ app.post('/api/setup/config', (req, res) => {
         }
         
         // If everything succeeded, return a success response
+        const updatedConfig = loadSetupConfig();
         res.json({ 
             success: true, 
             message: 'Configuration updated successfully',
-            data: loadSetupConfig()
+            data: { ...updatedConfig, songCount }
         });
 
     } catch (error) {
