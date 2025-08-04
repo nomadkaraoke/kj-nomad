@@ -1,11 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+const { mockEnsureDataDirExists, mockGetDataPath } = vi.hoisted(() => {
+  return {
+    mockEnsureDataDirExists: vi.fn(),
+    mockGetDataPath: vi.fn(),
+  };
+});
+
 // Mock dependencies before any imports
 vi.mock('fs');
 vi.mock('path');
 vi.mock('os');
 vi.mock('url', () => ({
   fileURLToPath: vi.fn(() => '/mock/setupWizard.js')
+}));
+
+// Mock the new dataPath module
+vi.mock('../dataPath.js', () => ({
+  ensureDataDirExists: mockEnsureDataDirExists,
+  getDataPath: mockGetDataPath,
 }));
 
 import fs from 'fs';
@@ -47,13 +60,16 @@ import {
   resetSetup,
   getMediaDirectorySuggestions,
   SetupConfig
-} from '../setupWizard';
+} from '../setupWizard.js';
 
 describe('SetupWizard', () => {
   beforeEach(() => {
     // Clear call history but keep implementations
     vi.clearAllMocks();
     
+    // Point getDataPath mock to our test file
+    mockGetDataPath.mockReturnValue(mockConfigFile);
+
     // Re-establish mocks that were cleared
     mockPath.dirname.mockImplementation((filePath) => {
       if (filePath === '/mock/setupWizard.js') return '/mock';
@@ -82,7 +98,6 @@ describe('SetupWizard', () => {
     describe('loadSetupConfig', () => {
       it('should return default config when config file does not exist', () => {
         mockFs.existsSync.mockReturnValue(false);
-        mockFs.mkdirSync.mockImplementation(() => undefined);
 
         const config = loadSetupConfig();
 
@@ -94,7 +109,7 @@ describe('SetupWizard', () => {
           enableNetworkAccess: true,
           setupComplete: false
         }));
-        expect(mockFs.mkdirSync).toHaveBeenCalled();
+        expect(mockEnsureDataDirExists).toHaveBeenCalled();
       });
 
       it('should load existing config file successfully', () => {
@@ -167,17 +182,10 @@ describe('SetupWizard', () => {
         expect(console.error).toHaveBeenCalledWith('[SetupWizard] Error loading config:', expect.any(Error));
       });
 
-      it('should create config directory if it does not exist', () => {
-        mockFs.existsSync.mockImplementation((path) => {
-          if (path === mockConfigDir) return false;
-          if (path === mockConfigFile) return false;
-          return true;
-        });
-        mockFs.mkdirSync.mockImplementation(() => undefined);
-
+      it('should ensure data directory exists on load', () => {
+        mockFs.existsSync.mockReturnValue(false); // Config file doesn't exist
         loadSetupConfig();
-
-        expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockConfigDir, { recursive: true });
+        expect(mockEnsureDataDirExists).toHaveBeenCalled();
       });
     });
 
@@ -243,12 +251,10 @@ describe('SetupWizard', () => {
         expect(savedData.lastModified).toBe('2024-01-01T12:00:00.000Z');
       });
 
-      it('should create config directory if it does not exist', () => {
+      it('should ensure data directory exists on save', () => {
         mockFs.existsSync.mockReturnValue(false);
-
         saveSetupConfig(mockConfig);
-
-        expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockConfigDir, { recursive: true });
+        expect(mockEnsureDataDirExists).toHaveBeenCalled();
       });
 
       it('should handle write errors gracefully', () => {
@@ -738,9 +744,10 @@ describe('SetupWizard', () => {
         }));
         
         // Mock invalid directory
-        mockFs.existsSync.mockImplementation((path) => {
-          if (path.toString().includes('/nonexistent/media')) return false;
-          return true; // For config file
+        mockFs.existsSync.mockImplementation((p) => {
+          if (p && p.toString().includes('/nonexistent/media')) return false;
+          if (p === mockConfigFile) return true;
+          return false;
         });
 
         const result = isSetupRequired();

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import { applySetupRoutes } from '../../setupWizard';
+import { applySetupRoutes } from '../../setupWizard.js';
 
 // Mock modules before importing
 vi.mock('fs', () => ({

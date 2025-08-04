@@ -19,8 +19,8 @@ import {
   getPlaybackState,
   resetSession,
   session
-} from '../songQueue';
-import type { Song } from '../mediaLibrary';
+} from '../songQueue.js';
+import type { Song } from '../mediaLibrary.js';
 
 // Mock data
 const mockSong1: Song = {

@@ -6,7 +6,7 @@ import {
   searchSongs, 
   getSongById,
   resetMediaLibrary
-} from '../mediaLibrary';
+} from '../mediaLibrary.js';
 
 // Mock fs and path modules
 vi.mock('fs', () => ({

@@ -14,7 +14,7 @@ const mockNetworkInterfaces = vi.mocked(networkInterfaces);
 const mockFetch = vi.mocked(fetch);
 
 // Import after mocks are set up
-import { CloudConnector } from '../cloudConnector';
+import { CloudConnector } from '../cloudConnector.js';
 
 // Mock WebSocket instance
 class MockWebSocketInstance {

@@ -2,10 +2,11 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { 
-  scanFillerMusic, 
+  scanFillerMusic,
   getNextFillerSong,
-  resetFillerMusic
-} from '../fillerMusic';
+  // getFillerMusicState, // This function is not exported
+  resetFillerMusic as resetFillerMusicState, // Renaming for clarity
+} from '../fillerMusic.js';
 
 // Mock fs and path modules
 vi.mock('fs', () => ({
@@ -28,6 +29,15 @@ vi.mock('url', () => ({
 
 const mockFs = vi.mocked(fs);
 const mockPath = vi.mocked(path);
+
+// Local reset function for tests
+const resetFillerMusic = () => {
+  try {
+    resetFillerMusicState();
+  } catch {
+    // Mocking might prevent direct access, manually reset if needed
+  }
+};
 
 describe('fillerMusic', () => {
   beforeEach(() => {

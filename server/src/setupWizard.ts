@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { networkInterfaces } from 'os';
 import express, { Request, Response } from 'express';
+import { getDataPath, ensureDataDirExists } from './dataPath.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -44,7 +45,7 @@ export interface NetworkInfo {
   }>;
 }
 
-const CONFIG_FILE = path.join(__dirname, '../config/setup.json');
+const CONFIG_FILE = getDataPath('setup.json');
 const DEFAULT_MEDIA_DIR = path.join(__dirname, '../media');
 const DEFAULT_CONFIG: SetupConfig = {
   mediaDirectory: DEFAULT_MEDIA_DIR,
@@ -58,20 +59,10 @@ const DEFAULT_CONFIG: SetupConfig = {
 };
 
 /**
- * Ensure config directory exists
- */
-function ensureConfigDirectory() {
-  const configDir = path.dirname(CONFIG_FILE);
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
-  }
-}
-
-/**
  * Load setup configuration
  */
 export function loadSetupConfig(): SetupConfig {
-  ensureConfigDirectory();
+  ensureDataDirExists();
   
   try {
     if (fs.existsSync(CONFIG_FILE)) {
@@ -92,7 +83,7 @@ export function loadSetupConfig(): SetupConfig {
  * Save setup configuration
  */
 export function saveSetupConfig(config: SetupConfig): boolean {
-  ensureConfigDirectory();
+  ensureDataDirExists();
   
   try {
     const configToSave = {
@@ -348,8 +339,8 @@ export function resetSetup(): boolean {
  * Apply setup routes to the Express app
  */
 export function applySetupRoutes(app: express.Application): void {
-  // Ensure config directory exists
-  ensureConfigDirectory();
+  // Ensure data directory exists
+  ensureDataDirExists();
 
   // Get setup status
   app.get('/api/setup/status', (req, res) => {

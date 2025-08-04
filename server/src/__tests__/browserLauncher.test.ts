@@ -14,8 +14,8 @@ import {
   launchBrowser,
   launchAdminInterface,
   shouldAutoLaunch,
-  displayStartupInstructions
-} from '../browserLauncher';
+  displayStartupInstructions,
+} from '../browserLauncher.js';
 
 describe('BrowserLauncher', () => {
   beforeEach(() => {

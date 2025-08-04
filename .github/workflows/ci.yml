@@ -381,7 +381,7 @@ jobs:
           **Commit:** `${{ github.sha }}`
           
           **Warning:** This is an unstable build and may contain bugs.
-        prerelease: true
+        prerelease: false
         files: |
           ./artifacts/**/*
 

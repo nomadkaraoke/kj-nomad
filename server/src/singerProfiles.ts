@@ -1,10 +1,5 @@
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { getDataPath, ensureDataDirExists } from './dataPath.js';
 
 export interface SingerProfile {
   id: string;
@@ -48,14 +43,12 @@ export interface SingerStats {
 class SingerProfileManager {
   private profiles: Map<string, SingerProfile> = new Map();
   private performances: Map<string, PerformanceRecord> = new Map();
-  private dataDirectory: string;
   private profilesFile: string;
   private performancesFile: string;
 
-  constructor(dataDirectory?: string) {
-    this.dataDirectory = dataDirectory || path.join(__dirname, '../data');
-    this.profilesFile = path.join(this.dataDirectory, 'singer-profiles.json');
-    this.performancesFile = path.join(this.dataDirectory, 'performance-records.json');
+  constructor() {
+    this.profilesFile = getDataPath('singer-profiles.json');
+    this.performancesFile = getDataPath('performance-records.json');
     this.ensureDataDirectory();
     this.loadData();
   }
@@ -369,9 +362,7 @@ class SingerProfileManager {
   // Private methods
 
   private ensureDataDirectory(): void {
-    if (!fs.existsSync(this.dataDirectory)) {
-      fs.mkdirSync(this.dataDirectory, { recursive: true });
-    }
+    ensureDataDirExists();
   }
 
   private loadData(): void {

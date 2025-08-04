@@ -15,7 +15,7 @@ const mockFs = vi.mocked(fs);
 const mockPath = vi.mocked(path);
 
 // Import mocked modules
-import { searchSongs } from '../../mediaLibrary';
+import { searchSongs } from '../../mediaLibrary.js';
 import { Readable } from 'stream';
 
 const mockSearchSongs = vi.mocked(searchSongs);

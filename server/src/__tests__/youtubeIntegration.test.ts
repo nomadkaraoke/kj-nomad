@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { youtubeIntegration, type DownloadProgress } from '../youtubeIntegration';
-import type { Song } from '../mediaLibrary';
+import { youtubeIntegration, type DownloadProgress } from '../youtubeIntegration.js';
+import type { Song } from '../mediaLibrary.js';
 
 // Mock child_process
 vi.mock('child_process');

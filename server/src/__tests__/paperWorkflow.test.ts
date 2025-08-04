@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { PaperWorkflowManager, PaperSlip } from '../paperWorkflow';
-import { Song } from '../mediaLibrary';
+import { PaperWorkflowManager, PaperSlip } from '../paperWorkflow.js';
+import { Song } from '../mediaLibrary.js';
 
 // Mock Fuse.js with completely self-contained factory to avoid hoisting issues
 // Create everything inside the factory and expose via globalThis

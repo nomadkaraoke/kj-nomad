@@ -9,7 +9,8 @@
   },
   "license": "MIT",
   "private": true,
-  "main": "electron/main.js",
+  "type": "module",
+  "main": "electron/main.mjs",
   "homepage": "./",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
@@ -42,7 +43,7 @@
     "package:quick": "node package-executable.cjs --skip-deps",
     "package:skip-build": "node package-executable.cjs --skip-build",
     "generate:icons": "node scripts/generate-icons.js",
-    "test:packaging": "npm run dist && node scripts/test-electron-packaging.js",
+    "test:packaging": "npm run dist && node scripts/test-electron-packaging.cjs",
     "release": "npm run check-all && npm run package",
     "electron": "npm run build && electron .",
     "electron:dev": "concurrently \"npm run dev:server\" \"wait-on http://localhost:3000 && electron .\"",
@@ -55,7 +56,8 @@
   "devDependencies": {
     "concurrently": "^9.0.1",
     "electron": "^37.2.5",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "esbuild": ">=0.20.0"
   },
   "build": {
     "appId": "com.nomadkaraoke.kj-nomad",
@@ -66,11 +68,11 @@
     "files": [
       "electron/**/*",
       "server/dist/**/*",
-      "server/src/**/*",
       "server/public/**/*",
-      "server/media/**/*",
-      "server/package.json",
       "server/node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "**/node_modules/bonjour-service/**/*"
     ],
     "extraResources": [
       {

@@ -8,14 +8,14 @@ vi.mock('../../mediaLibrary');
 vi.mock('../../songQueue');
 vi.mock('../../fillerMusic');
 
-import { getSongById } from '../../mediaLibrary';
+import { getSongById } from '../../mediaLibrary.js';
 import { 
   addSongToQueue, 
   getQueue, 
   removeSongFromQueue, 
   getNextSong 
-} from '../../songQueue';
-import { getNextFillerSong } from '../../fillerMusic';
+} from '../../songQueue.js';
+import { getNextFillerSong } from '../../fillerMusic.js';
 
 const mockGetSongById = vi.mocked(getSongById);
 const mockAddSongToQueue = vi.mocked(addSongToQueue);

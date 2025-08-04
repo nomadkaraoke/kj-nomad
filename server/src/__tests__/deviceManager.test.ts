@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { DeviceManager } from '../deviceManager';
+import { DeviceManager } from '../deviceManager.js';
 
 // Mock WebSocket
 class MockWebSocket {
