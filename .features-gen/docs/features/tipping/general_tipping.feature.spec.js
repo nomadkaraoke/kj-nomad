@@ -1,0 +1,62 @@
+// Generated from: docs/features/tipping/general_tipping.feature
+import { test } from "playwright-bdd";
+
+test.describe('General Tipping and Gated Features', () => {
+
+  test.beforeEach('Background', async ({ Given, And }) => {
+    await Given('the KJ is running an online session with tipping enabled'); 
+    await And('the minimum tip for a "Love Heart" is $2.00'); 
+    await And('the KJ has configured "YouTube Access" as a gated feature for tippers only'); 
+  });
+  
+  test('Singer tips while making a song request', { tag: ['@tipping', '@monetization'] }, async ({ Given, When, Then, And }) => { 
+    await Given('a singer is requesting the song "Like a Rolling Stone"'); 
+    await When('the singer chooses to add a $5.00 tip during the request process'); 
+    await Then('the tip should be processed successfully'); 
+    await And('a "Love Heart" icon should be displayed next to the singer\'s name in the queue'); 
+  });
+
+  test('Singer tips without making a request', { tag: ['@tipping', '@monetization'] }, async ({ Given, When, Then, And }) => { 
+    await Given('a singer is viewing the main singer interface'); 
+    await When('the singer uses the "Tip the KJ" feature to send a $10.00 tip'); 
+    await Then('the tip should be processed successfully'); 
+    await And('the KJ should see the tip in their admin dashboard\'s tipping breakdown'); 
+  });
+
+  test('Singer\'s tip is below the threshold for a "Love Heart"', { tag: ['@tipping', '@monetization'] }, async ({ Given, When, Then, But }) => { 
+    await Given('a singer is making a song request'); 
+    await When('the singer adds a $1.00 tip'); 
+    await Then('the tip should be processed successfully'); 
+    await But('a "Love Heart" icon should not be displayed next to the singer\'s name'); 
+  });
+
+  test('A non-tipping singer tries to access a gated feature', { tag: ['@tipping', '@monetization'] }, async ({ Given, When, Then, And }) => { 
+    await Given('a singer has not tipped during the session'); 
+    await When('the singer attempts to request a song from YouTube'); 
+    await Then('the UI should inform them that YouTube requests are for tippers only'); 
+    await And('prompt them to add a tip to unlock the feature'); 
+  });
+
+  test('A tipping singer accesses a gated feature', { tag: ['@tipping', '@monetization'] }, async ({ Given, When, Then }) => { 
+    await Given('a singer has previously tipped $5.00 in the session'); 
+    await When('the singer searches for a song on YouTube'); 
+    await Then('they should be able to successfully request the YouTube song'); 
+  });
+
+});
+
+// == technical section ==
+
+test.use({
+  $test: ({}, use) => use(test),
+  $uri: ({}, use) => use('docs/features/tipping/general_tipping.feature'),
+  $bddFileData: ({}, use) => use(bddFileData),
+});
+
+const bddFileData = [ // bdd-data-start
+  {"pwTestLine":12,"pickleLine":11,"tags":["@tipping","@monetization"],"steps":[{"pwStepLine":7,"gherkinStepLine":7,"keywordType":"Context","textWithKeyword":"Given the KJ is running an online session with tipping enabled","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"And the minimum tip for a \"Love Heart\" is $2.00","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Love Heart\"","children":[{"start":23,"value":"Love Heart","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"},{"group":{"start":39,"value":"2.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":9,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And the KJ has configured \"YouTube Access\" as a gated feature for tippers only","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"YouTube Access\"","children":[{"start":23,"value":"YouTube Access","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":13,"gherkinStepLine":12,"keywordType":"Context","textWithKeyword":"Given a singer is requesting the song \"Like a Rolling Stone\"","stepMatchArguments":[{"group":{"start":32,"value":"\"Like a Rolling Stone\"","children":[{"start":33,"value":"Like a Rolling Stone","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":14,"gherkinStepLine":13,"keywordType":"Action","textWithKeyword":"When the singer chooses to add a $5.00 tip during the request process","stepMatchArguments":[{"group":{"start":29,"value":"5.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":15,"gherkinStepLine":14,"keywordType":"Outcome","textWithKeyword":"Then the tip should be processed successfully","stepMatchArguments":[]},{"pwStepLine":16,"gherkinStepLine":15,"keywordType":"Outcome","textWithKeyword":"And a \"Love Heart\" icon should be displayed next to the singer's name in the queue","stepMatchArguments":[{"group":{"start":2,"value":"\"Love Heart\"","children":[{"start":3,"value":"Love Heart","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]}]},
+  {"pwTestLine":19,"pickleLine":17,"tags":["@tipping","@monetization"],"steps":[{"pwStepLine":7,"gherkinStepLine":7,"keywordType":"Context","textWithKeyword":"Given the KJ is running an online session with tipping enabled","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"And the minimum tip for a \"Love Heart\" is $2.00","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Love Heart\"","children":[{"start":23,"value":"Love Heart","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"},{"group":{"start":39,"value":"2.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":9,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And the KJ has configured \"YouTube Access\" as a gated feature for tippers only","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"YouTube Access\"","children":[{"start":23,"value":"YouTube Access","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":20,"gherkinStepLine":18,"keywordType":"Context","textWithKeyword":"Given a singer is viewing the main singer interface","stepMatchArguments":[]},{"pwStepLine":21,"gherkinStepLine":19,"keywordType":"Action","textWithKeyword":"When the singer uses the \"Tip the KJ\" feature to send a $10.00 tip","stepMatchArguments":[{"group":{"start":20,"value":"\"Tip the KJ\"","children":[{"start":21,"value":"Tip the KJ","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"},{"group":{"start":52,"value":"10.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":22,"gherkinStepLine":20,"keywordType":"Outcome","textWithKeyword":"Then the tip should be processed successfully","stepMatchArguments":[]},{"pwStepLine":23,"gherkinStepLine":21,"keywordType":"Outcome","textWithKeyword":"And the KJ should see the tip in their admin dashboard's tipping breakdown","stepMatchArguments":[]}]},
+  {"pwTestLine":26,"pickleLine":23,"tags":["@tipping","@monetization"],"steps":[{"pwStepLine":7,"gherkinStepLine":7,"keywordType":"Context","textWithKeyword":"Given the KJ is running an online session with tipping enabled","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"And the minimum tip for a \"Love Heart\" is $2.00","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Love Heart\"","children":[{"start":23,"value":"Love Heart","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"},{"group":{"start":39,"value":"2.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":9,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And the KJ has configured \"YouTube Access\" as a gated feature for tippers only","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"YouTube Access\"","children":[{"start":23,"value":"YouTube Access","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":27,"gherkinStepLine":24,"keywordType":"Context","textWithKeyword":"Given a singer is making a song request","stepMatchArguments":[]},{"pwStepLine":28,"gherkinStepLine":25,"keywordType":"Action","textWithKeyword":"When the singer adds a $1.00 tip","stepMatchArguments":[{"group":{"start":19,"value":"1.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":29,"gherkinStepLine":26,"keywordType":"Outcome","textWithKeyword":"Then the tip should be processed successfully","stepMatchArguments":[]},{"pwStepLine":30,"gherkinStepLine":27,"keywordType":"Outcome","textWithKeyword":"But a \"Love Heart\" icon should not be displayed next to the singer's name","stepMatchArguments":[{"group":{"start":2,"value":"\"Love Heart\"","children":[{"start":3,"value":"Love Heart","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]}]},
+  {"pwTestLine":33,"pickleLine":29,"tags":["@tipping","@monetization"],"steps":[{"pwStepLine":7,"gherkinStepLine":7,"keywordType":"Context","textWithKeyword":"Given the KJ is running an online session with tipping enabled","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"And the minimum tip for a \"Love Heart\" is $2.00","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Love Heart\"","children":[{"start":23,"value":"Love Heart","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"},{"group":{"start":39,"value":"2.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":9,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And the KJ has configured \"YouTube Access\" as a gated feature for tippers only","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"YouTube Access\"","children":[{"start":23,"value":"YouTube Access","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":34,"gherkinStepLine":30,"keywordType":"Context","textWithKeyword":"Given a singer has not tipped during the session","stepMatchArguments":[]},{"pwStepLine":35,"gherkinStepLine":31,"keywordType":"Action","textWithKeyword":"When the singer attempts to request a song from YouTube","stepMatchArguments":[]},{"pwStepLine":36,"gherkinStepLine":32,"keywordType":"Outcome","textWithKeyword":"Then the UI should inform them that YouTube requests are for tippers only","stepMatchArguments":[]},{"pwStepLine":37,"gherkinStepLine":33,"keywordType":"Outcome","textWithKeyword":"And prompt them to add a tip to unlock the feature","stepMatchArguments":[]}]},
+  {"pwTestLine":40,"pickleLine":35,"tags":["@tipping","@monetization"],"steps":[{"pwStepLine":7,"gherkinStepLine":7,"keywordType":"Context","textWithKeyword":"Given the KJ is running an online session with tipping enabled","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"And the minimum tip for a \"Love Heart\" is $2.00","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Love Heart\"","children":[{"start":23,"value":"Love Heart","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"},{"group":{"start":39,"value":"2.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":9,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And the KJ has configured \"YouTube Access\" as a gated feature for tippers only","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"YouTube Access\"","children":[{"start":23,"value":"YouTube Access","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":41,"gherkinStepLine":36,"keywordType":"Context","textWithKeyword":"Given a singer has previously tipped $5.00 in the session","stepMatchArguments":[{"group":{"start":32,"value":"5.00","children":[]},"parameterTypeName":"float"}]},{"pwStepLine":42,"gherkinStepLine":37,"keywordType":"Action","textWithKeyword":"When the singer searches for a song on YouTube","stepMatchArguments":[]},{"pwStepLine":43,"gherkinStepLine":38,"keywordType":"Outcome","textWithKeyword":"Then they should be able to successfully request the YouTube song","stepMatchArguments":[]}]},
+]; // bdd-data-end

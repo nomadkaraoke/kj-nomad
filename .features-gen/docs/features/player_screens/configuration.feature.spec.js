@@ -1,0 +1,66 @@
+// Generated from: docs/features/player_screens/configuration.feature
+import { test } from "playwright-bdd";
+
+test.describe('Player Screen Configuration', () => {
+
+  test.beforeEach('Background', async ({ Given, And }) => {
+    await Given('the KJ has a session running'); 
+    await And('a player screen named "Screen 1" is connected'); 
+  });
+  
+  test('New player screen has default settings', { tag: ['@player-screen', '@configuration'] }, async ({ When, Then, And }) => { 
+    await When('a new player screen connects to the server'); 
+    await Then('its audio output should be enabled by default'); 
+    await And('its ticker bar should be enabled by default'); 
+    await And('its full-height sidebar should be disabled by default'); 
+  });
+
+  test('KJ mutes and unmutes a player screen\'s audio', { tag: ['@player-screen', '@configuration'] }, async ({ Given, When, Then, And }) => { 
+    await Given('the audio on "Screen 1" is enabled'); 
+    await When('the KJ toggles the audio setting for "Screen 1"'); 
+    await Then('the audio output on "Screen 1" should be muted'); 
+    await And('when the KJ toggles the audio setting for "Screen 1" again'); 
+    await Then('the audio output on "Screen 1" should be unmuted'); 
+  });
+
+  test('KJ toggles the ticker bar', { tag: ['@player-screen', '@configuration'] }, async ({ Given, When, Then, And }) => { 
+    await Given('the ticker bar on "Screen 1" is enabled'); 
+    await When('the KJ toggles the ticker setting for "Screen 1"'); 
+    await Then('the ticker bar should be hidden on "Screen 1"'); 
+    await And('when the KJ toggles the ticker setting for "Screen 1" again'); 
+    await Then('the ticker bar should be visible on "Screen 1"'); 
+  });
+
+  test('KJ toggles the full-height sidebar', { tag: ['@player-screen', '@configuration'] }, async ({ Given, When, Then, And }) => { 
+    await Given('the sidebar on "Screen 1" is disabled'); 
+    await When('the KJ toggles the sidebar setting for "Screen 1"'); 
+    await Then('the sidebar showing the singer rotation should be visible on "Screen 1"'); 
+    await And('the main video player area should be resized to accommodate the sidebar'); 
+    await And('when the KJ toggles the sidebar setting for "Screen 1" again'); 
+    await Then('the sidebar should be hidden on "Screen 1"'); 
+  });
+
+  test('KJ sets a screen to be an information-only display', { tag: ['@player-screen', '@configuration'] }, async ({ Given, When, Then, And }) => { 
+    await Given('"Screen 1" is displaying the karaoke video'); 
+    await When('the KJ disables the video player for "Screen 1"'); 
+    await Then('the video player on "Screen 1" should be hidden'); 
+    await And('the screen should only display informational components like the sidebar and ticker'); 
+  });
+
+});
+
+// == technical section ==
+
+test.use({
+  $test: ({}, use) => use(test),
+  $uri: ({}, use) => use('docs/features/player_screens/configuration.feature'),
+  $bddFileData: ({}, use) => use(bddFileData),
+});
+
+const bddFileData = [ // bdd-data-start
+  {"pwTestLine":11,"pickleLine":11,"tags":["@player-screen","@configuration"],"steps":[{"pwStepLine":7,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"Given the KJ has a session running","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And a player screen named \"Screen 1\" is connected","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Screen 1\"","children":[{"start":23,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":12,"gherkinStepLine":12,"keywordType":"Action","textWithKeyword":"When a new player screen connects to the server","stepMatchArguments":[]},{"pwStepLine":13,"gherkinStepLine":13,"keywordType":"Outcome","textWithKeyword":"Then its audio output should be enabled by default","stepMatchArguments":[]},{"pwStepLine":14,"gherkinStepLine":14,"keywordType":"Outcome","textWithKeyword":"And its ticker bar should be enabled by default","stepMatchArguments":[]},{"pwStepLine":15,"gherkinStepLine":15,"keywordType":"Outcome","textWithKeyword":"And its full-height sidebar should be disabled by default","stepMatchArguments":[]}]},
+  {"pwTestLine":18,"pickleLine":17,"tags":["@player-screen","@configuration"],"steps":[{"pwStepLine":7,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"Given the KJ has a session running","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And a player screen named \"Screen 1\" is connected","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Screen 1\"","children":[{"start":23,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":19,"gherkinStepLine":18,"keywordType":"Context","textWithKeyword":"Given the audio on \"Screen 1\" is enabled","stepMatchArguments":[{"group":{"start":13,"value":"\"Screen 1\"","children":[{"start":14,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":20,"gherkinStepLine":19,"keywordType":"Action","textWithKeyword":"When the KJ toggles the audio setting for \"Screen 1\"","stepMatchArguments":[{"group":{"start":37,"value":"\"Screen 1\"","children":[{"start":38,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":21,"gherkinStepLine":20,"keywordType":"Outcome","textWithKeyword":"Then the audio output on \"Screen 1\" should be muted","stepMatchArguments":[{"group":{"start":20,"value":"\"Screen 1\"","children":[{"start":21,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":22,"gherkinStepLine":21,"keywordType":"Outcome","textWithKeyword":"And when the KJ toggles the audio setting for \"Screen 1\" again","stepMatchArguments":[{"group":{"start":42,"value":"\"Screen 1\"","children":[{"start":43,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":23,"gherkinStepLine":22,"keywordType":"Outcome","textWithKeyword":"Then the audio output on \"Screen 1\" should be unmuted","stepMatchArguments":[{"group":{"start":20,"value":"\"Screen 1\"","children":[{"start":21,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]}]},
+  {"pwTestLine":26,"pickleLine":24,"tags":["@player-screen","@configuration"],"steps":[{"pwStepLine":7,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"Given the KJ has a session running","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And a player screen named \"Screen 1\" is connected","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Screen 1\"","children":[{"start":23,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":27,"gherkinStepLine":25,"keywordType":"Context","textWithKeyword":"Given the ticker bar on \"Screen 1\" is enabled","stepMatchArguments":[{"group":{"start":18,"value":"\"Screen 1\"","children":[{"start":19,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":28,"gherkinStepLine":26,"keywordType":"Action","textWithKeyword":"When the KJ toggles the ticker setting for \"Screen 1\"","stepMatchArguments":[{"group":{"start":38,"value":"\"Screen 1\"","children":[{"start":39,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":29,"gherkinStepLine":27,"keywordType":"Outcome","textWithKeyword":"Then the ticker bar should be hidden on \"Screen 1\"","stepMatchArguments":[{"group":{"start":35,"value":"\"Screen 1\"","children":[{"start":36,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":30,"gherkinStepLine":28,"keywordType":"Outcome","textWithKeyword":"And when the KJ toggles the ticker setting for \"Screen 1\" again","stepMatchArguments":[{"group":{"start":43,"value":"\"Screen 1\"","children":[{"start":44,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":31,"gherkinStepLine":29,"keywordType":"Outcome","textWithKeyword":"Then the ticker bar should be visible on \"Screen 1\"","stepMatchArguments":[{"group":{"start":36,"value":"\"Screen 1\"","children":[{"start":37,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]}]},
+  {"pwTestLine":34,"pickleLine":31,"tags":["@player-screen","@configuration"],"steps":[{"pwStepLine":7,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"Given the KJ has a session running","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And a player screen named \"Screen 1\" is connected","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Screen 1\"","children":[{"start":23,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":35,"gherkinStepLine":32,"keywordType":"Context","textWithKeyword":"Given the sidebar on \"Screen 1\" is disabled","stepMatchArguments":[{"group":{"start":15,"value":"\"Screen 1\"","children":[{"start":16,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":36,"gherkinStepLine":33,"keywordType":"Action","textWithKeyword":"When the KJ toggles the sidebar setting for \"Screen 1\"","stepMatchArguments":[{"group":{"start":39,"value":"\"Screen 1\"","children":[{"start":40,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":37,"gherkinStepLine":34,"keywordType":"Outcome","textWithKeyword":"Then the sidebar showing the singer rotation should be visible on \"Screen 1\"","stepMatchArguments":[{"group":{"start":61,"value":"\"Screen 1\"","children":[{"start":62,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":38,"gherkinStepLine":35,"keywordType":"Outcome","textWithKeyword":"And the main video player area should be resized to accommodate the sidebar","stepMatchArguments":[]},{"pwStepLine":39,"gherkinStepLine":36,"keywordType":"Outcome","textWithKeyword":"And when the KJ toggles the sidebar setting for \"Screen 1\" again","stepMatchArguments":[{"group":{"start":44,"value":"\"Screen 1\"","children":[{"start":45,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":40,"gherkinStepLine":37,"keywordType":"Outcome","textWithKeyword":"Then the sidebar should be hidden on \"Screen 1\"","stepMatchArguments":[{"group":{"start":32,"value":"\"Screen 1\"","children":[{"start":33,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]}]},
+  {"pwTestLine":43,"pickleLine":39,"tags":["@player-screen","@configuration"],"steps":[{"pwStepLine":7,"gherkinStepLine":8,"keywordType":"Context","textWithKeyword":"Given the KJ has a session running","isBg":true,"stepMatchArguments":[]},{"pwStepLine":8,"gherkinStepLine":9,"keywordType":"Context","textWithKeyword":"And a player screen named \"Screen 1\" is connected","isBg":true,"stepMatchArguments":[{"group":{"start":22,"value":"\"Screen 1\"","children":[{"start":23,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":44,"gherkinStepLine":40,"keywordType":"Context","textWithKeyword":"Given \"Screen 1\" is displaying the karaoke video","stepMatchArguments":[{"group":{"start":0,"value":"\"Screen 1\"","children":[{"start":1,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":45,"gherkinStepLine":41,"keywordType":"Action","textWithKeyword":"When the KJ disables the video player for \"Screen 1\"","stepMatchArguments":[{"group":{"start":37,"value":"\"Screen 1\"","children":[{"start":38,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":46,"gherkinStepLine":42,"keywordType":"Outcome","textWithKeyword":"Then the video player on \"Screen 1\" should be hidden","stepMatchArguments":[{"group":{"start":20,"value":"\"Screen 1\"","children":[{"start":21,"value":"Screen 1","children":[{"children":[]}]},{"children":[{"children":[]}]}]},"parameterTypeName":"string"}]},{"pwStepLine":47,"gherkinStepLine":43,"keywordType":"Outcome","textWithKeyword":"And the screen should only display informational components like the sidebar and ticker","stepMatchArguments":[]}]},
+]; // bdd-data-end

@@ -6,7 +6,7 @@ import { CheckCircleIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 const OnlineSessionConnectedPage: React.FC = () => {
   return (
     <div className="h-screen w-screen bg-gray-900 text-white flex items-center justify-center font-sans">
-      <Container size="sm">
+      <Container size="md">
         <Card className="bg-gray-800 border border-gray-700 shadow-2xl">
           <div className="p-8 text-center">
             <div className="flex justify-center mb-6">

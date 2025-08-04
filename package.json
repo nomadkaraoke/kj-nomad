@@ -25,7 +25,8 @@
     "test": "npm run test:server && npm run test:client",
     "test:server": "cd server && npm run test",
     "test:client": "cd client && npm run test",
-    "test:e2e": "node run-e2e-tests.js",
+    "test:e2e": "npx bddgen && npx playwright test",
+    "test:e2e:report": "npx playwright show-report e2e/report",
     "test:e2e:open": "cd client && npm run cypress:open",
     "lint": "npm run lint:server && npm run lint:client",
     "lint:server": "cd server && npm run lint",
@@ -54,10 +55,13 @@
     "dist:linux": "npm run build && electron-builder --linux"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "concurrently": "^9.0.1",
     "electron": "^37.2.5",
     "electron-builder": "^26.0.12",
-    "esbuild": ">=0.20.0"
+    "esbuild": ">=0.20.0",
+    "playwright-bdd": "^8.3.1",
+    "ts-node": "^10.9.2"
   },
   "build": {
     "appId": "com.nomadkaraoke.kj-nomad",

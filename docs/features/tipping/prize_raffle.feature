@@ -13,7 +13,7 @@ Feature: Tip Prize Raffle
     When the KJ clicks the "Draw Raffle" button
     Then a winner should be randomly selected from the list of tippers
     And a prominent overlay should be displayed on all player screens announcing the winner
-    For example: "Congratulations! Alice has won A $10 Bar Voucher!"
+    # For example: "Congratulations! Alice has won A $10 Bar Voucher!"
 
   Scenario: KJ re-draws the raffle if the winner is absent
     Given the KJ has just drawn "Charlie" as the winner
