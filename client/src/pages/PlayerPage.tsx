@@ -1,13 +1,23 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { UAParser } from 'ua-parser-js';
 import { useAppStore } from '../store/appStore';
 import type { Device } from '../store/appStore';
 import Ticker from '../components/Player/Ticker';
 import { websocketService } from '../services/websocketService';
-import { PlayIcon } from '@heroicons/react/24/outline';
+import { PlayIcon, SignalIcon, SignalSlashIcon } from '@heroicons/react/24/outline';
+import { clsx } from 'clsx';
 
 const PlayerPage: React.FC = () => {
-  const { nowPlaying, tickerText, queue, devices, connectionStatus } = useAppStore();
+  const { 
+    nowPlaying, 
+    tickerText, 
+    queue, 
+    devices, 
+    connectionStatus,
+    playerDeviceId,
+    playerShowIdentify,
+    playerIsDisconnected,
+  } = useAppStore();
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [, setIsPlaying] = useState(false);
@@ -18,55 +28,13 @@ const PlayerPage: React.FC = () => {
     isSidebarVisible: false,
     isVideoPlayerVisible: true,
   });
-  const [showIdentify, setShowIdentify] = useState(false);
-  const [isDisconnected, setIsDisconnected] = useState(false);
-  const [deviceId, setDeviceId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (connectionStatus === 'connected') {
-      const parser = new UAParser(navigator.userAgent);
-      const result = parser.getResult();
-      
-      websocketService.send({
-        type: 'client_identify',
-        payload: {
-          type: 'player',
-          userAgent: navigator.userAgent,
-          viewport: {
-            width: window.innerWidth,
-            height: window.innerHeight,
-          },
-          os: `${result.os.name} ${result.os.version}`,
-          browser: `${result.browser.name} ${result.browser.version}`,
-          isApp: 'kj-nomad' in window,
-        },
-      });
-    }
-  }, [connectionStatus]);
+    websocketService.connect('player');
+  }, []);
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const message = JSON.parse(event.data);
-      if (message.type === 'device_registered') {
-        setDeviceId(message.payload.deviceId);
-      } else if (message.type === 'identify_screen' && message.payload.deviceId === deviceId) {
-        setShowIdentify(true);
-        setTimeout(() => setShowIdentify(false), 5000);
-      } else if (message.type === 'disconnect_screen' && message.payload.deviceId === deviceId) {
-        setIsDisconnected(true);
-        websocketService.disconnect();
-      }
-    };
-
-    const socket = useAppStore.getState().socket;
-    socket?.addEventListener('message', handleMessage);
-    return () => {
-      socket?.removeEventListener('message', handleMessage);
-    };
-  }, [deviceId]);
-
-  useEffect(() => {
-    const myDevice = devices.find(d => d.id === deviceId);
+    const myDevice = devices.find(d => d.id === playerDeviceId);
     if (myDevice) {
       setDeviceSettings({
         isAudioEnabled: myDevice.isAudioEnabled,
@@ -75,7 +43,7 @@ const PlayerPage: React.FC = () => {
         isVideoPlayerVisible: myDevice.isVideoPlayerVisible,
       });
     }
-  }, [devices, deviceId]);
+  }, [devices, playerDeviceId]);
   
   useEffect(() => {
     const video = videoRef.current;
@@ -133,23 +101,41 @@ const PlayerPage: React.FC = () => {
   // Get next few singers for display
   const upcomingSingers = queue.slice(0, 3);
 
-  if (isDisconnected) {
+  if (playerIsDisconnected) {
     return (
       <div className="player-container bg-gray-800 flex items-center justify-center text-white text-center">
         <div>
           <h1 className="text-4xl font-bold mb-4">Player Screen Disconnected</h1>
-          <p className="text-xl">Thanks for using KJ-Nomad.</p>
+          <p className="text-xl">Thank you for using KJ-Nomad!</p>
         </div>
       </div>
     );
   }
   
+  const ConnectionStatusIndicator = () => {
+    const statusConfig = {
+      connected: { color: 'bg-green-500', text: 'Connected', icon: <SignalIcon className="h-4 w-4" /> },
+      connecting: { color: 'bg-yellow-500', text: 'Connecting...', icon: <div className="h-3 w-3 rounded-full bg-yellow-500 animate-pulse" /> },
+      error: { color: 'bg-red-500', text: 'Connection Error', icon: <SignalSlashIcon className="h-4 w-4" /> },
+      idle: { color: 'bg-gray-500', text: 'Disconnected', icon: <SignalSlashIcon className="h-4 w-4" /> },
+    };
+    const currentStatus = statusConfig[connectionStatus];
+
+    return (
+      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm">
+        <div className={clsx("h-3 w-3 rounded-full", currentStatus.color)}></div>
+        <span>{currentStatus.text}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="player-container bg-gradient-to-br from-blue-900 to-slate-900">
-      {showIdentify && (
+      <ConnectionStatusIndicator />
+      {playerShowIdentify && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="text-white text-9xl font-bold">
-            {devices.findIndex(d => d.id === deviceId) + 1}
+            {devices.findIndex(d => d.id === playerDeviceId) + 1}
           </div>
         </div>
       )}

@@ -68,6 +68,12 @@ const mockState: AppState = {
   toggleDeviceVideoPlayer: vi.fn(),
   identifyDevice: vi.fn(),
   disconnectDevice: vi.fn(),
+  playerDeviceId: null,
+  playerShowIdentify: false,
+  playerIsDisconnected: false,
+  setPlayerDeviceId: vi.fn(),
+  setPlayerShowIdentify: vi.fn(),
+  setPlayerIsDisconnected: vi.fn(),
 };
 
 vi.mock('../store/appStore', () => ({

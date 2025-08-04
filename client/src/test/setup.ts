@@ -14,3 +14,11 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock HTMLMediaElement methods for JSDOM
+if (typeof window.HTMLMediaElement !== 'undefined') {
+  window.HTMLMediaElement.prototype.load = () => { /* do nothing */ };
+  window.HTMLMediaElement.prototype.play = async () => { /* do nothing */ };
+  window.HTMLMediaElement.prototype.pause = () => { /* do nothing */ };
+  // Add other media methods if needed
+}

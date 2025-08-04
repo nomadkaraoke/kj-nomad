@@ -1190,12 +1190,13 @@ const broadcast = (data: WebSocketMessage) => {
 // Set up cloud connector now that broadcast is defined
 cloudConnector.setLocalBroadcast(broadcast);
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   const clientId = randomUUID();
+  const ipAddress = req.socket.remoteAddress || 'unknown';
   let clientType: 'player' | 'admin' | 'singer' = 'admin'; // Default to admin
   let clientName = 'Unknown Client';
   
-  console.log(`Client connected: ${clientId}`);
+  console.log(`Client connected: ${clientId} from ${ipAddress}`);
   
   // Send current session state to newly connected client
   ws.send(JSON.stringify({ type: 'session_state_updated', payload: getSessionState() }));
@@ -1221,7 +1222,7 @@ wss.on('connection', (ws) => {
             if (clientType === 'player') {
                 const deviceInfo = {
                     name: clientName,
-                    ipAddress: payload.ipAddress || 'unknown',
+                    ipAddress, // Use the IP from the connection
                     userAgent: payload.userAgent || 'unknown',
                     viewport: payload.viewport || { width: 0, height: 0 },
                     os: payload.os || 'unknown',

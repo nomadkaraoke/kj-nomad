@@ -90,6 +90,9 @@ export interface AppState {
     localIps: string[];
   };
   devices: Device[];
+  playerDeviceId: string | null;
+  playerShowIdentify: boolean;
+  playerIsDisconnected: boolean;
   
   // Search state
   searchQuery: string;
@@ -121,6 +124,9 @@ export interface AppState {
   setOnlineSessionRequiresLibrary: (requiresLibrary: boolean) => void;
   setIsSessionConnected: (isConnected: boolean) => void;
   setOnlineSessionId: (sessionId: string | null) => void;
+  setPlayerDeviceId: (id: string | null) => void;
+  setPlayerShowIdentify: (show: boolean) => void;
+  setPlayerIsDisconnected: (disconnected: boolean) => void;
   
   // Complex actions
   checkServerInfo: () => Promise<void>;
@@ -169,6 +175,9 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       showHistory: false,
       isSetupComplete: false,
+      playerDeviceId: null,
+      playerShowIdentify: false,
+      playerIsDisconnected: false,
       serverInfo: { port: 0, localIps: [] },
       devices: [],
       
@@ -206,6 +215,9 @@ export const useAppStore = create<AppState>()(
       setOnlineSessionRequiresLibrary: (onlineSessionRequiresLibrary) => set({ onlineSessionRequiresLibrary }),
       setIsSessionConnected: (isSessionConnected) => set({ isSessionConnected }),
       setOnlineSessionId: (onlineSessionId) => set({ onlineSessionId }),
+      setPlayerDeviceId: (id) => set({ playerDeviceId: id }),
+      setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
+      setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
       
       // Complex actions
       checkServerInfo: async () => {

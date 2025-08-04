@@ -108,8 +108,8 @@ export class DeviceManager extends EventEmitter {
   private devices: Map<string, PlayerDevice> = new Map();
   private groups: Map<string, DeviceGroup> = new Map();
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly HEARTBEAT_INTERVAL = 30000; // 30 seconds
-  private readonly ACTIVITY_TIMEOUT = 60000; // 1 minute
+  private readonly HEARTBEAT_INTERVAL = 5000; // 5 seconds
+  private readonly ACTIVITY_TIMEOUT = 15000; // 15 seconds
 
   constructor() {
     super();
@@ -235,13 +235,12 @@ export class DeviceManager extends EventEmitter {
    */
   sendToDevice(deviceId: string, message: DeviceMessage): boolean {
     const device = this.devices.get(deviceId);
-    if (!device || !device.isOnline || device.ws.readyState !== device.ws.OPEN) {
+    if (!device || !device.isOnline || device.ws.readyState !== WSWebSocket.OPEN) {
       return false;
     }
 
     try {
       device.ws.send(JSON.stringify(message));
-      device.lastActivity = Date.now();
       return true;
     } catch (error) {
       console.error(`[DeviceManager] Failed to send to device ${device.name}:`, error);
@@ -471,10 +470,13 @@ export class DeviceManager extends EventEmitter {
         
         // Check if device has been inactive too long
         if (now - device.lastActivity > this.ACTIVITY_TIMEOUT) {
-          console.log(`[DeviceManager] Device ${device.name} inactive, marking offline`);
-          device.isOnline = false;
-          device.status = 'disconnected';
-          this.emit('deviceTimeout', device);
+          if (device.isOnline) {
+            console.log(`[DeviceManager] Device ${device.name} inactive, marking offline`);
+            device.isOnline = false;
+            device.status = 'disconnected';
+            this.emit('deviceTimeout', device);
+            this.emit('deviceDisconnected', device); // Ensure frontend updates
+          }
           continue;
         }
 
@@ -495,6 +497,13 @@ export class DeviceManager extends EventEmitter {
     if (!device) return;
 
     device.lastActivity = Date.now();
+    if (!device.isOnline) {
+      device.isOnline = true;
+      device.status = 'connected';
+      this.emit('deviceReconnected', device);
+      this.emit('deviceConnected', device); // Ensure frontend updates
+      console.log(`[DeviceManager] Device ${device.name} reconnected.`);
+    }
     
     // Update sync stats with heartbeat timing
     const roundTripTime = Date.now() - data.serverTime;

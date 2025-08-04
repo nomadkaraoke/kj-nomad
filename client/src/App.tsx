@@ -52,7 +52,12 @@ const AppContent: React.FC = () => {
 
 function App() {
   useEffect(() => {
-    websocketService.connect();
+    // Don't connect if we are on a dedicated page like player or singer
+    const path = window.location.pathname;
+    if (!path.startsWith('/player') && !path.startsWith('/singer')) {
+      websocketService.connect('admin');
+    }
+    
     useAppStore.getState().checkSetupStatus();
 
     let modeCleanup: (() => void) | undefined;

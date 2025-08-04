@@ -22014,6 +22014,9 @@ const useAppStore = create()(
       isLoading: false,
       showHistory: false,
       isSetupComplete: false,
+      playerDeviceId: null,
+      playerShowIdentify: false,
+      playerIsDisconnected: false,
       serverInfo: { port: 0, localIps: [] },
       devices: [],
       // Search state
@@ -22048,6 +22051,9 @@ const useAppStore = create()(
       setOnlineSessionRequiresLibrary: (onlineSessionRequiresLibrary) => set({ onlineSessionRequiresLibrary }),
       setIsSessionConnected: (isSessionConnected) => set({ isSessionConnected }),
       setOnlineSessionId: (onlineSessionId) => set({ onlineSessionId }),
+      setPlayerDeviceId: (id) => set({ playerDeviceId: id }),
+      setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
+      setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
       // Complex actions
       checkServerInfo: async () => {
         try {
@@ -22227,16 +22233,1726 @@ const useAppStore = create()(
     { name: "kj-nomad-store" }
   )
 );
+var LIBVERSION = "2.0.4", UA_MAX_LENGTH = 500, USER_AGENT = "user-agent", EMPTY = "", UNKNOWN = "?", FUNC_TYPE = "function", UNDEF_TYPE = "undefined", OBJ_TYPE = "object", STR_TYPE = "string", UA_BROWSER = "browser", UA_CPU = "cpu", UA_DEVICE = "device", UA_ENGINE = "engine", UA_OS = "os", UA_RESULT = "result", NAME = "name", TYPE = "type", VENDOR = "vendor", VERSION = "version", ARCHITECTURE = "architecture", MAJOR = "major", MODEL = "model", CONSOLE = "console", MOBILE = "mobile", TABLET = "tablet", SMARTTV = "smarttv", WEARABLE = "wearable", XR = "xr", EMBEDDED = "embedded", INAPP = "inapp", BRANDS = "brands", FORMFACTORS = "formFactors", FULLVERLIST = "fullVersionList", PLATFORM = "platform", PLATFORMVER = "platformVersion", BITNESS = "bitness", CH_HEADER = "sec-ch-ua", CH_HEADER_FULL_VER_LIST = CH_HEADER + "-full-version-list", CH_HEADER_ARCH = CH_HEADER + "-arch", CH_HEADER_BITNESS = CH_HEADER + "-" + BITNESS, CH_HEADER_FORM_FACTORS = CH_HEADER + "-form-factors", CH_HEADER_MOBILE = CH_HEADER + "-" + MOBILE, CH_HEADER_MODEL = CH_HEADER + "-" + MODEL, CH_HEADER_PLATFORM = CH_HEADER + "-" + PLATFORM, CH_HEADER_PLATFORM_VER = CH_HEADER_PLATFORM + "-version", CH_ALL_VALUES = [BRANDS, FULLVERLIST, MOBILE, MODEL, PLATFORM, PLATFORMVER, ARCHITECTURE, FORMFACTORS, BITNESS], AMAZON = "Amazon", APPLE = "Apple", ASUS = "ASUS", BLACKBERRY = "BlackBerry", GOOGLE = "Google", HUAWEI = "Huawei", LENOVO = "Lenovo", HONOR = "Honor", LG = "LG", MICROSOFT = "Microsoft", MOTOROLA = "Motorola", NVIDIA = "Nvidia", ONEPLUS = "OnePlus", OPPO = "OPPO", SAMSUNG = "Samsung", SHARP = "Sharp", SONY = "Sony", XIAOMI = "Xiaomi", ZEBRA = "Zebra", CHROME = "Chrome", CHROMIUM = "Chromium", CHROMECAST = "Chromecast", EDGE = "Edge", FIREFOX = "Firefox", OPERA = "Opera", FACEBOOK = "Facebook", SOGOU = "Sogou", PREFIX_MOBILE = "Mobile ", SUFFIX_BROWSER = " Browser", WINDOWS = "Windows";
+var isWindow$1 = typeof window !== UNDEF_TYPE, NAVIGATOR = isWindow$1 && window.navigator ? window.navigator : void 0, NAVIGATOR_UADATA = NAVIGATOR && NAVIGATOR.userAgentData ? NAVIGATOR.userAgentData : void 0;
+var extend = function(defaultRgx, extensions) {
+  var mergedRgx = {};
+  var extraRgx = extensions;
+  if (!isExtensions(extensions)) {
+    extraRgx = {};
+    for (var i in extensions) {
+      for (var j in extensions[i]) {
+        extraRgx[j] = extensions[i][j].concat(extraRgx[j] ? extraRgx[j] : []);
+      }
+    }
+  }
+  for (var k in defaultRgx) {
+    mergedRgx[k] = extraRgx[k] && extraRgx[k].length % 2 === 0 ? extraRgx[k].concat(defaultRgx[k]) : defaultRgx[k];
+  }
+  return mergedRgx;
+}, enumerize = function(arr) {
+  var enums = {};
+  for (var i = 0; i < arr.length; i++) {
+    enums[arr[i].toUpperCase()] = arr[i];
+  }
+  return enums;
+}, has = function(str1, str2) {
+  if (typeof str1 === OBJ_TYPE && str1.length > 0) {
+    for (var i in str1) {
+      if (lowerize(str2) == lowerize(str1[i])) return true;
+    }
+    return false;
+  }
+  return isString(str1) ? lowerize(str2) == lowerize(str1) : false;
+}, isExtensions = function(obj, deep) {
+  for (var prop in obj) {
+    return /^(browser|cpu|device|engine|os)$/.test(prop) || (deep ? isExtensions(obj[prop]) : false);
+  }
+}, isString = function(val) {
+  return typeof val === STR_TYPE;
+}, itemListToArray = function(header) {
+  if (!header) return void 0;
+  var arr = [];
+  var tokens = strip(/\\?\"/g, header).split(",");
+  for (var i = 0; i < tokens.length; i++) {
+    if (tokens[i].indexOf(";") > -1) {
+      var token = trim(tokens[i]).split(";v=");
+      arr[i] = { brand: token[0], version: token[1] };
+    } else {
+      arr[i] = trim(tokens[i]);
+    }
+  }
+  return arr;
+}, lowerize = function(str) {
+  return isString(str) ? str.toLowerCase() : str;
+}, majorize = function(version) {
+  return isString(version) ? strip(/[^\d\.]/g, version).split(".")[0] : void 0;
+}, setProps = function(arr) {
+  for (var i in arr) {
+    var propName = arr[i];
+    if (typeof propName == OBJ_TYPE && propName.length == 2) {
+      this[propName[0]] = propName[1];
+    } else {
+      this[propName] = void 0;
+    }
+  }
+  return this;
+}, strip = function(pattern, str) {
+  return isString(str) ? str.replace(pattern, EMPTY) : str;
+}, stripQuotes = function(str) {
+  return strip(/\\?\"/g, str);
+}, trim = function(str, len) {
+  if (isString(str)) {
+    str = strip(/^\s\s*/, str);
+    return typeof len === UNDEF_TYPE ? str : str.substring(0, UA_MAX_LENGTH);
+  }
+};
+var rgxMapper = function(ua, arrays) {
+  if (!ua || !arrays) return;
+  var i = 0, j, k, p, q, matches, match;
+  while (i < arrays.length && !matches) {
+    var regex = arrays[i], props = arrays[i + 1];
+    j = k = 0;
+    while (j < regex.length && !matches) {
+      if (!regex[j]) {
+        break;
+      }
+      matches = regex[j++].exec(ua);
+      if (!!matches) {
+        for (p = 0; p < props.length; p++) {
+          match = matches[++k];
+          q = props[p];
+          if (typeof q === OBJ_TYPE && q.length > 0) {
+            if (q.length === 2) {
+              if (typeof q[1] == FUNC_TYPE) {
+                this[q[0]] = q[1].call(this, match);
+              } else {
+                this[q[0]] = q[1];
+              }
+            } else if (q.length >= 3) {
+              if (typeof q[1] === FUNC_TYPE && !(q[1].exec && q[1].test)) {
+                if (q.length > 3) {
+                  this[q[0]] = match ? q[1].apply(this, q.slice(2)) : void 0;
+                } else {
+                  this[q[0]] = match ? q[1].call(this, match, q[2]) : void 0;
+                }
+              } else {
+                if (q.length == 3) {
+                  this[q[0]] = match ? match.replace(q[1], q[2]) : void 0;
+                } else if (q.length == 4) {
+                  this[q[0]] = match ? q[3].call(this, match.replace(q[1], q[2])) : void 0;
+                } else if (q.length > 4) {
+                  this[q[0]] = match ? q[3].apply(this, [match.replace(q[1], q[2])].concat(q.slice(4))) : void 0;
+                }
+              }
+            }
+          } else {
+            this[q] = match ? match : void 0;
+          }
+        }
+      }
+    }
+    i += 2;
+  }
+}, strMapper = function(str, map) {
+  for (var i in map) {
+    if (typeof map[i] === OBJ_TYPE && map[i].length > 0) {
+      for (var j = 0; j < map[i].length; j++) {
+        if (has(map[i][j], str)) {
+          return i === UNKNOWN ? void 0 : i;
+        }
+      }
+    } else if (has(map[i], str)) {
+      return i === UNKNOWN ? void 0 : i;
+    }
+  }
+  return map.hasOwnProperty("*") ? map["*"] : str;
+};
+var windowsVersionMap = {
+  "ME": "4.90",
+  "NT 3.51": "3.51",
+  "NT 4.0": "4.0",
+  "2000": ["5.0", "5.01"],
+  "XP": ["5.1", "5.2"],
+  "Vista": "6.0",
+  "7": "6.1",
+  "8": "6.2",
+  "8.1": "6.3",
+  "10": ["6.4", "10.0"],
+  "NT": ""
+}, formFactorsMap = {
+  "embedded": "Automotive",
+  "mobile": "Mobile",
+  "tablet": ["Tablet", "EInk"],
+  "smarttv": "TV",
+  "wearable": "Watch",
+  "xr": ["VR", "XR"],
+  "?": ["Desktop", "Unknown"],
+  "*": void 0
+}, browserHintsMap = {
+  "Chrome": "Google Chrome",
+  "Edge": "Microsoft Edge",
+  "Edge WebView2": "Microsoft Edge WebView2",
+  "Chrome WebView": "Android WebView",
+  "Chrome Headless": "HeadlessChrome",
+  "Huawei Browser": "HuaweiBrowser",
+  "MIUI Browser": "Miui Browser",
+  "Opera Mobi": "OperaMobile",
+  "Yandex": "YaBrowser"
+};
+var defaultRegexes = {
+  browser: [
+    [
+      // Most common regardless engine
+      /\b(?:crmo|crios)\/([\w\.]+)/i
+      // Chrome for Android/iOS
+    ],
+    [VERSION, [NAME, PREFIX_MOBILE + "Chrome"]],
+    [
+      /webview.+edge\/([\w\.]+)/i
+      // Microsoft Edge
+    ],
+    [VERSION, [NAME, EDGE + " WebView"]],
+    [
+      /edg(?:e|ios|a)?\/([\w\.]+)/i
+    ],
+    [VERSION, [NAME, "Edge"]],
+    [
+      // Presto based
+      /(opera mini)\/([-\w\.]+)/i,
+      // Opera Mini
+      /(opera [mobiletab]{3,6})\b.+version\/([-\w\.]+)/i,
+      // Opera Mobi/Tablet
+      /(opera)(?:.+version\/|[\/ ]+)([\w\.]+)/i
+      // Opera
+    ],
+    [NAME, VERSION],
+    [
+      /opios[\/ ]+([\w\.]+)/i
+      // Opera mini on iphone >= 8.0
+    ],
+    [VERSION, [NAME, OPERA + " Mini"]],
+    [
+      /\bop(?:rg)?x\/([\w\.]+)/i
+      // Opera GX
+    ],
+    [VERSION, [NAME, OPERA + " GX"]],
+    [
+      /\bopr\/([\w\.]+)/i
+      // Opera Webkit
+    ],
+    [VERSION, [NAME, OPERA]],
+    [
+      // Mixed
+      /\bb[ai]*d(?:uhd|[ub]*[aekoprswx]{5,6})[\/ ]?([\w\.]+)/i
+      // Baidu
+    ],
+    [VERSION, [NAME, "Baidu"]],
+    [
+      /\b(?:mxbrowser|mxios|myie2)\/?([-\w\.]*)\b/i
+      // Maxthon
+    ],
+    [VERSION, [NAME, "Maxthon"]],
+    [
+      /(kindle)\/([\w\.]+)/i,
+      // Kindle
+      /(lunascape|maxthon|netfront|jasmine|blazer|sleipnir)[\/ ]?([\w\.]*)/i,
+      // Lunascape/Maxthon/Netfront/Jasmine/Blazer/Sleipnir
+      // Trident based
+      /(avant|iemobile|slim(?:browser|boat|jet))[\/ ]?([\d\.]*)/i,
+      // Avant/IEMobile/SlimBrowser/SlimBoat/Slimjet
+      /(?:ms|\()(ie) ([\w\.]+)/i,
+      // Internet Explorer
+      // Blink/Webkit/KHTML based                                         // Flock/RockMelt/Midori/Epiphany/Silk/Skyfire/Bolt/Iron/Iridium/PhantomJS/Bowser/QupZilla/Falkon/LG Browser/Otter/qutebrowser/Dooble
+      /(flock|rockmelt|midori|epiphany|silk|skyfire|ovibrowser|bolt|iron|vivaldi|iridium|phantomjs|bowser|qupzilla|falkon|rekonq|puffin|brave|whale(?!.+naver)|qqbrowserlite|duckduckgo|klar|helio|(?=comodo_)?dragon|otter|dooble|(?:lg |qute)browser)\/([-\w\.]+)/i,
+      // Rekonq/Puffin/Brave/Whale/QQBrowserLite/QQ//Vivaldi/DuckDuckGo/Klar/Helio/Dragon
+      /(heytap|ovi|115|surf)browser\/([\d\.]+)/i,
+      // HeyTap/Ovi/115/Surf
+      /(ecosia|weibo)(?:__| \w+@)([\d\.]+)/i
+      // Ecosia/Weibo
+    ],
+    [NAME, VERSION],
+    [
+      /quark(?:pc)?\/([-\w\.]+)/i
+      // Quark
+    ],
+    [VERSION, [NAME, "Quark"]],
+    [
+      /\bddg\/([\w\.]+)/i
+      // DuckDuckGo
+    ],
+    [VERSION, [NAME, "DuckDuckGo"]],
+    [
+      /(?:\buc? ?browser|(?:juc.+)ucweb)[\/ ]?([\w\.]+)/i
+      // UCBrowser
+    ],
+    [VERSION, [NAME, "UCBrowser"]],
+    [
+      /microm.+\bqbcore\/([\w\.]+)/i,
+      // WeChat Desktop for Windows Built-in Browser
+      /\bqbcore\/([\w\.]+).+microm/i,
+      /micromessenger\/([\w\.]+)/i
+      // WeChat
+    ],
+    [VERSION, [NAME, "WeChat"]],
+    [
+      /konqueror\/([\w\.]+)/i
+      // Konqueror
+    ],
+    [VERSION, [NAME, "Konqueror"]],
+    [
+      /trident.+rv[: ]([\w\.]{1,9})\b.+like gecko/i
+      // IE11
+    ],
+    [VERSION, [NAME, "IE"]],
+    [
+      /ya(?:search)?browser\/([\w\.]+)/i
+      // Yandex
+    ],
+    [VERSION, [NAME, "Yandex"]],
+    [
+      /slbrowser\/([\w\.]+)/i
+      // Smart Lenovo Browser
+    ],
+    [VERSION, [NAME, "Smart " + LENOVO + SUFFIX_BROWSER]],
+    [
+      /(avast|avg)\/([\w\.]+)/i
+      // Avast/AVG Secure Browser
+    ],
+    [[NAME, /(.+)/, "$1 Secure" + SUFFIX_BROWSER], VERSION],
+    [
+      /\bfocus\/([\w\.]+)/i
+      // Firefox Focus
+    ],
+    [VERSION, [NAME, FIREFOX + " Focus"]],
+    [
+      /\bopt\/([\w\.]+)/i
+      // Opera Touch
+    ],
+    [VERSION, [NAME, OPERA + " Touch"]],
+    [
+      /coc_coc\w+\/([\w\.]+)/i
+      // Coc Coc Browser
+    ],
+    [VERSION, [NAME, "Coc Coc"]],
+    [
+      /dolfin\/([\w\.]+)/i
+      // Dolphin
+    ],
+    [VERSION, [NAME, "Dolphin"]],
+    [
+      /coast\/([\w\.]+)/i
+      // Opera Coast
+    ],
+    [VERSION, [NAME, OPERA + " Coast"]],
+    [
+      /miuibrowser\/([\w\.]+)/i
+      // MIUI Browser
+    ],
+    [VERSION, [NAME, "MIUI" + SUFFIX_BROWSER]],
+    [
+      /fxios\/([\w\.-]+)/i
+      // Firefox for iOS
+    ],
+    [VERSION, [NAME, PREFIX_MOBILE + FIREFOX]],
+    [
+      /\bqihoobrowser\/?([\w\.]*)/i
+      // 360
+    ],
+    [VERSION, [NAME, "360"]],
+    [
+      /\b(qq)\/([\w\.]+)/i
+      // QQ
+    ],
+    [[NAME, /(.+)/, "$1Browser"], VERSION],
+    [
+      /(oculus|sailfish|huawei|vivo|pico)browser\/([\w\.]+)/i
+    ],
+    [[NAME, /(.+)/, "$1" + SUFFIX_BROWSER], VERSION],
+    [
+      // Oculus/Sailfish/HuaweiBrowser/VivoBrowser/PicoBrowser
+      /samsungbrowser\/([\w\.]+)/i
+      // Samsung Internet
+    ],
+    [VERSION, [NAME, SAMSUNG + " Internet"]],
+    [
+      /metasr[\/ ]?([\d\.]+)/i
+      // Sogou Explorer
+    ],
+    [VERSION, [NAME, SOGOU + " Explorer"]],
+    [
+      /(sogou)mo\w+\/([\d\.]+)/i
+      // Sogou Mobile
+    ],
+    [[NAME, SOGOU + " Mobile"], VERSION],
+    [
+      /(electron)\/([\w\.]+) safari/i,
+      // Electron-based App
+      /(tesla)(?: qtcarbrowser|\/(20\d\d\.[-\w\.]+))/i,
+      // Tesla
+      /m?(qqbrowser|2345(?=browser|chrome|explorer))\w*[\/ ]?v?([\w\.]+)/i
+      // QQ/2345
+    ],
+    [NAME, VERSION],
+    [
+      /(lbbrowser|rekonq)/i
+      // LieBao Browser/Rekonq
+    ],
+    [NAME],
+    [
+      /ome\/([\w\.]+) \w* ?(iron) saf/i,
+      // Iron
+      /ome\/([\w\.]+).+qihu (360)[es]e/i
+      // 360
+    ],
+    [VERSION, NAME],
+    [
+      // WebView
+      /((?:fban\/fbios|fb_iab\/fb4a)(?!.+fbav)|;fbav\/([\w\.]+);)/i
+      // Facebook App for iOS & Android
+    ],
+    [[NAME, FACEBOOK], VERSION, [TYPE, INAPP]],
+    [
+      /(kakao(?:talk|story))[\/ ]([\w\.]+)/i,
+      // Kakao App
+      /(naver)\(.*?(\d+\.[\w\.]+).*\)/i,
+      // Naver InApp
+      /(daum)apps[\/ ]([\w\.]+)/i,
+      // Daum App
+      /safari (line)\/([\w\.]+)/i,
+      // Line App for iOS
+      /\b(line)\/([\w\.]+)\/iab/i,
+      // Line App for Android
+      /(alipay)client\/([\w\.]+)/i,
+      // Alipay
+      /(twitter)(?:and| f.+e\/([\w\.]+))/i,
+      // Twitter
+      /(instagram|snapchat|klarna)[\/ ]([-\w\.]+)/i
+      // Instagram/Snapchat/Klarna
+    ],
+    [NAME, VERSION, [TYPE, INAPP]],
+    [
+      /\bgsa\/([\w\.]+) .*safari\//i
+      // Google Search Appliance on iOS
+    ],
+    [VERSION, [NAME, "GSA"], [TYPE, INAPP]],
+    [
+      /musical_ly(?:.+app_?version\/|_)([\w\.]+)/i
+      // TikTok
+    ],
+    [VERSION, [NAME, "TikTok"], [TYPE, INAPP]],
+    [
+      /\[(linkedin)app\]/i
+      // LinkedIn App for iOS & Android
+    ],
+    [NAME, [TYPE, INAPP]],
+    [
+      /(chromium)[\/ ]([-\w\.]+)/i
+      // Chromium
+    ],
+    [NAME, VERSION],
+    [
+      /headlesschrome(?:\/([\w\.]+)| )/i
+      // Chrome Headless
+    ],
+    [VERSION, [NAME, CHROME + " Headless"]],
+    [
+      /wv\).+chrome\/([\w\.]+).+edgw\//i
+      // Edge WebView2
+    ],
+    [VERSION, [NAME, EDGE + " WebView2"]],
+    [
+      / wv\).+(chrome)\/([\w\.]+)/i
+      // Chrome WebView
+    ],
+    [[NAME, CHROME + " WebView"], VERSION],
+    [
+      /droid.+ version\/([\w\.]+)\b.+(?:mobile safari|safari)/i
+      // Android Browser
+    ],
+    [VERSION, [NAME, "Android" + SUFFIX_BROWSER]],
+    [
+      /chrome\/([\w\.]+) mobile/i
+      // Chrome Mobile
+    ],
+    [VERSION, [NAME, PREFIX_MOBILE + "Chrome"]],
+    [
+      /(chrome|omniweb|arora|[tizenoka]{5} ?browser)\/v?([\w\.]+)/i
+      // Chrome/OmniWeb/Arora/Tizen/Nokia
+    ],
+    [NAME, VERSION],
+    [
+      /version\/([\w\.\,]+) .*mobile(?:\/\w+ | ?)safari/i
+      // Safari Mobile
+    ],
+    [VERSION, [NAME, PREFIX_MOBILE + "Safari"]],
+    [
+      /iphone .*mobile(?:\/\w+ | ?)safari/i
+    ],
+    [[NAME, PREFIX_MOBILE + "Safari"]],
+    [
+      /version\/([\w\.\,]+) .*(safari)/i
+      // Safari
+    ],
+    [VERSION, NAME],
+    [
+      /webkit.+?(mobile ?safari|safari)(\/[\w\.]+)/i
+      // Safari < 3.0
+    ],
+    [NAME, [VERSION, "1"]],
+    [
+      /(webkit|khtml)\/([\w\.]+)/i
+    ],
+    [NAME, VERSION],
+    [
+      // Gecko based
+      /(?:mobile|tablet);.*(firefox)\/([\w\.-]+)/i
+      // Firefox Mobile
+    ],
+    [[NAME, PREFIX_MOBILE + FIREFOX], VERSION],
+    [
+      /(navigator|netscape\d?)\/([-\w\.]+)/i
+      // Netscape
+    ],
+    [[NAME, "Netscape"], VERSION],
+    [
+      /(wolvic|librewolf)\/([\w\.]+)/i
+      // Wolvic/LibreWolf
+    ],
+    [NAME, VERSION],
+    [
+      /mobile vr; rv:([\w\.]+)\).+firefox/i
+      // Firefox Reality
+    ],
+    [VERSION, [NAME, FIREFOX + " Reality"]],
+    [
+      /ekiohf.+(flow)\/([\w\.]+)/i,
+      // Flow
+      /(swiftfox)/i,
+      // Swiftfox
+      /(icedragon|iceweasel|camino|chimera|fennec|maemo browser|minimo|conkeror)[\/ ]?([\w\.\+]+)/i,
+      // IceDragon/Iceweasel/Camino/Chimera/Fennec/Maemo/Minimo/Conkeror
+      /(seamonkey|k-meleon|icecat|iceape|firebird|phoenix|palemoon|basilisk|waterfox)\/([-\w\.]+)$/i,
+      // Firefox/SeaMonkey/K-Meleon/IceCat/IceApe/Firebird/Phoenix
+      /(firefox)\/([\w\.]+)/i,
+      // Other Firefox-based
+      /(mozilla)\/([\w\.]+) .+rv\:.+gecko\/\d+/i,
+      // Mozilla
+      // Other
+      /(amaya|dillo|doris|icab|ladybird|lynx|mosaic|netsurf|obigo|polaris|w3m|(?:go|ice|up)[\. ]?browser)[-\/ ]?v?([\w\.]+)/i,
+      // Polaris/Lynx/Dillo/iCab/Doris/Amaya/w3m/NetSurf/Obigo/Mosaic/Go/ICE/UP.Browser/Ladybird
+      /\b(links) \(([\w\.]+)/i
+      // Links
+    ],
+    [NAME, [VERSION, /_/g, "."]],
+    [
+      /(cobalt)\/([\w\.]+)/i
+      // Cobalt
+    ],
+    [NAME, [VERSION, /[^\d\.]+./, EMPTY]]
+  ],
+  cpu: [
+    [
+      /\b((amd|x|x86[-_]?|wow|win)64)\b/i
+      // AMD64 (x64)
+    ],
+    [[ARCHITECTURE, "amd64"]],
+    [
+      /(ia32(?=;))/i,
+      // IA32 (quicktime)
+      /\b((i[346]|x)86)(pc)?\b/i
+      // IA32 (x86)
+    ],
+    [[ARCHITECTURE, "ia32"]],
+    [
+      /\b(aarch64|arm(v?[89]e?l?|_?64))\b/i
+      // ARM64
+    ],
+    [[ARCHITECTURE, "arm64"]],
+    [
+      /\b(arm(v[67])?ht?n?[fl]p?)\b/i
+      // ARMHF
+    ],
+    [[ARCHITECTURE, "armhf"]],
+    [
+      // PocketPC mistakenly identified as PowerPC
+      /( (ce|mobile); ppc;|\/[\w\.]+arm\b)/i
+    ],
+    [[ARCHITECTURE, "arm"]],
+    [
+      /((ppc|powerpc)(64)?)( mac|;|\))/i
+      // PowerPC
+    ],
+    [[ARCHITECTURE, /ower/, EMPTY, lowerize]],
+    [
+      / sun4\w[;\)]/i
+      // SPARC
+    ],
+    [[ARCHITECTURE, "sparc"]],
+    [
+      /\b(avr32|ia64(?=;)|68k(?=\))|\barm(?=v([1-7]|[5-7]1)l?|;|eabi)|(irix|mips|sparc)(64)?\b|pa-risc)/i
+      // IA64, 68K, ARM/64, AVR/32, IRIX/64, MIPS/64, SPARC/64, PA-RISC
+    ],
+    [[ARCHITECTURE, lowerize]]
+  ],
+  device: [
+    [
+      //////////////////////////
+      // MOBILES & TABLETS
+      /////////////////////////
+      // Samsung
+      /\b(sch-i[89]0\d|shw-m380s|sm-[ptx]\w{2,4}|gt-[pn]\d{2,4}|sgh-t8[56]9|nexus 10)/i
+    ],
+    [MODEL, [VENDOR, SAMSUNG], [TYPE, TABLET]],
+    [
+      /\b((?:s[cgp]h|gt|sm)-(?![lr])\w+|sc[g-]?[\d]+a?|galaxy nexus)/i,
+      /samsung[- ]((?!sm-[lr]|browser)[-\w]+)/i,
+      /sec-(sgh\w+)/i
+    ],
+    [MODEL, [VENDOR, SAMSUNG], [TYPE, MOBILE]],
+    [
+      // Apple
+      /(?:\/|\()(ip(?:hone|od)[\w, ]*)(?:\/|;)/i
+      // iPod/iPhone
+    ],
+    [MODEL, [VENDOR, APPLE], [TYPE, MOBILE]],
+    [
+      /\((ipad);[-\w\),; ]+apple/i,
+      // iPad
+      /applecoremedia\/[\w\.]+ \((ipad)/i,
+      /\b(ipad)\d\d?,\d\d?[;\]].+ios/i
+    ],
+    [MODEL, [VENDOR, APPLE], [TYPE, TABLET]],
+    [
+      /(macintosh);/i
+    ],
+    [MODEL, [VENDOR, APPLE]],
+    [
+      // Sharp
+      /\b(sh-?[altvz]?\d\d[a-ekm]?)/i
+    ],
+    [MODEL, [VENDOR, SHARP], [TYPE, MOBILE]],
+    [
+      // Honor
+      /\b((?:brt|eln|hey2?|gdi|jdn)-a?[lnw]09|(?:ag[rm]3?|jdn2|kob2)-a?[lw]0[09]hn)(?: bui|\)|;)/i
+    ],
+    [MODEL, [VENDOR, HONOR], [TYPE, TABLET]],
+    [
+      /honor([-\w ]+)[;\)]/i
+    ],
+    [MODEL, [VENDOR, HONOR], [TYPE, MOBILE]],
+    [
+      // Huawei
+      /\b((?:ag[rs][2356]?k?|bah[234]?|bg[2o]|bt[kv]|cmr|cpn|db[ry]2?|jdn2|got|kob2?k?|mon|pce|scm|sht?|[tw]gr|vrd)-[ad]?[lw][0125][09]b?|605hw|bg2-u03|(?:gem|fdr|m2|ple|t1)-[7a]0[1-4][lu]|t1-a2[13][lw]|mediapad[\w\. ]*(?= bui|\)))\b(?!.+d\/s)/i
+    ],
+    [MODEL, [VENDOR, HUAWEI], [TYPE, TABLET]],
+    [
+      /(?:huawei)([-\w ]+)[;\)]/i,
+      /\b(nexus 6p|\w{2,4}e?-[atu]?[ln][\dx][012359c][adn]?)\b(?!.+d\/s)/i
+    ],
+    [MODEL, [VENDOR, HUAWEI], [TYPE, MOBILE]],
+    [
+      // Xiaomi
+      /oid[^\)]+; (2[\dbc]{4}(182|283|rp\w{2})[cgl]|m2105k81a?c)(?: bui|\))/i,
+      /\b((?:red)?mi[-_ ]?pad[\w- ]*)(?: bui|\))/i
+      // Mi Pad tablets
+    ],
+    [[MODEL, /_/g, " "], [VENDOR, XIAOMI], [TYPE, TABLET]],
+    [
+      /\b(poco[\w ]+|m2\d{3}j\d\d[a-z]{2})(?: bui|\))/i,
+      // Xiaomi POCO
+      /\b; (\w+) build\/hm\1/i,
+      // Xiaomi Hongmi 'numeric' models
+      /\b(hm[-_ ]?note?[_ ]?(?:\d\w)?) bui/i,
+      // Xiaomi Hongmi
+      /\b(redmi[\-_ ]?(?:note|k)?[\w_ ]+)(?: bui|\))/i,
+      // Xiaomi Redmi
+      /oid[^\)]+; (m?[12][0-389][01]\w{3,6}[c-y])( bui|; wv|\))/i,
+      // Xiaomi Redmi 'numeric' models
+      /\b(mi[-_ ]?(?:a\d|one|one[_ ]plus|note lte|max|cc)?[_ ]?(?:\d?\w?)[_ ]?(?:plus|se|lite|pro)?)(?: bui|\))/i,
+      // Xiaomi Mi
+      / ([\w ]+) miui\/v?\d/i
+    ],
+    [[MODEL, /_/g, " "], [VENDOR, XIAOMI], [TYPE, MOBILE]],
+    [
+      // OnePlus
+      /droid.+; (cph2[3-6]\d[13579]|((gm|hd)19|(ac|be|in|kb)20|(d[en]|eb|le|mt)21|ne22)[0-2]\d|p[g-k]\w[1m]10)\b/i,
+      /(?:one)?(?:plus)? (a\d0\d\d)(?: b|\))/i
+    ],
+    [MODEL, [VENDOR, ONEPLUS], [TYPE, MOBILE]],
+    [
+      // OPPO
+      /; (\w+) bui.+ oppo/i,
+      /\b(cph[12]\d{3}|p(?:af|c[al]|d\w|e[ar])[mt]\d0|x9007|a101op)\b/i
+    ],
+    [MODEL, [VENDOR, OPPO], [TYPE, MOBILE]],
+    [
+      /\b(opd2(\d{3}a?))(?: bui|\))/i
+    ],
+    [MODEL, [VENDOR, strMapper, { "OnePlus": ["203", "304", "403", "404", "413", "415"], "*": OPPO }], [TYPE, TABLET]],
+    [
+      // BLU
+      /(vivo (5r?|6|8l?|go|one|s|x[il]?[2-4]?)[\w\+ ]*)(?: bui|\))/i
+      // Vivo series
+    ],
+    [MODEL, [VENDOR, "BLU"], [TYPE, MOBILE]],
+    [
+      // Vivo
+      /; vivo (\w+)(?: bui|\))/i,
+      /\b(v[12]\d{3}\w?[at])(?: bui|;)/i
+    ],
+    [MODEL, [VENDOR, "Vivo"], [TYPE, MOBILE]],
+    [
+      // Realme
+      /\b(rmx[1-3]\d{3})(?: bui|;|\))/i
+    ],
+    [MODEL, [VENDOR, "Realme"], [TYPE, MOBILE]],
+    [
+      // Lenovo
+      /(ideatab[-\w ]+|602lv|d-42a|a101lv|a2109a|a3500-hv|s[56]000|pb-6505[my]|tb-?x?\d{3,4}(?:f[cu]|xu|[av])|yt\d?-[jx]?\d+[lfmx])( bui|;|\)|\/)/i,
+      /lenovo ?(b[68]0[08]0-?[hf]?|tab(?:[\w- ]+?)|tb[\w-]{6,7})( bui|;|\)|\/)/i
+    ],
+    [MODEL, [VENDOR, LENOVO], [TYPE, TABLET]],
+    [
+      /lenovo[-_ ]?([-\w ]+?)(?: bui|\)|\/)/i
+    ],
+    [MODEL, [VENDOR, LENOVO], [TYPE, MOBILE]],
+    [
+      // Motorola
+      /\b(milestone|droid(?:[2-4x]| (?:bionic|x2|pro|razr))?:?( 4g)?)\b[\w ]+build\//i,
+      /\bmot(?:orola)?[- ]([\w\s]+)(\)| bui)/i,
+      /((?:moto(?! 360)[-\w\(\) ]+|xt\d{3,4}[cgkosw\+]?[-\d]*|nexus 6)(?= bui|\)))/i
+    ],
+    [MODEL, [VENDOR, MOTOROLA], [TYPE, MOBILE]],
+    [
+      /\b(mz60\d|xoom[2 ]{0,2}) build\//i
+    ],
+    [MODEL, [VENDOR, MOTOROLA], [TYPE, TABLET]],
+    [
+      // LG
+      /((?=lg)?[vl]k\-?\d{3}) bui| 3\.[-\w; ]{10}lg?-([06cv9]{3,4})/i
+    ],
+    [MODEL, [VENDOR, LG], [TYPE, TABLET]],
+    [
+      /(lm(?:-?f100[nv]?|-[\w\.]+)(?= bui|\))|nexus [45])/i,
+      /\blg[-e;\/ ]+(?!.*(?:browser|netcast|android tv|watch|webos))(\w+)/i,
+      /\blg-?([\d\w]+) bui/i
+    ],
+    [MODEL, [VENDOR, LG], [TYPE, MOBILE]],
+    [
+      // Nokia
+      /(nokia) (t[12][01])/i
+    ],
+    [VENDOR, MODEL, [TYPE, TABLET]],
+    [
+      /(?:maemo|nokia).*(n900|lumia \d+|rm-\d+)/i,
+      /nokia[-_ ]?(([-\w\. ]*))/i
+    ],
+    [[MODEL, /_/g, " "], [TYPE, MOBILE], [VENDOR, "Nokia"]],
+    [
+      // Google
+      /(pixel (c|tablet))\b/i
+      // Google Pixel C/Tablet
+    ],
+    [MODEL, [VENDOR, GOOGLE], [TYPE, TABLET]],
+    [
+      // Google Pixel
+      /droid.+;(?: google)? (g(01[13]a|020[aem]|025[jn]|1b60|1f8f|2ybb|4s1m|576d|5nz6|8hhn|8vou|a02099|c15s|d1yq|e2ae|ec77|gh2x|kv4x|p4bc|pj41|r83y|tt9q|ur25|wvk6)|pixel[\d ]*a?( pro)?( xl)?( fold)?( \(5g\))?)( bui|\))/i
+    ],
+    [MODEL, [VENDOR, GOOGLE], [TYPE, MOBILE]],
+    [
+      /(google) (pixelbook( go)?)/i
+    ],
+    [VENDOR, MODEL],
+    [
+      // Sony
+      /droid.+; (a?\d[0-2]{2}so|[c-g]\d{4}|so[-gl]\w+|xq-\w\w\d\d)(?= bui|\).+chrome\/(?![1-6]{0,1}\d\.))/i
+    ],
+    [MODEL, [VENDOR, SONY], [TYPE, MOBILE]],
+    [
+      /sony tablet [ps]/i,
+      /\b(?:sony)?sgp\w+(?: bui|\))/i
+    ],
+    [[MODEL, "Xperia Tablet"], [VENDOR, SONY], [TYPE, TABLET]],
+    [
+      // Amazon
+      /(alexa)webm/i,
+      /(kf[a-z]{2}wi|aeo(?!bc)\w\w)( bui|\))/i,
+      // Kindle Fire without Silk / Echo Show
+      /(kf[a-z]+)( bui|\)).+silk\//i
+      // Kindle Fire HD
+    ],
+    [MODEL, [VENDOR, AMAZON], [TYPE, TABLET]],
+    [
+      /((?:sd|kf)[0349hijorstuw]+)( bui|\)).+silk\//i
+      // Fire Phone
+    ],
+    [[MODEL, /(.+)/g, "Fire Phone $1"], [VENDOR, AMAZON], [TYPE, MOBILE]],
+    [
+      // BlackBerry
+      /(playbook);[-\w\),; ]+(rim)/i
+      // BlackBerry PlayBook
+    ],
+    [MODEL, VENDOR, [TYPE, TABLET]],
+    [
+      /\b((?:bb[a-f]|st[hv])100-\d)/i,
+      /\(bb10; (\w+)/i
+      // BlackBerry 10
+    ],
+    [MODEL, [VENDOR, BLACKBERRY], [TYPE, MOBILE]],
+    [
+      // Asus
+      /(?:\b|asus_)(transfo[prime ]{4,10} \w+|eeepc|slider \w+|nexus 7|padfone|p00[cj])/i
+    ],
+    [MODEL, [VENDOR, ASUS], [TYPE, TABLET]],
+    [
+      / (z[bes]6[027][012][km][ls]|zenfone \d\w?)\b/i
+    ],
+    [MODEL, [VENDOR, ASUS], [TYPE, MOBILE]],
+    [
+      // HTC
+      /(nexus 9)/i
+      // HTC Nexus 9
+    ],
+    [MODEL, [VENDOR, "HTC"], [TYPE, TABLET]],
+    [
+      /(htc)[-;_ ]{1,2}([\w ]+(?=\)| bui)|\w+)/i,
+      // HTC
+      // ZTE
+      /(zte)[- ]([\w ]+?)(?: bui|\/|\))/i,
+      /(alcatel|geeksphone|nexian|panasonic(?!(?:;|\.))|sony(?!-bra))[-_ ]?([-\w]*)/i
+      // Alcatel/GeeksPhone/Nexian/Panasonic/Sony
+    ],
+    [VENDOR, [MODEL, /_/g, " "], [TYPE, MOBILE]],
+    [
+      // TCL
+      /tcl (xess p17aa)/i,
+      /droid [\w\.]+; ((?:8[14]9[16]|9(?:0(?:48|60|8[01])|1(?:3[27]|66)|2(?:6[69]|9[56])|466))[gqswx])(_\w(\w|\w\w))?(\)| bui)/i
+    ],
+    [MODEL, [VENDOR, "TCL"], [TYPE, TABLET]],
+    [
+      /droid [\w\.]+; (418(?:7d|8v)|5087z|5102l|61(?:02[dh]|25[adfh]|27[ai]|56[dh]|59k|65[ah])|a509dl|t(?:43(?:0w|1[adepqu])|50(?:6d|7[adju])|6(?:09dl|10k|12b|71[efho]|76[hjk])|7(?:66[ahju]|67[hw]|7[045][bh]|71[hk]|73o|76[ho]|79w|81[hks]?|82h|90[bhsy]|99b)|810[hs]))(_\w(\w|\w\w))?(\)| bui)/i
+    ],
+    [MODEL, [VENDOR, "TCL"], [TYPE, MOBILE]],
+    [
+      // itel
+      /(itel) ((\w+))/i
+    ],
+    [[VENDOR, lowerize], MODEL, [TYPE, strMapper, { "tablet": ["p10001l", "w7001"], "*": "mobile" }]],
+    [
+      // Acer
+      /droid.+; ([ab][1-7]-?[0178a]\d\d?)/i
+    ],
+    [MODEL, [VENDOR, "Acer"], [TYPE, TABLET]],
+    [
+      // Meizu
+      /droid.+; (m[1-5] note) bui/i,
+      /\bmz-([-\w]{2,})/i
+    ],
+    [MODEL, [VENDOR, "Meizu"], [TYPE, MOBILE]],
+    [
+      // Ulefone
+      /; ((?:power )?armor(?:[\w ]{0,8}))(?: bui|\))/i
+    ],
+    [MODEL, [VENDOR, "Ulefone"], [TYPE, MOBILE]],
+    [
+      // Energizer
+      /; (energy ?\w+)(?: bui|\))/i,
+      /; energizer ([\w ]+)(?: bui|\))/i
+    ],
+    [MODEL, [VENDOR, "Energizer"], [TYPE, MOBILE]],
+    [
+      // Cat
+      /; cat (b35);/i,
+      /; (b15q?|s22 flip|s48c|s62 pro)(?: bui|\))/i
+    ],
+    [MODEL, [VENDOR, "Cat"], [TYPE, MOBILE]],
+    [
+      // Smartfren
+      /((?:new )?andromax[\w- ]+)(?: bui|\))/i
+    ],
+    [MODEL, [VENDOR, "Smartfren"], [TYPE, MOBILE]],
+    [
+      // Nothing
+      /droid.+; (a(in)?(0(15|59|6[35])|142)p?)/i
+    ],
+    [MODEL, [VENDOR, "Nothing"], [TYPE, MOBILE]],
+    [
+      // Archos
+      /; (x67 5g|tikeasy \w+|ac[1789]\d\w+)( b|\))/i,
+      /archos ?(5|gamepad2?|([\w ]*[t1789]|hello) ?\d+[\w ]*)( b|\))/i
+    ],
+    [MODEL, [VENDOR, "Archos"], [TYPE, TABLET]],
+    [
+      /archos ([\w ]+)( b|\))/i,
+      /; (ac[3-6]\d\w{2,8})( b|\))/i
+    ],
+    [MODEL, [VENDOR, "Archos"], [TYPE, MOBILE]],
+    [
+      // HMD
+      /; (n159v)/i
+    ],
+    [MODEL, [VENDOR, "HMD"], [TYPE, MOBILE]],
+    [
+      // MIXED
+      /(imo) (tab \w+)/i,
+      // IMO
+      /(infinix|tecno) (x1101b?|p904|dp(7c|8d|10a)( pro)?|p70[1-3]a?|p904|t1101)/i
+      // Infinix XPad / Tecno
+    ],
+    [VENDOR, MODEL, [TYPE, TABLET]],
+    [
+      /(blackberry|benq|palm(?=\-)|sonyericsson|acer|asus(?! zenw)|dell|jolla|meizu|motorola|polytron|tecno|micromax|advan)[-_ ]?([-\w]*)/i,
+      // BlackBerry/BenQ/Palm/Sony-Ericsson/Acer/Asus/Dell/Meizu/Motorola/Polytron/Tecno/Micromax/Advan
+      /; (blu|hmd|imo|infinix|lava|oneplus|tcl)[_ ]([\w\+ ]+?)(?: bui|\)|; r)/i,
+      // BLU/HMD/IMO/Infinix/Lava/OnePlus/TCL
+      /(hp) ([\w ]+\w)/i,
+      // HP iPAQ
+      /(microsoft); (lumia[\w ]+)/i,
+      // Microsoft Lumia
+      /(oppo) ?([\w ]+) bui/i
+      // OPPO
+    ],
+    [VENDOR, MODEL, [TYPE, MOBILE]],
+    [
+      /(kobo)\s(ereader|touch)/i,
+      // Kobo
+      /(hp).+(touchpad(?!.+tablet)|tablet)/i,
+      // HP TouchPad
+      /(kindle)\/([\w\.]+)/i
+      // Kindle
+    ],
+    [VENDOR, MODEL, [TYPE, TABLET]],
+    [
+      /(surface duo)/i
+      // Surface Duo
+    ],
+    [MODEL, [VENDOR, MICROSOFT], [TYPE, TABLET]],
+    [
+      /droid [\d\.]+; (fp\du?)(?: b|\))/i
+      // Fairphone
+    ],
+    [MODEL, [VENDOR, "Fairphone"], [TYPE, MOBILE]],
+    [
+      /((?:tegranote|shield t(?!.+d tv))[\w- ]*?)(?: b|\))/i
+      // Nvidia Tablets
+    ],
+    [MODEL, [VENDOR, NVIDIA], [TYPE, TABLET]],
+    [
+      /(sprint) (\w+)/i
+      // Sprint Phones
+    ],
+    [VENDOR, MODEL, [TYPE, MOBILE]],
+    [
+      /(kin\.[onetw]{3})/i
+      // Microsoft Kin
+    ],
+    [[MODEL, /\./g, " "], [VENDOR, MICROSOFT], [TYPE, MOBILE]],
+    [
+      /droid.+; ([c6]+|et5[16]|mc[239][23]x?|vc8[03]x?)\)/i
+      // Zebra
+    ],
+    [MODEL, [VENDOR, ZEBRA], [TYPE, TABLET]],
+    [
+      /droid.+; (ec30|ps20|tc[2-8]\d[kx])\)/i
+    ],
+    [MODEL, [VENDOR, ZEBRA], [TYPE, MOBILE]],
+    [
+      ///////////////////
+      // SMARTTVS
+      ///////////////////
+      /smart-tv.+(samsung)/i
+      // Samsung
+    ],
+    [VENDOR, [TYPE, SMARTTV]],
+    [
+      /hbbtv.+maple;(\d+)/i
+    ],
+    [[MODEL, /^/, "SmartTV"], [VENDOR, SAMSUNG], [TYPE, SMARTTV]],
+    [
+      /(vizio)(?: |.+model\/)(\w+-\w+)/i,
+      // Vizio
+      /tcast.+(lg)e?. ([-\w]+)/i
+      // LG SmartTV
+    ],
+    [VENDOR, MODEL, [TYPE, SMARTTV]],
+    [
+      /(nux; netcast.+smarttv|lg (netcast\.tv-201\d|android tv))/i
+    ],
+    [[VENDOR, LG], [TYPE, SMARTTV]],
+    [
+      /(apple) ?tv/i
+      // Apple TV
+    ],
+    [VENDOR, [MODEL, APPLE + " TV"], [TYPE, SMARTTV]],
+    [
+      /crkey.*devicetype\/chromecast/i
+      // Google Chromecast Third Generation
+    ],
+    [[MODEL, CHROMECAST + " Third Generation"], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
+    [
+      /crkey.*devicetype\/([^/]*)/i
+      // Google Chromecast with specific device type
+    ],
+    [[MODEL, /^/, "Chromecast "], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
+    [
+      /fuchsia.*crkey/i
+      // Google Chromecast Nest Hub
+    ],
+    [[MODEL, CHROMECAST + " Nest Hub"], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
+    [
+      /crkey/i
+      // Google Chromecast, Linux-based or unknown
+    ],
+    [[MODEL, CHROMECAST], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
+    [
+      /(portaltv)/i
+      // Facebook Portal TV
+    ],
+    [MODEL, [VENDOR, FACEBOOK], [TYPE, SMARTTV]],
+    [
+      /droid.+aft(\w+)( bui|\))/i
+      // Fire TV
+    ],
+    [MODEL, [VENDOR, AMAZON], [TYPE, SMARTTV]],
+    [
+      /(shield \w+ tv)/i
+      // Nvidia Shield TV
+    ],
+    [MODEL, [VENDOR, NVIDIA], [TYPE, SMARTTV]],
+    [
+      /\(dtv[\);].+(aquos)/i,
+      /(aquos-tv[\w ]+)\)/i
+      // Sharp
+    ],
+    [MODEL, [VENDOR, SHARP], [TYPE, SMARTTV]],
+    [
+      /(bravia[\w ]+)( bui|\))/i
+      // Sony
+    ],
+    [MODEL, [VENDOR, SONY], [TYPE, SMARTTV]],
+    [
+      /(mi(tv|box)-?\w+) bui/i
+      // Xiaomi
+    ],
+    [MODEL, [VENDOR, XIAOMI], [TYPE, SMARTTV]],
+    [
+      /Hbbtv.*(technisat) (.*);/i
+      // TechniSAT
+    ],
+    [VENDOR, MODEL, [TYPE, SMARTTV]],
+    [
+      /\b(roku)[\dx]*[\)\/]((?:dvp-)?[\d\.]*)/i,
+      // Roku
+      /hbbtv\/\d+\.\d+\.\d+ +\([\w\+ ]*; *([\w\d][^;]*);([^;]*)/i
+      // HbbTV devices
+    ],
+    [[VENDOR, /.+\/(\w+)/, "$1", strMapper, { "LG": "lge" }], [MODEL, trim], [TYPE, SMARTTV]],
+    [
+      // SmartTV from Unidentified Vendors
+      /droid.+; ([\w- ]+) (?:android tv|smart[- ]?tv)/i
+    ],
+    [MODEL, [TYPE, SMARTTV]],
+    [
+      /\b(android tv|smart[- ]?tv|opera tv|tv; rv:|large screen[\w ]+safari)\b/i
+    ],
+    [[TYPE, SMARTTV]],
+    [
+      ///////////////////
+      // CONSOLES
+      ///////////////////
+      /(playstation \w+)/i
+      // Playstation
+    ],
+    [MODEL, [VENDOR, SONY], [TYPE, CONSOLE]],
+    [
+      /\b(xbox(?: one)?(?!; xbox))[\); ]/i
+      // Microsoft Xbox
+    ],
+    [MODEL, [VENDOR, MICROSOFT], [TYPE, CONSOLE]],
+    [
+      /(ouya)/i,
+      // Ouya
+      /(nintendo) (\w+)/i,
+      // Nintendo
+      /(retroid) (pocket ([^\)]+))/i
+      // Retroid Pocket
+    ],
+    [VENDOR, MODEL, [TYPE, CONSOLE]],
+    [
+      /droid.+; (shield)( bui|\))/i
+      // Nvidia Portable
+    ],
+    [MODEL, [VENDOR, NVIDIA], [TYPE, CONSOLE]],
+    [
+      ///////////////////
+      // WEARABLES
+      ///////////////////
+      /\b(sm-[lr]\d\d[0156][fnuw]?s?|gear live)\b/i
+      // Samsung Galaxy Watch
+    ],
+    [MODEL, [VENDOR, SAMSUNG], [TYPE, WEARABLE]],
+    [
+      /((pebble))app/i,
+      // Pebble
+      /(asus|google|lg|oppo) ((pixel |zen)?watch[\w ]*)( bui|\))/i
+      // Asus ZenWatch / LG Watch / Pixel Watch
+    ],
+    [VENDOR, MODEL, [TYPE, WEARABLE]],
+    [
+      /(ow(?:19|20)?we?[1-3]{1,3})/i
+      // Oppo Watch
+    ],
+    [MODEL, [VENDOR, OPPO], [TYPE, WEARABLE]],
+    [
+      /(watch)(?: ?os[,\/]|\d,\d\/)[\d\.]+/i
+      // Apple Watch
+    ],
+    [MODEL, [VENDOR, APPLE], [TYPE, WEARABLE]],
+    [
+      /(opwwe\d{3})/i
+      // OnePlus Watch
+    ],
+    [MODEL, [VENDOR, ONEPLUS], [TYPE, WEARABLE]],
+    [
+      /(moto 360)/i
+      // Motorola 360
+    ],
+    [MODEL, [VENDOR, MOTOROLA], [TYPE, WEARABLE]],
+    [
+      /(smartwatch 3)/i
+      // Sony SmartWatch
+    ],
+    [MODEL, [VENDOR, SONY], [TYPE, WEARABLE]],
+    [
+      /(g watch r)/i
+      // LG G Watch R
+    ],
+    [MODEL, [VENDOR, LG], [TYPE, WEARABLE]],
+    [
+      /droid.+; (wt63?0{2,3})\)/i
+    ],
+    [MODEL, [VENDOR, ZEBRA], [TYPE, WEARABLE]],
+    [
+      ///////////////////
+      // XR
+      ///////////////////
+      /droid.+; (glass) \d/i
+      // Google Glass
+    ],
+    [MODEL, [VENDOR, GOOGLE], [TYPE, XR]],
+    [
+      /(pico) (4|neo3(?: link|pro)?)/i
+      // Pico
+    ],
+    [VENDOR, MODEL, [TYPE, XR]],
+    [
+      /(quest( \d| pro)?s?).+vr/i
+      // Meta Quest
+    ],
+    [MODEL, [VENDOR, FACEBOOK], [TYPE, XR]],
+    [
+      /mobile vr; rv.+firefox/i
+      // Unidentifiable VR device using Firefox Reality / Wolvic
+    ],
+    [[TYPE, XR]],
+    [
+      ///////////////////
+      // EMBEDDED
+      ///////////////////
+      /(tesla)(?: qtcarbrowser|\/[-\w\.]+)/i
+      // Tesla
+    ],
+    [VENDOR, [TYPE, EMBEDDED]],
+    [
+      /(aeobc)\b/i
+      // Echo Dot
+    ],
+    [MODEL, [VENDOR, AMAZON], [TYPE, EMBEDDED]],
+    [
+      /(homepod).+mac os/i
+      // Apple HomePod
+    ],
+    [MODEL, [VENDOR, APPLE], [TYPE, EMBEDDED]],
+    [
+      /windows iot/i
+      // Unidentifiable embedded device using Windows IoT
+    ],
+    [[TYPE, EMBEDDED]],
+    [
+      ////////////////////
+      // MIXED (GENERIC)
+      ///////////////////
+      /droid .+?; ([^;]+?)(?: bui|; wv\)|\) applew).+?(mobile|vr|\d) safari/i
+    ],
+    [MODEL, [TYPE, strMapper, { "mobile": "Mobile", "xr": "VR", "*": TABLET }]],
+    [
+      /\b((tablet|tab)[;\/]|focus\/\d(?!.+mobile))/i
+      // Unidentifiable Tablet
+    ],
+    [[TYPE, TABLET]],
+    [
+      /(phone|mobile(?:[;\/]| [ \w\/\.]*safari)|pda(?=.+windows ce))/i
+      // Unidentifiable Mobile
+    ],
+    [[TYPE, MOBILE]],
+    [
+      /droid .+?; ([\w\. -]+)( bui|\))/i
+      // Generic Android Device
+    ],
+    [MODEL, [VENDOR, "Generic"]]
+  ],
+  engine: [
+    [
+      /windows.+ edge\/([\w\.]+)/i
+      // EdgeHTML
+    ],
+    [VERSION, [NAME, EDGE + "HTML"]],
+    [
+      /(arkweb)\/([\w\.]+)/i
+      // ArkWeb
+    ],
+    [NAME, VERSION],
+    [
+      /webkit\/537\.36.+chrome\/(?!27)([\w\.]+)/i
+      // Blink
+    ],
+    [VERSION, [NAME, "Blink"]],
+    [
+      /(presto)\/([\w\.]+)/i,
+      // Presto
+      /(webkit|trident|netfront|netsurf|amaya|lynx|w3m|goanna|servo)\/([\w\.]+)/i,
+      // WebKit/Trident/NetFront/NetSurf/Amaya/Lynx/w3m/Goanna/Servo
+      /ekioh(flow)\/([\w\.]+)/i,
+      // Flow
+      /(khtml|tasman|links)[\/ ]\(?([\w\.]+)/i,
+      // KHTML/Tasman/Links
+      /(icab)[\/ ]([23]\.[\d\.]+)/i,
+      // iCab
+      /\b(libweb)/i
+      // LibWeb
+    ],
+    [NAME, VERSION],
+    [
+      /ladybird\//i
+    ],
+    [[NAME, "LibWeb"]],
+    [
+      /rv\:([\w\.]{1,9})\b.+(gecko)/i
+      // Gecko
+    ],
+    [VERSION, NAME]
+  ],
+  os: [
+    [
+      // Windows
+      /(windows nt) (6\.[23]); arm/i
+      // Windows RT
+    ],
+    [[NAME, /N/, "R"], [VERSION, strMapper, windowsVersionMap]],
+    [
+      /(windows (?:phone|mobile|iot))(?: os)?[\/ ]?([\d\.]*( se)?)/i,
+      // Windows IoT/Mobile/Phone
+      // Windows NT/3.1/95/98/ME/2000/XP/Vista/7/8/8.1/10/11
+      /(windows)[\/ ](1[01]|2000|3\.1|7|8(\.1)?|9[58]|me|server 20\d\d( r2)?|vista|xp)/i
+    ],
+    [NAME, VERSION],
+    [
+      /windows nt ?([\d\.\)]*)(?!.+xbox)/i,
+      /\bwin(?=3| ?9|n)(?:nt| 9x )?([\d\.;]*)/i
+    ],
+    [[VERSION, /(;|\))/g, "", strMapper, windowsVersionMap], [NAME, WINDOWS]],
+    [
+      /(windows ce)\/?([\d\.]*)/i
+      // Windows CE
+    ],
+    [NAME, VERSION],
+    [
+      // iOS/macOS
+      /[adehimnop]{4,7}\b(?:.*os ([\w]+) like mac|; opera)/i,
+      // iOS
+      /(?:ios;fbsv\/|iphone.+ios[\/ ])([\d\.]+)/i,
+      /cfnetwork\/.+darwin/i
+    ],
+    [[VERSION, /_/g, "."], [NAME, "iOS"]],
+    [
+      /(mac os x) ?([\w\. ]*)/i,
+      /(macintosh|mac_powerpc\b)(?!.+(haiku|morphos))/i
+      // Mac OS
+    ],
+    [[NAME, "macOS"], [VERSION, /_/g, "."]],
+    [
+      // Google Chromecast
+      /android ([\d\.]+).*crkey/i
+      // Google Chromecast, Android-based
+    ],
+    [VERSION, [NAME, CHROMECAST + " Android"]],
+    [
+      /fuchsia.*crkey\/([\d\.]+)/i
+      // Google Chromecast, Fuchsia-based
+    ],
+    [VERSION, [NAME, CHROMECAST + " Fuchsia"]],
+    [
+      /crkey\/([\d\.]+).*devicetype\/smartspeaker/i
+      // Google Chromecast, Linux-based Smart Speaker
+    ],
+    [VERSION, [NAME, CHROMECAST + " SmartSpeaker"]],
+    [
+      /linux.*crkey\/([\d\.]+)/i
+      // Google Chromecast, Legacy Linux-based
+    ],
+    [VERSION, [NAME, CHROMECAST + " Linux"]],
+    [
+      /crkey\/([\d\.]+)/i
+      // Google Chromecast, unknown
+    ],
+    [VERSION, [NAME, CHROMECAST]],
+    [
+      // Mobile OSes
+      /droid ([\w\.]+)\b.+(android[- ]x86)/i
+      // Android-x86
+    ],
+    [VERSION, NAME],
+    [
+      /(ubuntu) ([\w\.]+) like android/i
+      // Ubuntu Touch
+    ],
+    [[NAME, /(.+)/, "$1 Touch"], VERSION],
+    [
+      /(harmonyos)[\/ ]?([\d\.]*)/i,
+      // HarmonyOS
+      // Android/Blackberry/WebOS/QNX/Bada/RIM/KaiOS/Maemo/MeeGo/S40/Sailfish OS/OpenHarmony/Tizen
+      /(android|bada|blackberry|kaios|maemo|meego|openharmony|qnx|rim tablet os|sailfish|series40|symbian|tizen)\w*[-\/\.; ]?([\d\.]*)/i
+    ],
+    [NAME, VERSION],
+    [
+      /\(bb(10);/i
+      // BlackBerry 10
+    ],
+    [VERSION, [NAME, BLACKBERRY]],
+    [
+      /(?:symbian ?os|symbos|s60(?=;)|series ?60)[-\/ ]?([\w\.]*)/i
+      // Symbian
+    ],
+    [VERSION, [NAME, "Symbian"]],
+    [
+      /mozilla\/[\d\.]+ \((?:mobile|tablet|tv|mobile; [\w ]+); rv:.+ gecko\/([\w\.]+)/i
+      // Firefox OS
+    ],
+    [VERSION, [NAME, FIREFOX + " OS"]],
+    [
+      /\b(?:hp)?wos(?:browser)?\/([\w\.]+)/i,
+      // WebOS
+      /webos(?:[ \/]?|\.tv-20(?=2[2-9]))(\d[\d\.]*)/i
+    ],
+    [VERSION, [NAME, "webOS"]],
+    [
+      /web0s;.+?(?:chr[o0]me|safari)\/(\d+)/i
+      // https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine
+    ],
+    [[VERSION, strMapper, { "25": "120", "24": "108", "23": "94", "22": "87", "6": "79", "5": "68", "4": "53", "3": "38", "2": "538", "1": "537", "*": "TV" }], [NAME, "webOS"]],
+    [
+      /watch(?: ?os[,\/]|\d,\d\/)([\d\.]+)/i
+      // watchOS
+    ],
+    [VERSION, [NAME, "watchOS"]],
+    [
+      // Google ChromeOS
+      /(cros) [\w]+(?:\)| ([\w\.]+)\b)/i
+      // Chromium OS
+    ],
+    [[NAME, "Chrome OS"], VERSION],
+    [
+      // Smart TVs
+      /panasonic;(viera)/i,
+      // Panasonic Viera
+      /(netrange)mmh/i,
+      // Netrange
+      /(nettv)\/(\d+\.[\w\.]+)/i,
+      // NetTV
+      // Console
+      /(nintendo|playstation) (\w+)/i,
+      // Nintendo/Playstation
+      /(xbox); +xbox ([^\);]+)/i,
+      // Microsoft Xbox (360, One, X, S, Series X, Series S)
+      /(pico) .+os([\w\.]+)/i,
+      // Pico
+      // Other
+      /\b(joli|palm)\b ?(?:os)?\/?([\w\.]*)/i,
+      // Joli/Palm
+      /linux.+(mint)[\/\(\) ]?([\w\.]*)/i,
+      // Mint
+      /(mageia|vectorlinux|fuchsia|arcaos|arch(?= ?linux))[;l ]([\d\.]*)/i,
+      // Mageia/VectorLinux/Fuchsia/ArcaOS/Arch
+      /([kxln]?ubuntu|debian|suse|opensuse|gentoo|slackware|fedora|mandriva|centos|pclinuxos|red ?hat|zenwalk|linpus|raspbian|plan 9|minix|risc os|contiki|deepin|manjaro|elementary os|sabayon|linspire|knoppix)(?: gnu[\/ ]linux)?(?: enterprise)?(?:[- ]linux)?(?:-gnu)?[-\/ ]?(?!chrom|package)([-\w\.]*)/i,
+      // Ubuntu/Debian/SUSE/Gentoo/Slackware/Fedora/Mandriva/CentOS/PCLinuxOS/RedHat/Zenwalk/Linpus/Raspbian/Plan9/Minix/RISCOS/Contiki/Deepin/Manjaro/elementary/Sabayon/Linspire/Knoppix
+      /((?:open)?solaris)[-\/ ]?([\w\.]*)/i,
+      // Solaris
+      /\b(aix)[; ]([1-9\.]{0,4})/i,
+      // AIX
+      /(hurd|linux|morphos)(?: (?:arm|x86|ppc)\w*| ?)([\w\.]*)/i,
+      // Hurd/Linux/MorphOS
+      /(gnu) ?([\w\.]*)/i,
+      // GNU
+      /\b([-frentopcghs]{0,5}bsd|dragonfly)[\/ ]?(?!amd|[ix346]{1,2}86)([\w\.]*)/i,
+      // FreeBSD/NetBSD/OpenBSD/PC-BSD/GhostBSD/DragonFly
+      /(haiku) ?(r\d)?/i
+      // Haiku
+    ],
+    [NAME, VERSION],
+    [
+      /(sunos) ?([\d\.]*)/i
+      // Solaris
+    ],
+    [[NAME, "Solaris"], VERSION],
+    [
+      /\b(beos|os\/2|amigaos|openvms|hp-ux|serenityos)/i,
+      // BeOS/OS2/AmigaOS/OpenVMS/HP-UX/SerenityOS
+      /(unix) ?([\w\.]*)/i
+      // UNIX
+    ],
+    [NAME, VERSION]
+  ]
+};
+var defaultProps = function() {
+  var props = { init: {}, isIgnore: {}, isIgnoreRgx: {}, toString: {} };
+  setProps.call(props.init, [
+    [UA_BROWSER, [NAME, VERSION, MAJOR, TYPE]],
+    [UA_CPU, [ARCHITECTURE]],
+    [UA_DEVICE, [TYPE, MODEL, VENDOR]],
+    [UA_ENGINE, [NAME, VERSION]],
+    [UA_OS, [NAME, VERSION]]
+  ]);
+  setProps.call(props.isIgnore, [
+    [UA_BROWSER, [VERSION, MAJOR]],
+    [UA_ENGINE, [VERSION]],
+    [UA_OS, [VERSION]]
+  ]);
+  setProps.call(props.isIgnoreRgx, [
+    [UA_BROWSER, / ?browser$/i],
+    [UA_OS, / ?os$/i]
+  ]);
+  setProps.call(props.toString, [
+    [UA_BROWSER, [NAME, VERSION]],
+    [UA_CPU, [ARCHITECTURE]],
+    [UA_DEVICE, [VENDOR, MODEL]],
+    [UA_ENGINE, [NAME, VERSION]],
+    [UA_OS, [NAME, VERSION]]
+  ]);
+  return props;
+}();
+var createIData = function(item, itemType) {
+  var init_props = defaultProps.init[itemType], is_ignoreProps = defaultProps.isIgnore[itemType] || 0, is_ignoreRgx = defaultProps.isIgnoreRgx[itemType] || 0, toString_props = defaultProps.toString[itemType] || 0;
+  function IData() {
+    setProps.call(this, init_props);
+  }
+  IData.prototype.getItem = function() {
+    return item;
+  };
+  IData.prototype.withClientHints = function() {
+    if (!NAVIGATOR_UADATA) {
+      return item.parseCH().get();
+    }
+    return NAVIGATOR_UADATA.getHighEntropyValues(CH_ALL_VALUES).then(function(res) {
+      return item.setCH(new UACHData(res, false)).parseCH().get();
+    });
+  };
+  IData.prototype.withFeatureCheck = function() {
+    return item.detectFeature().get();
+  };
+  if (itemType != UA_RESULT) {
+    IData.prototype.is = function(strToCheck) {
+      var is = false;
+      for (var i in this) {
+        if (this.hasOwnProperty(i) && !has(is_ignoreProps, i) && lowerize(is_ignoreRgx ? strip(is_ignoreRgx, this[i]) : this[i]) == lowerize(is_ignoreRgx ? strip(is_ignoreRgx, strToCheck) : strToCheck)) {
+          is = true;
+          if (strToCheck != UNDEF_TYPE) break;
+        } else if (strToCheck == UNDEF_TYPE && is) {
+          is = !is;
+          break;
+        }
+      }
+      return is;
+    };
+    IData.prototype.toString = function() {
+      var str = EMPTY;
+      for (var i in toString_props) {
+        if (typeof this[toString_props[i]] !== UNDEF_TYPE) {
+          str += (str ? " " : EMPTY) + this[toString_props[i]];
+        }
+      }
+      return str || UNDEF_TYPE;
+    };
+  }
+  if (!NAVIGATOR_UADATA) {
+    IData.prototype.then = function(cb) {
+      var that = this;
+      var IDataResolve = function() {
+        for (var prop in that) {
+          if (that.hasOwnProperty(prop)) {
+            this[prop] = that[prop];
+          }
+        }
+      };
+      IDataResolve.prototype = {
+        is: IData.prototype.is,
+        toString: IData.prototype.toString
+      };
+      var resolveData = new IDataResolve();
+      cb(resolveData);
+      return resolveData;
+    };
+  }
+  return new IData();
+};
+function UACHData(uach, isHttpUACH) {
+  uach = uach || {};
+  setProps.call(this, CH_ALL_VALUES);
+  if (isHttpUACH) {
+    setProps.call(this, [
+      [BRANDS, itemListToArray(uach[CH_HEADER])],
+      [FULLVERLIST, itemListToArray(uach[CH_HEADER_FULL_VER_LIST])],
+      [MOBILE, /\?1/.test(uach[CH_HEADER_MOBILE])],
+      [MODEL, stripQuotes(uach[CH_HEADER_MODEL])],
+      [PLATFORM, stripQuotes(uach[CH_HEADER_PLATFORM])],
+      [PLATFORMVER, stripQuotes(uach[CH_HEADER_PLATFORM_VER])],
+      [ARCHITECTURE, stripQuotes(uach[CH_HEADER_ARCH])],
+      [FORMFACTORS, itemListToArray(uach[CH_HEADER_FORM_FACTORS])],
+      [BITNESS, stripQuotes(uach[CH_HEADER_BITNESS])]
+    ]);
+  } else {
+    for (var prop in uach) {
+      if (this.hasOwnProperty(prop) && typeof uach[prop] !== UNDEF_TYPE) this[prop] = uach[prop];
+    }
+  }
+}
+function UAItem(itemType, ua, rgxMap, uaCH) {
+  this.get = function(prop) {
+    if (!prop) return this.data;
+    return this.data.hasOwnProperty(prop) ? this.data[prop] : void 0;
+  };
+  this.set = function(prop, val) {
+    this.data[prop] = val;
+    return this;
+  };
+  this.setCH = function(ch) {
+    this.uaCH = ch;
+    return this;
+  };
+  this.detectFeature = function() {
+    if (NAVIGATOR && NAVIGATOR.userAgent == this.ua) {
+      switch (this.itemType) {
+        case UA_BROWSER:
+          if (NAVIGATOR.brave && typeof NAVIGATOR.brave.isBrave == FUNC_TYPE) {
+            this.set(NAME, "Brave");
+          }
+          break;
+        case UA_DEVICE:
+          if (!this.get(TYPE) && NAVIGATOR_UADATA && NAVIGATOR_UADATA[MOBILE]) {
+            this.set(TYPE, MOBILE);
+          }
+          if (this.get(MODEL) == "Macintosh" && NAVIGATOR && typeof NAVIGATOR.standalone !== UNDEF_TYPE && NAVIGATOR.maxTouchPoints && NAVIGATOR.maxTouchPoints > 2) {
+            this.set(MODEL, "iPad").set(TYPE, TABLET);
+          }
+          break;
+        case UA_OS:
+          if (!this.get(NAME) && NAVIGATOR_UADATA && NAVIGATOR_UADATA[PLATFORM]) {
+            this.set(NAME, NAVIGATOR_UADATA[PLATFORM]);
+          }
+          break;
+        case UA_RESULT:
+          var data = this.data;
+          var detect = function(itemType2) {
+            return data[itemType2].getItem().detectFeature().get();
+          };
+          this.set(UA_BROWSER, detect(UA_BROWSER)).set(UA_CPU, detect(UA_CPU)).set(UA_DEVICE, detect(UA_DEVICE)).set(UA_ENGINE, detect(UA_ENGINE)).set(UA_OS, detect(UA_OS));
+      }
+    }
+    return this;
+  };
+  this.parseUA = function() {
+    if (this.itemType != UA_RESULT) {
+      rgxMapper.call(this.data, this.ua, this.rgxMap);
+    }
+    if (this.itemType == UA_BROWSER) {
+      this.set(MAJOR, majorize(this.get(VERSION)));
+    }
+    return this;
+  };
+  this.parseCH = function() {
+    var uaCH2 = this.uaCH, rgxMap2 = this.rgxMap;
+    switch (this.itemType) {
+      case UA_BROWSER:
+      case UA_ENGINE:
+        var brands = uaCH2[FULLVERLIST] || uaCH2[BRANDS], prevName;
+        if (brands) {
+          for (var i in brands) {
+            var brandName = brands[i].brand || brands[i], brandVersion = brands[i].version;
+            if (this.itemType == UA_BROWSER && !/not.a.brand/i.test(brandName) && (!prevName || /Chrom/.test(prevName) && brandName != CHROMIUM || prevName == EDGE && /WebView2/.test(brandName))) {
+              brandName = strMapper(brandName, browserHintsMap);
+              prevName = this.get(NAME);
+              if (!(prevName && !/Chrom/.test(prevName) && /Chrom/.test(brandName))) {
+                this.set(NAME, brandName).set(VERSION, brandVersion).set(MAJOR, majorize(brandVersion));
+              }
+              prevName = brandName;
+            }
+            if (this.itemType == UA_ENGINE && brandName == CHROMIUM) {
+              this.set(VERSION, brandVersion);
+            }
+          }
+        }
+        break;
+      case UA_CPU:
+        var archName = uaCH2[ARCHITECTURE];
+        if (archName) {
+          if (archName && uaCH2[BITNESS] == "64") archName += "64";
+          rgxMapper.call(this.data, archName + ";", rgxMap2);
+        }
+        break;
+      case UA_DEVICE:
+        if (uaCH2[MOBILE]) {
+          this.set(TYPE, MOBILE);
+        }
+        if (uaCH2[MODEL]) {
+          this.set(MODEL, uaCH2[MODEL]);
+          if (!this.get(TYPE) || !this.get(VENDOR)) {
+            var reParse = {};
+            rgxMapper.call(reParse, "droid 9; " + uaCH2[MODEL] + ")", rgxMap2);
+            if (!this.get(TYPE) && !!reParse.type) {
+              this.set(TYPE, reParse.type);
+            }
+            if (!this.get(VENDOR) && !!reParse.vendor) {
+              this.set(VENDOR, reParse.vendor);
+            }
+          }
+        }
+        if (uaCH2[FORMFACTORS]) {
+          var ff;
+          if (typeof uaCH2[FORMFACTORS] !== "string") {
+            var idx = 0;
+            while (!ff && idx < uaCH2[FORMFACTORS].length) {
+              ff = strMapper(uaCH2[FORMFACTORS][idx++], formFactorsMap);
+            }
+          } else {
+            ff = strMapper(uaCH2[FORMFACTORS], formFactorsMap);
+          }
+          this.set(TYPE, ff);
+        }
+        break;
+      case UA_OS:
+        var osName = uaCH2[PLATFORM];
+        if (osName) {
+          var osVersion = uaCH2[PLATFORMVER];
+          if (osName == WINDOWS) osVersion = parseInt(majorize(osVersion), 10) >= 13 ? "11" : "10";
+          this.set(NAME, osName).set(VERSION, osVersion);
+        }
+        if (this.get(NAME) == WINDOWS && uaCH2[MODEL] == "Xbox") {
+          this.set(NAME, "Xbox").set(VERSION, void 0);
+        }
+        break;
+      case UA_RESULT:
+        var data = this.data;
+        var parse = function(itemType2) {
+          return data[itemType2].getItem().setCH(uaCH2).parseCH().get();
+        };
+        this.set(UA_BROWSER, parse(UA_BROWSER)).set(UA_CPU, parse(UA_CPU)).set(UA_DEVICE, parse(UA_DEVICE)).set(UA_ENGINE, parse(UA_ENGINE)).set(UA_OS, parse(UA_OS));
+    }
+    return this;
+  };
+  setProps.call(this, [
+    ["itemType", itemType],
+    ["ua", ua],
+    ["uaCH", uaCH],
+    ["rgxMap", rgxMap],
+    ["data", createIData(this, itemType)]
+  ]);
+  return this;
+}
+function UAParser(ua, extensions, headers) {
+  if (typeof ua === OBJ_TYPE) {
+    if (isExtensions(ua, true)) {
+      if (typeof extensions === OBJ_TYPE) {
+        headers = extensions;
+      }
+      extensions = ua;
+    } else {
+      headers = ua;
+      extensions = void 0;
+    }
+    ua = void 0;
+  } else if (typeof ua === STR_TYPE && !isExtensions(extensions, true)) {
+    headers = extensions;
+    extensions = void 0;
+  }
+  if (headers && typeof headers.append === FUNC_TYPE) {
+    var kv = {};
+    headers.forEach(function(v, k) {
+      kv[k] = v;
+    });
+    headers = kv;
+  }
+  if (!(this instanceof UAParser)) {
+    return new UAParser(ua, extensions, headers).getResult();
+  }
+  var userAgent = typeof ua === STR_TYPE ? ua : (
+    // Passed user-agent string
+    headers && headers[USER_AGENT] ? headers[USER_AGENT] : (
+      // User-Agent from passed headers
+      NAVIGATOR && NAVIGATOR.userAgent ? NAVIGATOR.userAgent : (
+        // navigator.userAgent
+        EMPTY
+      )
+    )
+  ), httpUACH = new UACHData(headers, true), regexMap = extensions ? extend(defaultRegexes, extensions) : defaultRegexes, createItemFunc = function(itemType) {
+    if (itemType == UA_RESULT) {
+      return function() {
+        return new UAItem(itemType, userAgent, regexMap, httpUACH).set("ua", userAgent).set(UA_BROWSER, this.getBrowser()).set(UA_CPU, this.getCPU()).set(UA_DEVICE, this.getDevice()).set(UA_ENGINE, this.getEngine()).set(UA_OS, this.getOS()).get();
+      };
+    } else {
+      return function() {
+        return new UAItem(itemType, userAgent, regexMap[itemType], httpUACH).parseUA().get();
+      };
+    }
+  };
+  setProps.call(this, [
+    ["getBrowser", createItemFunc(UA_BROWSER)],
+    ["getCPU", createItemFunc(UA_CPU)],
+    ["getDevice", createItemFunc(UA_DEVICE)],
+    ["getEngine", createItemFunc(UA_ENGINE)],
+    ["getOS", createItemFunc(UA_OS)],
+    ["getResult", createItemFunc(UA_RESULT)],
+    ["getUA", function() {
+      return userAgent;
+    }],
+    ["setUA", function(ua2) {
+      if (isString(ua2))
+        userAgent = ua2.length > UA_MAX_LENGTH ? trim(ua2, UA_MAX_LENGTH) : ua2;
+      return this;
+    }]
+  ]).setUA(userAgent);
+  return this;
+}
+UAParser.VERSION = LIBVERSION;
+UAParser.BROWSER = enumerize([NAME, VERSION, MAJOR, TYPE]);
+UAParser.CPU = enumerize([ARCHITECTURE]);
+UAParser.DEVICE = enumerize([MODEL, VENDOR, TYPE, CONSOLE, MOBILE, SMARTTV, TABLET, WEARABLE, EMBEDDED]);
+UAParser.ENGINE = UAParser.OS = enumerize([NAME, VERSION]);
 class WebSocketService {
   ws = null;
+  isConnecting = false;
+  clientType = "unknown";
   reconnectAttempts = 0;
-  maxReconnectAttempts = 5;
   reconnectInterval = 1e3;
-  // Start with 1 second
-  maxReconnectInterval = 3e4;
-  // Max 30 seconds
+  maxReconnectInterval = 1e4;
+  // Try again every 10 seconds max
   reconnectTimer = null;
-  connect() {
+  connect(type = "unknown") {
+    this.clientType = type;
+    if (this.ws || this.isConnecting) {
+      return;
+    }
+    this.isConnecting = true;
+    useAppStore.getState().setConnectionStatus("connecting");
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.hostname;
@@ -22245,31 +23961,36 @@ class WebSocketService {
       this.ws = new WebSocket(url);
       this.ws.onopen = () => {
         console.log("WebSocket connected");
+        this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.reconnectInterval = 1e3;
         useAppStore.getState().setSocket(this.ws);
         useAppStore.getState().setConnectionStatus("connected");
         useAppStore.getState().setError(null);
+        if (this.clientType === "player") {
+          this.identifyAsPlayer();
+        } else {
+          this.send({ type: "client_identify", payload: { type: this.clientType } });
+        }
         this.send({ type: "get_session_state" });
         this.send({ type: "get_history" });
       };
       this.ws.onclose = (event) => {
+        this.isConnecting = false;
+        this.ws = null;
         if (event.code !== 1001 && event.code !== 1e3) {
           console.log("WebSocket disconnected:", event.code, event.reason);
         }
         useAppStore.getState().setSocket(null);
-        useAppStore.getState().setConnectionStatus("idle");
-        if (event.code !== 1e3 && event.code !== 1001 && this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (event.code !== 1e3 && event.code !== 1001) {
           this.scheduleReconnect();
-        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          useAppStore.getState().setConnectionStatus("error");
-          useAppStore.getState().setError("Failed to connect after multiple attempts");
+        } else {
+          useAppStore.getState().setConnectionStatus("idle");
         }
       };
       this.ws.onerror = (error) => {
-        if (this.ws?.readyState !== WebSocket.CONNECTING) {
-          console.error("WebSocket error:", error);
-        }
+        this.isConnecting = false;
+        console.error("WebSocket error:", error);
         useAppStore.getState().setConnectionStatus("error");
         useAppStore.getState().setError("Connection error occurred");
       };
@@ -22282,6 +24003,7 @@ class WebSocketService {
         }
       };
     } catch (error) {
+      this.isConnecting = false;
       if (this.reconnectAttempts === 0) {
         console.error("Failed to create WebSocket connection:", error);
       }
@@ -22289,18 +24011,36 @@ class WebSocketService {
       useAppStore.getState().setError("Failed to create connection");
     }
   }
+  identifyAsPlayer() {
+    const parser = new UAParser(navigator.userAgent);
+    const result = parser.getResult();
+    this.send({
+      type: "client_identify",
+      payload: {
+        type: "player",
+        userAgent: navigator.userAgent,
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight
+        },
+        os: `${result.os.name} ${result.os.version}`,
+        browser: `${result.browser.name} ${result.browser.version}`,
+        isApp: "kj-nomad" in window
+      }
+    });
+  }
   scheduleReconnect() {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
     this.reconnectAttempts++;
-    if (this.reconnectAttempts > 1) {
-      console.log(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${this.reconnectInterval}ms`);
+    if (this.reconnectAttempts === 1) {
+      console.log("Disconnected from server. Retrying every 10 seconds indefinitely...");
     }
     useAppStore.getState().setConnectionStatus("connecting");
-    useAppStore.getState().setError(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    useAppStore.getState().setError("Disconnected. Reconnecting...");
     this.reconnectTimer = setTimeout(() => {
-      this.connect();
+      this.connect(this.clientType);
     }, this.reconnectInterval);
     this.reconnectInterval = Math.min(
       this.maxReconnectInterval,
@@ -22309,7 +24049,6 @@ class WebSocketService {
   }
   handleMessage(message) {
     const { type, payload } = message;
-    console.log("[WebSocketService] Received message:", { type, payload });
     const store = useAppStore.getState();
     switch (type) {
       case "queue_updated":
@@ -22323,7 +24062,6 @@ class WebSocketService {
       case "session_state_updated":
         if (payload && typeof payload === "object") {
           const sessionState = payload;
-          console.log("[WebSocketService] Setting session state:", sessionState);
           store.setSessionState(sessionState);
           store.setPlaybackState(sessionState.playbackState);
           if (sessionState.nowPlaying) {
@@ -22341,14 +24079,12 @@ class WebSocketService {
         break;
       case "history_updated":
         if (payload && Array.isArray(payload)) {
-          console.log("[WebSocketService] Setting session history:", payload);
           store.setSessionHistory(payload);
         }
         break;
       case "play":
         if (payload && typeof payload === "object") {
           const playPayload = payload;
-          console.log("[WebSocketService] Setting nowPlaying:", playPayload);
           store.setNowPlaying({
             songId: playPayload.songId,
             fileName: playPayload.fileName,
@@ -22357,11 +24093,6 @@ class WebSocketService {
             startTime: Date.now()
           });
           store.setPlaybackState("playing");
-          if (playPayload.restart) {
-            console.log("[WebSocketService] Song restarted");
-          } else if (playPayload.replay) {
-            console.log("[WebSocketService] Song replayed from history");
-          }
         }
         break;
       case "play_filler_music":
@@ -22383,8 +24114,36 @@ class WebSocketService {
         store.setPlaybackState("playing");
         break;
       case "ticker_updated":
-        console.log("[WebSocketService] Setting ticker text:", payload);
         store.setTickerText(payload);
+        break;
+      // Player-specific messages
+      case "device_registered":
+        if (this.clientType === "player" && payload && typeof payload === "object" && "deviceId" in payload) {
+          store.setPlayerDeviceId(payload.deviceId);
+        }
+        break;
+      case "heartbeat":
+        if (this.clientType === "player" && payload && typeof payload === "object" && "serverTime" in payload) {
+          this.send({
+            type: "heartbeat_response",
+            payload: {
+              serverTime: payload.serverTime,
+              clientTime: Date.now()
+            }
+          });
+        }
+        break;
+      case "identify_screen":
+        if (this.clientType === "player" && payload && typeof payload === "object" && "deviceId" in payload && payload.deviceId === store.playerDeviceId) {
+          store.setPlayerShowIdentify(true);
+          setTimeout(() => store.setPlayerShowIdentify(false), 5e3);
+        }
+        break;
+      case "disconnect_screen":
+        if (this.clientType === "player" && payload && typeof payload === "object" && "deviceId" in payload && payload.deviceId === store.playerDeviceId) {
+          store.setPlayerIsDisconnected(true);
+          this.disconnect();
+        }
         break;
       case "online_session_connected":
         if (payload && typeof payload === "object") {
@@ -22406,8 +24165,6 @@ class WebSocketService {
           store.setConnectionStatus("connected");
         }
         break;
-      default:
-        console.log("Unhandled message type:", type, payload);
     }
   }
   send(data) {
@@ -22415,7 +24172,6 @@ class WebSocketService {
       this.ws.send(JSON.stringify(data));
       return true;
     } else {
-      console.warn("WebSocket is not connected");
       return false;
     }
   }
@@ -22649,7 +24405,7 @@ function ArrowPathIcon({
     d: "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
   }));
 }
-const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
+const ForwardRef$x = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
 function ArrowTopRightOnSquareIcon({
   title,
   titleId,
@@ -22673,7 +24429,7 @@ function ArrowTopRightOnSquareIcon({
     d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
   }));
 }
-const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
 function Bars3Icon({
   title,
   titleId,
@@ -22697,7 +24453,7 @@ function Bars3Icon({
     d: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
   }));
 }
-const ForwardRef$u = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
+const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
 function CheckCircleIcon({
   title,
   titleId,
@@ -22721,7 +24477,7 @@ function CheckCircleIcon({
     d: "M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
   }));
 }
-const ForwardRef$t = /* @__PURE__ */ reactExports.forwardRef(CheckCircleIcon);
+const ForwardRef$u = /* @__PURE__ */ reactExports.forwardRef(CheckCircleIcon);
 function ClockIcon({
   title,
   titleId,
@@ -22745,7 +24501,7 @@ function ClockIcon({
     d: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
   }));
 }
-const ForwardRef$s = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
+const ForwardRef$t = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
 function Cog6ToothIcon({
   title,
   titleId,
@@ -22773,7 +24529,7 @@ function Cog6ToothIcon({
     d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
   }));
 }
-const ForwardRef$r = /* @__PURE__ */ reactExports.forwardRef(Cog6ToothIcon);
+const ForwardRef$s = /* @__PURE__ */ reactExports.forwardRef(Cog6ToothIcon);
 function ComputerDesktopIcon({
   title,
   titleId,
@@ -22797,7 +24553,7 @@ function ComputerDesktopIcon({
     d: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"
   }));
 }
-const ForwardRef$q = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
+const ForwardRef$r = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
 function ExclamationCircleIcon({
   title,
   titleId,
@@ -22821,7 +24577,7 @@ function ExclamationCircleIcon({
     d: "M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
   }));
 }
-const ForwardRef$p = /* @__PURE__ */ reactExports.forwardRef(ExclamationCircleIcon);
+const ForwardRef$q = /* @__PURE__ */ reactExports.forwardRef(ExclamationCircleIcon);
 function ExclamationTriangleIcon({
   title,
   titleId,
@@ -22845,7 +24601,7 @@ function ExclamationTriangleIcon({
     d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
   }));
 }
-const ForwardRef$o = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
+const ForwardRef$p = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
 function EyeIcon({
   title,
   titleId,
@@ -22873,7 +24629,7 @@ function EyeIcon({
     d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
   }));
 }
-const ForwardRef$n = /* @__PURE__ */ reactExports.forwardRef(EyeIcon);
+const ForwardRef$o = /* @__PURE__ */ reactExports.forwardRef(EyeIcon);
 function FolderOpenIcon({
   title,
   titleId,
@@ -22897,7 +24653,7 @@ function FolderOpenIcon({
     d: "M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"
   }));
 }
-const ForwardRef$m = /* @__PURE__ */ reactExports.forwardRef(FolderOpenIcon);
+const ForwardRef$n = /* @__PURE__ */ reactExports.forwardRef(FolderOpenIcon);
 function ForwardIcon({
   title,
   titleId,
@@ -22921,7 +24677,7 @@ function ForwardIcon({
     d: "M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"
   }));
 }
-const ForwardRef$l = /* @__PURE__ */ reactExports.forwardRef(ForwardIcon);
+const ForwardRef$m = /* @__PURE__ */ reactExports.forwardRef(ForwardIcon);
 function GlobeAltIcon({
   title,
   titleId,
@@ -22945,7 +24701,7 @@ function GlobeAltIcon({
     d: "M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"
   }));
 }
-const ForwardRef$k = /* @__PURE__ */ reactExports.forwardRef(GlobeAltIcon);
+const ForwardRef$l = /* @__PURE__ */ reactExports.forwardRef(GlobeAltIcon);
 function MagnifyingGlassIcon({
   title,
   titleId,
@@ -22969,7 +24725,7 @@ function MagnifyingGlassIcon({
     d: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
   }));
 }
-const ForwardRef$j = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
+const ForwardRef$k = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
 function MicrophoneIcon({
   title,
   titleId,
@@ -22993,7 +24749,7 @@ function MicrophoneIcon({
     d: "M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
   }));
 }
-const ForwardRef$i = /* @__PURE__ */ reactExports.forwardRef(MicrophoneIcon);
+const ForwardRef$j = /* @__PURE__ */ reactExports.forwardRef(MicrophoneIcon);
 function MoonIcon({
   title,
   titleId,
@@ -23017,7 +24773,7 @@ function MoonIcon({
     d: "M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
   }));
 }
-const ForwardRef$h = /* @__PURE__ */ reactExports.forwardRef(MoonIcon);
+const ForwardRef$i = /* @__PURE__ */ reactExports.forwardRef(MoonIcon);
 function MusicalNoteIcon({
   title,
   titleId,
@@ -23041,7 +24797,7 @@ function MusicalNoteIcon({
     d: "m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
   }));
 }
-const ForwardRef$g = /* @__PURE__ */ reactExports.forwardRef(MusicalNoteIcon);
+const ForwardRef$h = /* @__PURE__ */ reactExports.forwardRef(MusicalNoteIcon);
 function PauseIcon({
   title,
   titleId,
@@ -23065,7 +24821,7 @@ function PauseIcon({
     d: "M15.75 5.25v13.5m-7.5-13.5v13.5"
   }));
 }
-const ForwardRef$f = /* @__PURE__ */ reactExports.forwardRef(PauseIcon);
+const ForwardRef$g = /* @__PURE__ */ reactExports.forwardRef(PauseIcon);
 function PlayIcon({
   title,
   titleId,
@@ -23089,7 +24845,7 @@ function PlayIcon({
     d: "M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
   }));
 }
-const ForwardRef$e = /* @__PURE__ */ reactExports.forwardRef(PlayIcon);
+const ForwardRef$f = /* @__PURE__ */ reactExports.forwardRef(PlayIcon);
 function QrCodeIcon({
   title,
   titleId,
@@ -23117,7 +24873,7 @@ function QrCodeIcon({
     d: "M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z"
   }));
 }
-const ForwardRef$d = /* @__PURE__ */ reactExports.forwardRef(QrCodeIcon);
+const ForwardRef$e = /* @__PURE__ */ reactExports.forwardRef(QrCodeIcon);
 function SignalSlashIcon({
   title,
   titleId,
@@ -23141,7 +24897,31 @@ function SignalSlashIcon({
     d: "m3 3 8.735 8.735m0 0a.374.374 0 1 1 .53.53m-.53-.53.53.53m0 0L21 21M14.652 9.348a3.75 3.75 0 0 1 0 5.304m2.121-7.425a6.75 6.75 0 0 1 0 9.546m2.121-11.667c3.808 3.807 3.808 9.98 0 13.788m-9.546-4.242a3.733 3.733 0 0 1-1.06-2.122m-1.061 4.243a6.75 6.75 0 0 1-1.625-6.929m-.496 9.05c-3.068-3.067-3.664-7.67-1.79-11.334M12 12h.008v.008H12V12Z"
   }));
 }
-const ForwardRef$c = /* @__PURE__ */ reactExports.forwardRef(SignalSlashIcon);
+const ForwardRef$d = /* @__PURE__ */ reactExports.forwardRef(SignalSlashIcon);
+function SignalIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+  }));
+}
+const ForwardRef$c = /* @__PURE__ */ reactExports.forwardRef(SignalIcon);
 function SparklesIcon({
   title,
   titleId,
@@ -23463,14 +25243,14 @@ const SessionHistory = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold mb-2", children: "Session History" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4 text-blue-100", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "w-4 h-4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "w-4 h-4" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Started: ",
               sessionState ? formatTime(sessionState.startedAt) : "Unknown"
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "w-4 h-4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "w-4 h-4" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               sessionHistory.length,
               " songs played"
@@ -23488,7 +25268,7 @@ const SessionHistory = () => {
       )
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 overflow-y-auto max-h-[calc(80vh-200px)]", children: sessionHistory.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-12 text-gray-500 dark:text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "w-16 h-16 mx-auto mb-4 opacity-50" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "w-16 h-16 mx-auto mb-4 opacity-50" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-medium mb-2", children: "No Songs Played Yet" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Songs will appear here as they are performed during this session." })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: sessionHistory.slice().reverse().map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -23513,7 +25293,7 @@ const SessionHistory = () => {
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: entry.singerName })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "w-4 h-4" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "w-4 h-4" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatTime(entry.playedAt) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -23530,7 +25310,7 @@ const SessionHistory = () => {
               className: "flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors",
               title: "Replay this song",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$e, { className: "w-4 h-4" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "w-4 h-4" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden sm:inline", children: "Replay" })
               ]
             }
@@ -23568,7 +25348,7 @@ function useCombinedRefs() {
   );
 }
 const canUseDOM = typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.document.createElement !== "undefined";
-function isWindow$1(element) {
+function isWindow(element) {
   const elementString = Object.prototype.toString.call(element);
   return elementString === "[object Window]" || // In Electron context the Window object serializes to [object global]
   elementString === "[object global]";
@@ -23581,7 +25361,7 @@ function getWindow(target) {
   if (!target) {
     return window;
   }
-  if (isWindow$1(target)) {
+  if (isWindow(target)) {
     return target;
   }
   if (!isNode(target)) {
@@ -23596,7 +25376,7 @@ function isDocument(node) {
   return node instanceof Document;
 }
 function isHTMLElement(node) {
-  if (isWindow$1(node)) {
+  if (isWindow(node)) {
     return false;
   }
   return node instanceof getWindow(node).HTMLElement;
@@ -23608,7 +25388,7 @@ function getOwnerDocument(target) {
   if (!target) {
     return document;
   }
-  if (isWindow$1(target)) {
+  if (isWindow(target)) {
     return target.document;
   }
   if (!isNode(target)) {
@@ -24417,7 +26197,7 @@ function getScrollableElement(element) {
   if (!canUseDOM || !element) {
     return null;
   }
-  if (isWindow$1(element)) {
+  if (isWindow(element)) {
     return element;
   }
   if (!isNode(element)) {
@@ -24432,13 +26212,13 @@ function getScrollableElement(element) {
   return null;
 }
 function getScrollXCoordinate(element) {
-  if (isWindow$1(element)) {
+  if (isWindow(element)) {
     return element.scrollX;
   }
   return element.scrollLeft;
 }
 function getScrollYCoordinate(element) {
-  if (isWindow$1(element)) {
+  if (isWindow(element)) {
     return element.scrollY;
   }
   return element.scrollTop;
@@ -27839,13 +29619,13 @@ const PlayerScreenManager = () => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold", children: "Player Screens" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: devices.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 px-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-16 w-16 mx-auto text-gray-400 dark:text-gray-500" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-16 w-16 mx-auto text-gray-400 dark:text-gray-500" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-4 text-lg font-medium text-gray-900 dark:text-white", children: "No Player Screens Connected" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-500 dark:text-gray-400", children: "To show karaoke lyrics and videos, connect a display (like a TV or projector)." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 text-left space-y-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-semibold flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: "h-5 w-5 mr-2" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: "h-5 w-5 mr-2" }),
             "Option 1: Use a Web Browser"
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-600 dark:text-gray-300", children: "On any device with a web browser (like a Smart TV, laptop, or tablet), open the browser and go to:" }),
@@ -27854,7 +29634,7 @@ const PlayerScreenManager = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-200 dark:border-gray-700 my-4" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-semibold flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-5 w-5 mr-2" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$e, { className: "h-5 w-5 mr-2" }),
             "Option 2: Use the KJ-Nomad App"
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-600 dark:text-gray-300", children: 'For the best performance, install and run the KJ-Nomad app on another computer, and select "Set up as Player" on launch. It will automatically find and connect to your server.' })
@@ -27862,7 +29642,7 @@ const PlayerScreenManager = () => {
       ] })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: Array.isArray(devices) && devices.map((device, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: device.isOnline ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-8 w-8 text-green-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-8 w-8 text-red-500" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: device.isOnline ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-8 w-8 text-green-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-8 w-8 text-red-500" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-semibold text-gray-900 dark:text-white", children: [
             "Screen ",
@@ -27893,7 +29673,7 @@ const PlayerScreenManager = () => {
             onClick: () => identifyDevice(device.id),
             className: "p-2 rounded-full",
             title: "Identify Screen",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-6 w-6 text-gray-600 dark:text-gray-300" })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-6 w-6 text-gray-600 dark:text-gray-300" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27926,7 +29706,7 @@ const PlayerScreenManager = () => {
             onClick: () => toggleDeviceSidebar(device.id),
             className: clsx("p-2 rounded-full", { "bg-blue-100 dark:bg-blue-900/50": device.isSidebarVisible }),
             title: device.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: clsx("h-6 w-6", device.isSidebarVisible ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300") })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: clsx("h-6 w-6", device.isSidebarVisible ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300") })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27975,9 +29755,9 @@ const ThemeToggle = () => {
       case "light":
         return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$7, { className: "h-4 w-4" });
       case "dark":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "h-4 w-4" });
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "h-4 w-4" });
       case "system":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-4 w-4" });
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-4 w-4" });
     }
   };
   const getLabel = () => {
@@ -28017,7 +29797,7 @@ const Navigation = () => {
     {
       path: "/",
       label: "KJ Control",
-      icon: ForwardRef$r,
+      icon: ForwardRef$s,
       description: "Host Interface"
     },
     {
@@ -28030,7 +29810,7 @@ const Navigation = () => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(Header, { sticky: true, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between py-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Link, { to: "/", className: "flex items-center space-x-2 text-2xl font-bold text-blue-600 dark:text-blue-400", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "h-8 w-8" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-8 w-8" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "KJ-Nomad" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: connectionStatus === "connected" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-green-600 dark:text-green-400", children: [
@@ -28044,7 +29824,7 @@ const Navigation = () => {
           ] })
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 text-red-600 dark:text-red-400", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-4 w-4" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$p, { className: "h-4 w-4" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium hidden sm:inline", children: error || "Disconnected" })
       ] }) })
     ] }),
@@ -28144,7 +29924,7 @@ const HomePage = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx(ManualRequestForm, {}),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold flex items-center space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-5 w-5" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-5 w-5" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Playback Controls" })
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3", children: [
@@ -28158,7 +29938,7 @@ const HomePage = () => {
                 className: "flex flex-col items-center space-y-1 h-20",
                 "data-testid": "play-next-button",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$e, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Play Next" })
                 ]
               }
@@ -28172,7 +29952,7 @@ const HomePage = () => {
                 size: "lg",
                 className: "flex flex-col items-center space-y-1 h-20",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: playbackState === "paused" ? "Resume" : "Pause" })
                 ]
               }
@@ -28186,7 +29966,7 @@ const HomePage = () => {
                 size: "lg",
                 className: "flex flex-col items-center space-y-1 h-20",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$x, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Restart" })
                 ]
               }
@@ -28200,7 +29980,7 @@ const HomePage = () => {
                 size: "lg",
                 className: "flex flex-col items-center space-y-1 h-20",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$m, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Skip" })
                 ]
               }
@@ -28228,7 +30008,7 @@ const HomePage = () => {
                 size: "lg",
                 className: "flex flex-col items-center space-y-1 h-20",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "History" }),
                   sessionHistory.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center", children: sessionHistory.length })
                 ]
@@ -28422,7 +30202,7 @@ const SetupWizardPage = () => {
         ] });
       case "select_media":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$m, { className: "h-12 w-12 text-blue-600 dark:text-blue-400" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-12 w-12 text-blue-600 dark:text-blue-400" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white mb-4", children: "Select Media Library" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-600 dark:text-gray-300 mb-6", children: "Choose the folder on your computer that contains your karaoke video files." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", children: [
@@ -28434,7 +30214,7 @@ const SetupWizardPage = () => {
                 onClick: handleSelectDirectory,
                 className: "w-full",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$m, { className: "h-5 w-5 mr-2" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-5 w-5 mr-2" }),
                   "Choose Folder"
                 ]
               }
@@ -28460,7 +30240,7 @@ const SetupWizardPage = () => {
         ] });
       case "scan_media":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-12 w-12 text-blue-600 dark:text-blue-400 animate-pulse" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 text-blue-600 dark:text-blue-400 animate-pulse" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white mb-4", children: "Scanning Library" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-600 dark:text-gray-300 mb-6", children: "Please wait while we scan your media files..." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-200 dark:bg-dark-700 rounded-full h-4 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -28487,7 +30267,7 @@ const SetupWizardPage = () => {
         ] });
       case "complete":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-100 dark:bg-green-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-12 w-12 text-green-600 dark:text-green-400" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-100 dark:bg-green-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-12 w-12 text-green-600 dark:text-green-400" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white mb-4", children: "Setup Complete!" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-600 dark:text-gray-300 mb-8", children: mediaDirectory ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             "We found ",
@@ -28584,1719 +30364,15 @@ const OnlineSessionConnectPage = () => {
 };
 const OnlineSessionConnectedPage = () => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-screen w-screen bg-gray-900 text-white flex items-center justify-center font-sans", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { size: "sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { className: "bg-gray-800 border border-gray-700 shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 text-center", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-100 dark:bg-green-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-12 w-12 text-green-500" }) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-100 dark:bg-green-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-12 w-12 text-green-500" }) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white mb-4", children: "Successfully Connected" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 mb-8", children: "This app is now connected to your online session. You can now manage your show from the web admin interface." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-gray-900 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center space-x-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-5 w-5 text-blue-400" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-5 w-5 text-blue-400" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-blue-300", children: "kj.nomadkaraoke.com/admin" })
     ] }) })
   ] }) }) }) });
 };
-var LIBVERSION = "2.0.4", UA_MAX_LENGTH = 500, USER_AGENT = "user-agent", EMPTY = "", UNKNOWN = "?", FUNC_TYPE = "function", UNDEF_TYPE = "undefined", OBJ_TYPE = "object", STR_TYPE = "string", UA_BROWSER = "browser", UA_CPU = "cpu", UA_DEVICE = "device", UA_ENGINE = "engine", UA_OS = "os", UA_RESULT = "result", NAME = "name", TYPE = "type", VENDOR = "vendor", VERSION = "version", ARCHITECTURE = "architecture", MAJOR = "major", MODEL = "model", CONSOLE = "console", MOBILE = "mobile", TABLET = "tablet", SMARTTV = "smarttv", WEARABLE = "wearable", XR = "xr", EMBEDDED = "embedded", INAPP = "inapp", BRANDS = "brands", FORMFACTORS = "formFactors", FULLVERLIST = "fullVersionList", PLATFORM = "platform", PLATFORMVER = "platformVersion", BITNESS = "bitness", CH_HEADER = "sec-ch-ua", CH_HEADER_FULL_VER_LIST = CH_HEADER + "-full-version-list", CH_HEADER_ARCH = CH_HEADER + "-arch", CH_HEADER_BITNESS = CH_HEADER + "-" + BITNESS, CH_HEADER_FORM_FACTORS = CH_HEADER + "-form-factors", CH_HEADER_MOBILE = CH_HEADER + "-" + MOBILE, CH_HEADER_MODEL = CH_HEADER + "-" + MODEL, CH_HEADER_PLATFORM = CH_HEADER + "-" + PLATFORM, CH_HEADER_PLATFORM_VER = CH_HEADER_PLATFORM + "-version", CH_ALL_VALUES = [BRANDS, FULLVERLIST, MOBILE, MODEL, PLATFORM, PLATFORMVER, ARCHITECTURE, FORMFACTORS, BITNESS], AMAZON = "Amazon", APPLE = "Apple", ASUS = "ASUS", BLACKBERRY = "BlackBerry", GOOGLE = "Google", HUAWEI = "Huawei", LENOVO = "Lenovo", HONOR = "Honor", LG = "LG", MICROSOFT = "Microsoft", MOTOROLA = "Motorola", NVIDIA = "Nvidia", ONEPLUS = "OnePlus", OPPO = "OPPO", SAMSUNG = "Samsung", SHARP = "Sharp", SONY = "Sony", XIAOMI = "Xiaomi", ZEBRA = "Zebra", CHROME = "Chrome", CHROMIUM = "Chromium", CHROMECAST = "Chromecast", EDGE = "Edge", FIREFOX = "Firefox", OPERA = "Opera", FACEBOOK = "Facebook", SOGOU = "Sogou", PREFIX_MOBILE = "Mobile ", SUFFIX_BROWSER = " Browser", WINDOWS = "Windows";
-var isWindow = typeof window !== UNDEF_TYPE, NAVIGATOR = isWindow && window.navigator ? window.navigator : void 0, NAVIGATOR_UADATA = NAVIGATOR && NAVIGATOR.userAgentData ? NAVIGATOR.userAgentData : void 0;
-var extend = function(defaultRgx, extensions) {
-  var mergedRgx = {};
-  var extraRgx = extensions;
-  if (!isExtensions(extensions)) {
-    extraRgx = {};
-    for (var i in extensions) {
-      for (var j in extensions[i]) {
-        extraRgx[j] = extensions[i][j].concat(extraRgx[j] ? extraRgx[j] : []);
-      }
-    }
-  }
-  for (var k in defaultRgx) {
-    mergedRgx[k] = extraRgx[k] && extraRgx[k].length % 2 === 0 ? extraRgx[k].concat(defaultRgx[k]) : defaultRgx[k];
-  }
-  return mergedRgx;
-}, enumerize = function(arr) {
-  var enums = {};
-  for (var i = 0; i < arr.length; i++) {
-    enums[arr[i].toUpperCase()] = arr[i];
-  }
-  return enums;
-}, has = function(str1, str2) {
-  if (typeof str1 === OBJ_TYPE && str1.length > 0) {
-    for (var i in str1) {
-      if (lowerize(str2) == lowerize(str1[i])) return true;
-    }
-    return false;
-  }
-  return isString(str1) ? lowerize(str2) == lowerize(str1) : false;
-}, isExtensions = function(obj, deep) {
-  for (var prop in obj) {
-    return /^(browser|cpu|device|engine|os)$/.test(prop) || (deep ? isExtensions(obj[prop]) : false);
-  }
-}, isString = function(val) {
-  return typeof val === STR_TYPE;
-}, itemListToArray = function(header) {
-  if (!header) return void 0;
-  var arr = [];
-  var tokens = strip(/\\?\"/g, header).split(",");
-  for (var i = 0; i < tokens.length; i++) {
-    if (tokens[i].indexOf(";") > -1) {
-      var token = trim(tokens[i]).split(";v=");
-      arr[i] = { brand: token[0], version: token[1] };
-    } else {
-      arr[i] = trim(tokens[i]);
-    }
-  }
-  return arr;
-}, lowerize = function(str) {
-  return isString(str) ? str.toLowerCase() : str;
-}, majorize = function(version) {
-  return isString(version) ? strip(/[^\d\.]/g, version).split(".")[0] : void 0;
-}, setProps = function(arr) {
-  for (var i in arr) {
-    var propName = arr[i];
-    if (typeof propName == OBJ_TYPE && propName.length == 2) {
-      this[propName[0]] = propName[1];
-    } else {
-      this[propName] = void 0;
-    }
-  }
-  return this;
-}, strip = function(pattern, str) {
-  return isString(str) ? str.replace(pattern, EMPTY) : str;
-}, stripQuotes = function(str) {
-  return strip(/\\?\"/g, str);
-}, trim = function(str, len) {
-  if (isString(str)) {
-    str = strip(/^\s\s*/, str);
-    return typeof len === UNDEF_TYPE ? str : str.substring(0, UA_MAX_LENGTH);
-  }
-};
-var rgxMapper = function(ua, arrays) {
-  if (!ua || !arrays) return;
-  var i = 0, j, k, p, q, matches, match;
-  while (i < arrays.length && !matches) {
-    var regex = arrays[i], props = arrays[i + 1];
-    j = k = 0;
-    while (j < regex.length && !matches) {
-      if (!regex[j]) {
-        break;
-      }
-      matches = regex[j++].exec(ua);
-      if (!!matches) {
-        for (p = 0; p < props.length; p++) {
-          match = matches[++k];
-          q = props[p];
-          if (typeof q === OBJ_TYPE && q.length > 0) {
-            if (q.length === 2) {
-              if (typeof q[1] == FUNC_TYPE) {
-                this[q[0]] = q[1].call(this, match);
-              } else {
-                this[q[0]] = q[1];
-              }
-            } else if (q.length >= 3) {
-              if (typeof q[1] === FUNC_TYPE && !(q[1].exec && q[1].test)) {
-                if (q.length > 3) {
-                  this[q[0]] = match ? q[1].apply(this, q.slice(2)) : void 0;
-                } else {
-                  this[q[0]] = match ? q[1].call(this, match, q[2]) : void 0;
-                }
-              } else {
-                if (q.length == 3) {
-                  this[q[0]] = match ? match.replace(q[1], q[2]) : void 0;
-                } else if (q.length == 4) {
-                  this[q[0]] = match ? q[3].call(this, match.replace(q[1], q[2])) : void 0;
-                } else if (q.length > 4) {
-                  this[q[0]] = match ? q[3].apply(this, [match.replace(q[1], q[2])].concat(q.slice(4))) : void 0;
-                }
-              }
-            }
-          } else {
-            this[q] = match ? match : void 0;
-          }
-        }
-      }
-    }
-    i += 2;
-  }
-}, strMapper = function(str, map) {
-  for (var i in map) {
-    if (typeof map[i] === OBJ_TYPE && map[i].length > 0) {
-      for (var j = 0; j < map[i].length; j++) {
-        if (has(map[i][j], str)) {
-          return i === UNKNOWN ? void 0 : i;
-        }
-      }
-    } else if (has(map[i], str)) {
-      return i === UNKNOWN ? void 0 : i;
-    }
-  }
-  return map.hasOwnProperty("*") ? map["*"] : str;
-};
-var windowsVersionMap = {
-  "ME": "4.90",
-  "NT 3.51": "3.51",
-  "NT 4.0": "4.0",
-  "2000": ["5.0", "5.01"],
-  "XP": ["5.1", "5.2"],
-  "Vista": "6.0",
-  "7": "6.1",
-  "8": "6.2",
-  "8.1": "6.3",
-  "10": ["6.4", "10.0"],
-  "NT": ""
-}, formFactorsMap = {
-  "embedded": "Automotive",
-  "mobile": "Mobile",
-  "tablet": ["Tablet", "EInk"],
-  "smarttv": "TV",
-  "wearable": "Watch",
-  "xr": ["VR", "XR"],
-  "?": ["Desktop", "Unknown"],
-  "*": void 0
-}, browserHintsMap = {
-  "Chrome": "Google Chrome",
-  "Edge": "Microsoft Edge",
-  "Edge WebView2": "Microsoft Edge WebView2",
-  "Chrome WebView": "Android WebView",
-  "Chrome Headless": "HeadlessChrome",
-  "Huawei Browser": "HuaweiBrowser",
-  "MIUI Browser": "Miui Browser",
-  "Opera Mobi": "OperaMobile",
-  "Yandex": "YaBrowser"
-};
-var defaultRegexes = {
-  browser: [
-    [
-      // Most common regardless engine
-      /\b(?:crmo|crios)\/([\w\.]+)/i
-      // Chrome for Android/iOS
-    ],
-    [VERSION, [NAME, PREFIX_MOBILE + "Chrome"]],
-    [
-      /webview.+edge\/([\w\.]+)/i
-      // Microsoft Edge
-    ],
-    [VERSION, [NAME, EDGE + " WebView"]],
-    [
-      /edg(?:e|ios|a)?\/([\w\.]+)/i
-    ],
-    [VERSION, [NAME, "Edge"]],
-    [
-      // Presto based
-      /(opera mini)\/([-\w\.]+)/i,
-      // Opera Mini
-      /(opera [mobiletab]{3,6})\b.+version\/([-\w\.]+)/i,
-      // Opera Mobi/Tablet
-      /(opera)(?:.+version\/|[\/ ]+)([\w\.]+)/i
-      // Opera
-    ],
-    [NAME, VERSION],
-    [
-      /opios[\/ ]+([\w\.]+)/i
-      // Opera mini on iphone >= 8.0
-    ],
-    [VERSION, [NAME, OPERA + " Mini"]],
-    [
-      /\bop(?:rg)?x\/([\w\.]+)/i
-      // Opera GX
-    ],
-    [VERSION, [NAME, OPERA + " GX"]],
-    [
-      /\bopr\/([\w\.]+)/i
-      // Opera Webkit
-    ],
-    [VERSION, [NAME, OPERA]],
-    [
-      // Mixed
-      /\bb[ai]*d(?:uhd|[ub]*[aekoprswx]{5,6})[\/ ]?([\w\.]+)/i
-      // Baidu
-    ],
-    [VERSION, [NAME, "Baidu"]],
-    [
-      /\b(?:mxbrowser|mxios|myie2)\/?([-\w\.]*)\b/i
-      // Maxthon
-    ],
-    [VERSION, [NAME, "Maxthon"]],
-    [
-      /(kindle)\/([\w\.]+)/i,
-      // Kindle
-      /(lunascape|maxthon|netfront|jasmine|blazer|sleipnir)[\/ ]?([\w\.]*)/i,
-      // Lunascape/Maxthon/Netfront/Jasmine/Blazer/Sleipnir
-      // Trident based
-      /(avant|iemobile|slim(?:browser|boat|jet))[\/ ]?([\d\.]*)/i,
-      // Avant/IEMobile/SlimBrowser/SlimBoat/Slimjet
-      /(?:ms|\()(ie) ([\w\.]+)/i,
-      // Internet Explorer
-      // Blink/Webkit/KHTML based                                         // Flock/RockMelt/Midori/Epiphany/Silk/Skyfire/Bolt/Iron/Iridium/PhantomJS/Bowser/QupZilla/Falkon/LG Browser/Otter/qutebrowser/Dooble
-      /(flock|rockmelt|midori|epiphany|silk|skyfire|ovibrowser|bolt|iron|vivaldi|iridium|phantomjs|bowser|qupzilla|falkon|rekonq|puffin|brave|whale(?!.+naver)|qqbrowserlite|duckduckgo|klar|helio|(?=comodo_)?dragon|otter|dooble|(?:lg |qute)browser)\/([-\w\.]+)/i,
-      // Rekonq/Puffin/Brave/Whale/QQBrowserLite/QQ//Vivaldi/DuckDuckGo/Klar/Helio/Dragon
-      /(heytap|ovi|115|surf)browser\/([\d\.]+)/i,
-      // HeyTap/Ovi/115/Surf
-      /(ecosia|weibo)(?:__| \w+@)([\d\.]+)/i
-      // Ecosia/Weibo
-    ],
-    [NAME, VERSION],
-    [
-      /quark(?:pc)?\/([-\w\.]+)/i
-      // Quark
-    ],
-    [VERSION, [NAME, "Quark"]],
-    [
-      /\bddg\/([\w\.]+)/i
-      // DuckDuckGo
-    ],
-    [VERSION, [NAME, "DuckDuckGo"]],
-    [
-      /(?:\buc? ?browser|(?:juc.+)ucweb)[\/ ]?([\w\.]+)/i
-      // UCBrowser
-    ],
-    [VERSION, [NAME, "UCBrowser"]],
-    [
-      /microm.+\bqbcore\/([\w\.]+)/i,
-      // WeChat Desktop for Windows Built-in Browser
-      /\bqbcore\/([\w\.]+).+microm/i,
-      /micromessenger\/([\w\.]+)/i
-      // WeChat
-    ],
-    [VERSION, [NAME, "WeChat"]],
-    [
-      /konqueror\/([\w\.]+)/i
-      // Konqueror
-    ],
-    [VERSION, [NAME, "Konqueror"]],
-    [
-      /trident.+rv[: ]([\w\.]{1,9})\b.+like gecko/i
-      // IE11
-    ],
-    [VERSION, [NAME, "IE"]],
-    [
-      /ya(?:search)?browser\/([\w\.]+)/i
-      // Yandex
-    ],
-    [VERSION, [NAME, "Yandex"]],
-    [
-      /slbrowser\/([\w\.]+)/i
-      // Smart Lenovo Browser
-    ],
-    [VERSION, [NAME, "Smart " + LENOVO + SUFFIX_BROWSER]],
-    [
-      /(avast|avg)\/([\w\.]+)/i
-      // Avast/AVG Secure Browser
-    ],
-    [[NAME, /(.+)/, "$1 Secure" + SUFFIX_BROWSER], VERSION],
-    [
-      /\bfocus\/([\w\.]+)/i
-      // Firefox Focus
-    ],
-    [VERSION, [NAME, FIREFOX + " Focus"]],
-    [
-      /\bopt\/([\w\.]+)/i
-      // Opera Touch
-    ],
-    [VERSION, [NAME, OPERA + " Touch"]],
-    [
-      /coc_coc\w+\/([\w\.]+)/i
-      // Coc Coc Browser
-    ],
-    [VERSION, [NAME, "Coc Coc"]],
-    [
-      /dolfin\/([\w\.]+)/i
-      // Dolphin
-    ],
-    [VERSION, [NAME, "Dolphin"]],
-    [
-      /coast\/([\w\.]+)/i
-      // Opera Coast
-    ],
-    [VERSION, [NAME, OPERA + " Coast"]],
-    [
-      /miuibrowser\/([\w\.]+)/i
-      // MIUI Browser
-    ],
-    [VERSION, [NAME, "MIUI" + SUFFIX_BROWSER]],
-    [
-      /fxios\/([\w\.-]+)/i
-      // Firefox for iOS
-    ],
-    [VERSION, [NAME, PREFIX_MOBILE + FIREFOX]],
-    [
-      /\bqihoobrowser\/?([\w\.]*)/i
-      // 360
-    ],
-    [VERSION, [NAME, "360"]],
-    [
-      /\b(qq)\/([\w\.]+)/i
-      // QQ
-    ],
-    [[NAME, /(.+)/, "$1Browser"], VERSION],
-    [
-      /(oculus|sailfish|huawei|vivo|pico)browser\/([\w\.]+)/i
-    ],
-    [[NAME, /(.+)/, "$1" + SUFFIX_BROWSER], VERSION],
-    [
-      // Oculus/Sailfish/HuaweiBrowser/VivoBrowser/PicoBrowser
-      /samsungbrowser\/([\w\.]+)/i
-      // Samsung Internet
-    ],
-    [VERSION, [NAME, SAMSUNG + " Internet"]],
-    [
-      /metasr[\/ ]?([\d\.]+)/i
-      // Sogou Explorer
-    ],
-    [VERSION, [NAME, SOGOU + " Explorer"]],
-    [
-      /(sogou)mo\w+\/([\d\.]+)/i
-      // Sogou Mobile
-    ],
-    [[NAME, SOGOU + " Mobile"], VERSION],
-    [
-      /(electron)\/([\w\.]+) safari/i,
-      // Electron-based App
-      /(tesla)(?: qtcarbrowser|\/(20\d\d\.[-\w\.]+))/i,
-      // Tesla
-      /m?(qqbrowser|2345(?=browser|chrome|explorer))\w*[\/ ]?v?([\w\.]+)/i
-      // QQ/2345
-    ],
-    [NAME, VERSION],
-    [
-      /(lbbrowser|rekonq)/i
-      // LieBao Browser/Rekonq
-    ],
-    [NAME],
-    [
-      /ome\/([\w\.]+) \w* ?(iron) saf/i,
-      // Iron
-      /ome\/([\w\.]+).+qihu (360)[es]e/i
-      // 360
-    ],
-    [VERSION, NAME],
-    [
-      // WebView
-      /((?:fban\/fbios|fb_iab\/fb4a)(?!.+fbav)|;fbav\/([\w\.]+);)/i
-      // Facebook App for iOS & Android
-    ],
-    [[NAME, FACEBOOK], VERSION, [TYPE, INAPP]],
-    [
-      /(kakao(?:talk|story))[\/ ]([\w\.]+)/i,
-      // Kakao App
-      /(naver)\(.*?(\d+\.[\w\.]+).*\)/i,
-      // Naver InApp
-      /(daum)apps[\/ ]([\w\.]+)/i,
-      // Daum App
-      /safari (line)\/([\w\.]+)/i,
-      // Line App for iOS
-      /\b(line)\/([\w\.]+)\/iab/i,
-      // Line App for Android
-      /(alipay)client\/([\w\.]+)/i,
-      // Alipay
-      /(twitter)(?:and| f.+e\/([\w\.]+))/i,
-      // Twitter
-      /(instagram|snapchat|klarna)[\/ ]([-\w\.]+)/i
-      // Instagram/Snapchat/Klarna
-    ],
-    [NAME, VERSION, [TYPE, INAPP]],
-    [
-      /\bgsa\/([\w\.]+) .*safari\//i
-      // Google Search Appliance on iOS
-    ],
-    [VERSION, [NAME, "GSA"], [TYPE, INAPP]],
-    [
-      /musical_ly(?:.+app_?version\/|_)([\w\.]+)/i
-      // TikTok
-    ],
-    [VERSION, [NAME, "TikTok"], [TYPE, INAPP]],
-    [
-      /\[(linkedin)app\]/i
-      // LinkedIn App for iOS & Android
-    ],
-    [NAME, [TYPE, INAPP]],
-    [
-      /(chromium)[\/ ]([-\w\.]+)/i
-      // Chromium
-    ],
-    [NAME, VERSION],
-    [
-      /headlesschrome(?:\/([\w\.]+)| )/i
-      // Chrome Headless
-    ],
-    [VERSION, [NAME, CHROME + " Headless"]],
-    [
-      /wv\).+chrome\/([\w\.]+).+edgw\//i
-      // Edge WebView2
-    ],
-    [VERSION, [NAME, EDGE + " WebView2"]],
-    [
-      / wv\).+(chrome)\/([\w\.]+)/i
-      // Chrome WebView
-    ],
-    [[NAME, CHROME + " WebView"], VERSION],
-    [
-      /droid.+ version\/([\w\.]+)\b.+(?:mobile safari|safari)/i
-      // Android Browser
-    ],
-    [VERSION, [NAME, "Android" + SUFFIX_BROWSER]],
-    [
-      /chrome\/([\w\.]+) mobile/i
-      // Chrome Mobile
-    ],
-    [VERSION, [NAME, PREFIX_MOBILE + "Chrome"]],
-    [
-      /(chrome|omniweb|arora|[tizenoka]{5} ?browser)\/v?([\w\.]+)/i
-      // Chrome/OmniWeb/Arora/Tizen/Nokia
-    ],
-    [NAME, VERSION],
-    [
-      /version\/([\w\.\,]+) .*mobile(?:\/\w+ | ?)safari/i
-      // Safari Mobile
-    ],
-    [VERSION, [NAME, PREFIX_MOBILE + "Safari"]],
-    [
-      /iphone .*mobile(?:\/\w+ | ?)safari/i
-    ],
-    [[NAME, PREFIX_MOBILE + "Safari"]],
-    [
-      /version\/([\w\.\,]+) .*(safari)/i
-      // Safari
-    ],
-    [VERSION, NAME],
-    [
-      /webkit.+?(mobile ?safari|safari)(\/[\w\.]+)/i
-      // Safari < 3.0
-    ],
-    [NAME, [VERSION, "1"]],
-    [
-      /(webkit|khtml)\/([\w\.]+)/i
-    ],
-    [NAME, VERSION],
-    [
-      // Gecko based
-      /(?:mobile|tablet);.*(firefox)\/([\w\.-]+)/i
-      // Firefox Mobile
-    ],
-    [[NAME, PREFIX_MOBILE + FIREFOX], VERSION],
-    [
-      /(navigator|netscape\d?)\/([-\w\.]+)/i
-      // Netscape
-    ],
-    [[NAME, "Netscape"], VERSION],
-    [
-      /(wolvic|librewolf)\/([\w\.]+)/i
-      // Wolvic/LibreWolf
-    ],
-    [NAME, VERSION],
-    [
-      /mobile vr; rv:([\w\.]+)\).+firefox/i
-      // Firefox Reality
-    ],
-    [VERSION, [NAME, FIREFOX + " Reality"]],
-    [
-      /ekiohf.+(flow)\/([\w\.]+)/i,
-      // Flow
-      /(swiftfox)/i,
-      // Swiftfox
-      /(icedragon|iceweasel|camino|chimera|fennec|maemo browser|minimo|conkeror)[\/ ]?([\w\.\+]+)/i,
-      // IceDragon/Iceweasel/Camino/Chimera/Fennec/Maemo/Minimo/Conkeror
-      /(seamonkey|k-meleon|icecat|iceape|firebird|phoenix|palemoon|basilisk|waterfox)\/([-\w\.]+)$/i,
-      // Firefox/SeaMonkey/K-Meleon/IceCat/IceApe/Firebird/Phoenix
-      /(firefox)\/([\w\.]+)/i,
-      // Other Firefox-based
-      /(mozilla)\/([\w\.]+) .+rv\:.+gecko\/\d+/i,
-      // Mozilla
-      // Other
-      /(amaya|dillo|doris|icab|ladybird|lynx|mosaic|netsurf|obigo|polaris|w3m|(?:go|ice|up)[\. ]?browser)[-\/ ]?v?([\w\.]+)/i,
-      // Polaris/Lynx/Dillo/iCab/Doris/Amaya/w3m/NetSurf/Obigo/Mosaic/Go/ICE/UP.Browser/Ladybird
-      /\b(links) \(([\w\.]+)/i
-      // Links
-    ],
-    [NAME, [VERSION, /_/g, "."]],
-    [
-      /(cobalt)\/([\w\.]+)/i
-      // Cobalt
-    ],
-    [NAME, [VERSION, /[^\d\.]+./, EMPTY]]
-  ],
-  cpu: [
-    [
-      /\b((amd|x|x86[-_]?|wow|win)64)\b/i
-      // AMD64 (x64)
-    ],
-    [[ARCHITECTURE, "amd64"]],
-    [
-      /(ia32(?=;))/i,
-      // IA32 (quicktime)
-      /\b((i[346]|x)86)(pc)?\b/i
-      // IA32 (x86)
-    ],
-    [[ARCHITECTURE, "ia32"]],
-    [
-      /\b(aarch64|arm(v?[89]e?l?|_?64))\b/i
-      // ARM64
-    ],
-    [[ARCHITECTURE, "arm64"]],
-    [
-      /\b(arm(v[67])?ht?n?[fl]p?)\b/i
-      // ARMHF
-    ],
-    [[ARCHITECTURE, "armhf"]],
-    [
-      // PocketPC mistakenly identified as PowerPC
-      /( (ce|mobile); ppc;|\/[\w\.]+arm\b)/i
-    ],
-    [[ARCHITECTURE, "arm"]],
-    [
-      /((ppc|powerpc)(64)?)( mac|;|\))/i
-      // PowerPC
-    ],
-    [[ARCHITECTURE, /ower/, EMPTY, lowerize]],
-    [
-      / sun4\w[;\)]/i
-      // SPARC
-    ],
-    [[ARCHITECTURE, "sparc"]],
-    [
-      /\b(avr32|ia64(?=;)|68k(?=\))|\barm(?=v([1-7]|[5-7]1)l?|;|eabi)|(irix|mips|sparc)(64)?\b|pa-risc)/i
-      // IA64, 68K, ARM/64, AVR/32, IRIX/64, MIPS/64, SPARC/64, PA-RISC
-    ],
-    [[ARCHITECTURE, lowerize]]
-  ],
-  device: [
-    [
-      //////////////////////////
-      // MOBILES & TABLETS
-      /////////////////////////
-      // Samsung
-      /\b(sch-i[89]0\d|shw-m380s|sm-[ptx]\w{2,4}|gt-[pn]\d{2,4}|sgh-t8[56]9|nexus 10)/i
-    ],
-    [MODEL, [VENDOR, SAMSUNG], [TYPE, TABLET]],
-    [
-      /\b((?:s[cgp]h|gt|sm)-(?![lr])\w+|sc[g-]?[\d]+a?|galaxy nexus)/i,
-      /samsung[- ]((?!sm-[lr]|browser)[-\w]+)/i,
-      /sec-(sgh\w+)/i
-    ],
-    [MODEL, [VENDOR, SAMSUNG], [TYPE, MOBILE]],
-    [
-      // Apple
-      /(?:\/|\()(ip(?:hone|od)[\w, ]*)(?:\/|;)/i
-      // iPod/iPhone
-    ],
-    [MODEL, [VENDOR, APPLE], [TYPE, MOBILE]],
-    [
-      /\((ipad);[-\w\),; ]+apple/i,
-      // iPad
-      /applecoremedia\/[\w\.]+ \((ipad)/i,
-      /\b(ipad)\d\d?,\d\d?[;\]].+ios/i
-    ],
-    [MODEL, [VENDOR, APPLE], [TYPE, TABLET]],
-    [
-      /(macintosh);/i
-    ],
-    [MODEL, [VENDOR, APPLE]],
-    [
-      // Sharp
-      /\b(sh-?[altvz]?\d\d[a-ekm]?)/i
-    ],
-    [MODEL, [VENDOR, SHARP], [TYPE, MOBILE]],
-    [
-      // Honor
-      /\b((?:brt|eln|hey2?|gdi|jdn)-a?[lnw]09|(?:ag[rm]3?|jdn2|kob2)-a?[lw]0[09]hn)(?: bui|\)|;)/i
-    ],
-    [MODEL, [VENDOR, HONOR], [TYPE, TABLET]],
-    [
-      /honor([-\w ]+)[;\)]/i
-    ],
-    [MODEL, [VENDOR, HONOR], [TYPE, MOBILE]],
-    [
-      // Huawei
-      /\b((?:ag[rs][2356]?k?|bah[234]?|bg[2o]|bt[kv]|cmr|cpn|db[ry]2?|jdn2|got|kob2?k?|mon|pce|scm|sht?|[tw]gr|vrd)-[ad]?[lw][0125][09]b?|605hw|bg2-u03|(?:gem|fdr|m2|ple|t1)-[7a]0[1-4][lu]|t1-a2[13][lw]|mediapad[\w\. ]*(?= bui|\)))\b(?!.+d\/s)/i
-    ],
-    [MODEL, [VENDOR, HUAWEI], [TYPE, TABLET]],
-    [
-      /(?:huawei)([-\w ]+)[;\)]/i,
-      /\b(nexus 6p|\w{2,4}e?-[atu]?[ln][\dx][012359c][adn]?)\b(?!.+d\/s)/i
-    ],
-    [MODEL, [VENDOR, HUAWEI], [TYPE, MOBILE]],
-    [
-      // Xiaomi
-      /oid[^\)]+; (2[\dbc]{4}(182|283|rp\w{2})[cgl]|m2105k81a?c)(?: bui|\))/i,
-      /\b((?:red)?mi[-_ ]?pad[\w- ]*)(?: bui|\))/i
-      // Mi Pad tablets
-    ],
-    [[MODEL, /_/g, " "], [VENDOR, XIAOMI], [TYPE, TABLET]],
-    [
-      /\b(poco[\w ]+|m2\d{3}j\d\d[a-z]{2})(?: bui|\))/i,
-      // Xiaomi POCO
-      /\b; (\w+) build\/hm\1/i,
-      // Xiaomi Hongmi 'numeric' models
-      /\b(hm[-_ ]?note?[_ ]?(?:\d\w)?) bui/i,
-      // Xiaomi Hongmi
-      /\b(redmi[\-_ ]?(?:note|k)?[\w_ ]+)(?: bui|\))/i,
-      // Xiaomi Redmi
-      /oid[^\)]+; (m?[12][0-389][01]\w{3,6}[c-y])( bui|; wv|\))/i,
-      // Xiaomi Redmi 'numeric' models
-      /\b(mi[-_ ]?(?:a\d|one|one[_ ]plus|note lte|max|cc)?[_ ]?(?:\d?\w?)[_ ]?(?:plus|se|lite|pro)?)(?: bui|\))/i,
-      // Xiaomi Mi
-      / ([\w ]+) miui\/v?\d/i
-    ],
-    [[MODEL, /_/g, " "], [VENDOR, XIAOMI], [TYPE, MOBILE]],
-    [
-      // OnePlus
-      /droid.+; (cph2[3-6]\d[13579]|((gm|hd)19|(ac|be|in|kb)20|(d[en]|eb|le|mt)21|ne22)[0-2]\d|p[g-k]\w[1m]10)\b/i,
-      /(?:one)?(?:plus)? (a\d0\d\d)(?: b|\))/i
-    ],
-    [MODEL, [VENDOR, ONEPLUS], [TYPE, MOBILE]],
-    [
-      // OPPO
-      /; (\w+) bui.+ oppo/i,
-      /\b(cph[12]\d{3}|p(?:af|c[al]|d\w|e[ar])[mt]\d0|x9007|a101op)\b/i
-    ],
-    [MODEL, [VENDOR, OPPO], [TYPE, MOBILE]],
-    [
-      /\b(opd2(\d{3}a?))(?: bui|\))/i
-    ],
-    [MODEL, [VENDOR, strMapper, { "OnePlus": ["203", "304", "403", "404", "413", "415"], "*": OPPO }], [TYPE, TABLET]],
-    [
-      // BLU
-      /(vivo (5r?|6|8l?|go|one|s|x[il]?[2-4]?)[\w\+ ]*)(?: bui|\))/i
-      // Vivo series
-    ],
-    [MODEL, [VENDOR, "BLU"], [TYPE, MOBILE]],
-    [
-      // Vivo
-      /; vivo (\w+)(?: bui|\))/i,
-      /\b(v[12]\d{3}\w?[at])(?: bui|;)/i
-    ],
-    [MODEL, [VENDOR, "Vivo"], [TYPE, MOBILE]],
-    [
-      // Realme
-      /\b(rmx[1-3]\d{3})(?: bui|;|\))/i
-    ],
-    [MODEL, [VENDOR, "Realme"], [TYPE, MOBILE]],
-    [
-      // Lenovo
-      /(ideatab[-\w ]+|602lv|d-42a|a101lv|a2109a|a3500-hv|s[56]000|pb-6505[my]|tb-?x?\d{3,4}(?:f[cu]|xu|[av])|yt\d?-[jx]?\d+[lfmx])( bui|;|\)|\/)/i,
-      /lenovo ?(b[68]0[08]0-?[hf]?|tab(?:[\w- ]+?)|tb[\w-]{6,7})( bui|;|\)|\/)/i
-    ],
-    [MODEL, [VENDOR, LENOVO], [TYPE, TABLET]],
-    [
-      /lenovo[-_ ]?([-\w ]+?)(?: bui|\)|\/)/i
-    ],
-    [MODEL, [VENDOR, LENOVO], [TYPE, MOBILE]],
-    [
-      // Motorola
-      /\b(milestone|droid(?:[2-4x]| (?:bionic|x2|pro|razr))?:?( 4g)?)\b[\w ]+build\//i,
-      /\bmot(?:orola)?[- ]([\w\s]+)(\)| bui)/i,
-      /((?:moto(?! 360)[-\w\(\) ]+|xt\d{3,4}[cgkosw\+]?[-\d]*|nexus 6)(?= bui|\)))/i
-    ],
-    [MODEL, [VENDOR, MOTOROLA], [TYPE, MOBILE]],
-    [
-      /\b(mz60\d|xoom[2 ]{0,2}) build\//i
-    ],
-    [MODEL, [VENDOR, MOTOROLA], [TYPE, TABLET]],
-    [
-      // LG
-      /((?=lg)?[vl]k\-?\d{3}) bui| 3\.[-\w; ]{10}lg?-([06cv9]{3,4})/i
-    ],
-    [MODEL, [VENDOR, LG], [TYPE, TABLET]],
-    [
-      /(lm(?:-?f100[nv]?|-[\w\.]+)(?= bui|\))|nexus [45])/i,
-      /\blg[-e;\/ ]+(?!.*(?:browser|netcast|android tv|watch|webos))(\w+)/i,
-      /\blg-?([\d\w]+) bui/i
-    ],
-    [MODEL, [VENDOR, LG], [TYPE, MOBILE]],
-    [
-      // Nokia
-      /(nokia) (t[12][01])/i
-    ],
-    [VENDOR, MODEL, [TYPE, TABLET]],
-    [
-      /(?:maemo|nokia).*(n900|lumia \d+|rm-\d+)/i,
-      /nokia[-_ ]?(([-\w\. ]*))/i
-    ],
-    [[MODEL, /_/g, " "], [TYPE, MOBILE], [VENDOR, "Nokia"]],
-    [
-      // Google
-      /(pixel (c|tablet))\b/i
-      // Google Pixel C/Tablet
-    ],
-    [MODEL, [VENDOR, GOOGLE], [TYPE, TABLET]],
-    [
-      // Google Pixel
-      /droid.+;(?: google)? (g(01[13]a|020[aem]|025[jn]|1b60|1f8f|2ybb|4s1m|576d|5nz6|8hhn|8vou|a02099|c15s|d1yq|e2ae|ec77|gh2x|kv4x|p4bc|pj41|r83y|tt9q|ur25|wvk6)|pixel[\d ]*a?( pro)?( xl)?( fold)?( \(5g\))?)( bui|\))/i
-    ],
-    [MODEL, [VENDOR, GOOGLE], [TYPE, MOBILE]],
-    [
-      /(google) (pixelbook( go)?)/i
-    ],
-    [VENDOR, MODEL],
-    [
-      // Sony
-      /droid.+; (a?\d[0-2]{2}so|[c-g]\d{4}|so[-gl]\w+|xq-\w\w\d\d)(?= bui|\).+chrome\/(?![1-6]{0,1}\d\.))/i
-    ],
-    [MODEL, [VENDOR, SONY], [TYPE, MOBILE]],
-    [
-      /sony tablet [ps]/i,
-      /\b(?:sony)?sgp\w+(?: bui|\))/i
-    ],
-    [[MODEL, "Xperia Tablet"], [VENDOR, SONY], [TYPE, TABLET]],
-    [
-      // Amazon
-      /(alexa)webm/i,
-      /(kf[a-z]{2}wi|aeo(?!bc)\w\w)( bui|\))/i,
-      // Kindle Fire without Silk / Echo Show
-      /(kf[a-z]+)( bui|\)).+silk\//i
-      // Kindle Fire HD
-    ],
-    [MODEL, [VENDOR, AMAZON], [TYPE, TABLET]],
-    [
-      /((?:sd|kf)[0349hijorstuw]+)( bui|\)).+silk\//i
-      // Fire Phone
-    ],
-    [[MODEL, /(.+)/g, "Fire Phone $1"], [VENDOR, AMAZON], [TYPE, MOBILE]],
-    [
-      // BlackBerry
-      /(playbook);[-\w\),; ]+(rim)/i
-      // BlackBerry PlayBook
-    ],
-    [MODEL, VENDOR, [TYPE, TABLET]],
-    [
-      /\b((?:bb[a-f]|st[hv])100-\d)/i,
-      /\(bb10; (\w+)/i
-      // BlackBerry 10
-    ],
-    [MODEL, [VENDOR, BLACKBERRY], [TYPE, MOBILE]],
-    [
-      // Asus
-      /(?:\b|asus_)(transfo[prime ]{4,10} \w+|eeepc|slider \w+|nexus 7|padfone|p00[cj])/i
-    ],
-    [MODEL, [VENDOR, ASUS], [TYPE, TABLET]],
-    [
-      / (z[bes]6[027][012][km][ls]|zenfone \d\w?)\b/i
-    ],
-    [MODEL, [VENDOR, ASUS], [TYPE, MOBILE]],
-    [
-      // HTC
-      /(nexus 9)/i
-      // HTC Nexus 9
-    ],
-    [MODEL, [VENDOR, "HTC"], [TYPE, TABLET]],
-    [
-      /(htc)[-;_ ]{1,2}([\w ]+(?=\)| bui)|\w+)/i,
-      // HTC
-      // ZTE
-      /(zte)[- ]([\w ]+?)(?: bui|\/|\))/i,
-      /(alcatel|geeksphone|nexian|panasonic(?!(?:;|\.))|sony(?!-bra))[-_ ]?([-\w]*)/i
-      // Alcatel/GeeksPhone/Nexian/Panasonic/Sony
-    ],
-    [VENDOR, [MODEL, /_/g, " "], [TYPE, MOBILE]],
-    [
-      // TCL
-      /tcl (xess p17aa)/i,
-      /droid [\w\.]+; ((?:8[14]9[16]|9(?:0(?:48|60|8[01])|1(?:3[27]|66)|2(?:6[69]|9[56])|466))[gqswx])(_\w(\w|\w\w))?(\)| bui)/i
-    ],
-    [MODEL, [VENDOR, "TCL"], [TYPE, TABLET]],
-    [
-      /droid [\w\.]+; (418(?:7d|8v)|5087z|5102l|61(?:02[dh]|25[adfh]|27[ai]|56[dh]|59k|65[ah])|a509dl|t(?:43(?:0w|1[adepqu])|50(?:6d|7[adju])|6(?:09dl|10k|12b|71[efho]|76[hjk])|7(?:66[ahju]|67[hw]|7[045][bh]|71[hk]|73o|76[ho]|79w|81[hks]?|82h|90[bhsy]|99b)|810[hs]))(_\w(\w|\w\w))?(\)| bui)/i
-    ],
-    [MODEL, [VENDOR, "TCL"], [TYPE, MOBILE]],
-    [
-      // itel
-      /(itel) ((\w+))/i
-    ],
-    [[VENDOR, lowerize], MODEL, [TYPE, strMapper, { "tablet": ["p10001l", "w7001"], "*": "mobile" }]],
-    [
-      // Acer
-      /droid.+; ([ab][1-7]-?[0178a]\d\d?)/i
-    ],
-    [MODEL, [VENDOR, "Acer"], [TYPE, TABLET]],
-    [
-      // Meizu
-      /droid.+; (m[1-5] note) bui/i,
-      /\bmz-([-\w]{2,})/i
-    ],
-    [MODEL, [VENDOR, "Meizu"], [TYPE, MOBILE]],
-    [
-      // Ulefone
-      /; ((?:power )?armor(?:[\w ]{0,8}))(?: bui|\))/i
-    ],
-    [MODEL, [VENDOR, "Ulefone"], [TYPE, MOBILE]],
-    [
-      // Energizer
-      /; (energy ?\w+)(?: bui|\))/i,
-      /; energizer ([\w ]+)(?: bui|\))/i
-    ],
-    [MODEL, [VENDOR, "Energizer"], [TYPE, MOBILE]],
-    [
-      // Cat
-      /; cat (b35);/i,
-      /; (b15q?|s22 flip|s48c|s62 pro)(?: bui|\))/i
-    ],
-    [MODEL, [VENDOR, "Cat"], [TYPE, MOBILE]],
-    [
-      // Smartfren
-      /((?:new )?andromax[\w- ]+)(?: bui|\))/i
-    ],
-    [MODEL, [VENDOR, "Smartfren"], [TYPE, MOBILE]],
-    [
-      // Nothing
-      /droid.+; (a(in)?(0(15|59|6[35])|142)p?)/i
-    ],
-    [MODEL, [VENDOR, "Nothing"], [TYPE, MOBILE]],
-    [
-      // Archos
-      /; (x67 5g|tikeasy \w+|ac[1789]\d\w+)( b|\))/i,
-      /archos ?(5|gamepad2?|([\w ]*[t1789]|hello) ?\d+[\w ]*)( b|\))/i
-    ],
-    [MODEL, [VENDOR, "Archos"], [TYPE, TABLET]],
-    [
-      /archos ([\w ]+)( b|\))/i,
-      /; (ac[3-6]\d\w{2,8})( b|\))/i
-    ],
-    [MODEL, [VENDOR, "Archos"], [TYPE, MOBILE]],
-    [
-      // HMD
-      /; (n159v)/i
-    ],
-    [MODEL, [VENDOR, "HMD"], [TYPE, MOBILE]],
-    [
-      // MIXED
-      /(imo) (tab \w+)/i,
-      // IMO
-      /(infinix|tecno) (x1101b?|p904|dp(7c|8d|10a)( pro)?|p70[1-3]a?|p904|t1101)/i
-      // Infinix XPad / Tecno
-    ],
-    [VENDOR, MODEL, [TYPE, TABLET]],
-    [
-      /(blackberry|benq|palm(?=\-)|sonyericsson|acer|asus(?! zenw)|dell|jolla|meizu|motorola|polytron|tecno|micromax|advan)[-_ ]?([-\w]*)/i,
-      // BlackBerry/BenQ/Palm/Sony-Ericsson/Acer/Asus/Dell/Meizu/Motorola/Polytron/Tecno/Micromax/Advan
-      /; (blu|hmd|imo|infinix|lava|oneplus|tcl)[_ ]([\w\+ ]+?)(?: bui|\)|; r)/i,
-      // BLU/HMD/IMO/Infinix/Lava/OnePlus/TCL
-      /(hp) ([\w ]+\w)/i,
-      // HP iPAQ
-      /(microsoft); (lumia[\w ]+)/i,
-      // Microsoft Lumia
-      /(oppo) ?([\w ]+) bui/i
-      // OPPO
-    ],
-    [VENDOR, MODEL, [TYPE, MOBILE]],
-    [
-      /(kobo)\s(ereader|touch)/i,
-      // Kobo
-      /(hp).+(touchpad(?!.+tablet)|tablet)/i,
-      // HP TouchPad
-      /(kindle)\/([\w\.]+)/i
-      // Kindle
-    ],
-    [VENDOR, MODEL, [TYPE, TABLET]],
-    [
-      /(surface duo)/i
-      // Surface Duo
-    ],
-    [MODEL, [VENDOR, MICROSOFT], [TYPE, TABLET]],
-    [
-      /droid [\d\.]+; (fp\du?)(?: b|\))/i
-      // Fairphone
-    ],
-    [MODEL, [VENDOR, "Fairphone"], [TYPE, MOBILE]],
-    [
-      /((?:tegranote|shield t(?!.+d tv))[\w- ]*?)(?: b|\))/i
-      // Nvidia Tablets
-    ],
-    [MODEL, [VENDOR, NVIDIA], [TYPE, TABLET]],
-    [
-      /(sprint) (\w+)/i
-      // Sprint Phones
-    ],
-    [VENDOR, MODEL, [TYPE, MOBILE]],
-    [
-      /(kin\.[onetw]{3})/i
-      // Microsoft Kin
-    ],
-    [[MODEL, /\./g, " "], [VENDOR, MICROSOFT], [TYPE, MOBILE]],
-    [
-      /droid.+; ([c6]+|et5[16]|mc[239][23]x?|vc8[03]x?)\)/i
-      // Zebra
-    ],
-    [MODEL, [VENDOR, ZEBRA], [TYPE, TABLET]],
-    [
-      /droid.+; (ec30|ps20|tc[2-8]\d[kx])\)/i
-    ],
-    [MODEL, [VENDOR, ZEBRA], [TYPE, MOBILE]],
-    [
-      ///////////////////
-      // SMARTTVS
-      ///////////////////
-      /smart-tv.+(samsung)/i
-      // Samsung
-    ],
-    [VENDOR, [TYPE, SMARTTV]],
-    [
-      /hbbtv.+maple;(\d+)/i
-    ],
-    [[MODEL, /^/, "SmartTV"], [VENDOR, SAMSUNG], [TYPE, SMARTTV]],
-    [
-      /(vizio)(?: |.+model\/)(\w+-\w+)/i,
-      // Vizio
-      /tcast.+(lg)e?. ([-\w]+)/i
-      // LG SmartTV
-    ],
-    [VENDOR, MODEL, [TYPE, SMARTTV]],
-    [
-      /(nux; netcast.+smarttv|lg (netcast\.tv-201\d|android tv))/i
-    ],
-    [[VENDOR, LG], [TYPE, SMARTTV]],
-    [
-      /(apple) ?tv/i
-      // Apple TV
-    ],
-    [VENDOR, [MODEL, APPLE + " TV"], [TYPE, SMARTTV]],
-    [
-      /crkey.*devicetype\/chromecast/i
-      // Google Chromecast Third Generation
-    ],
-    [[MODEL, CHROMECAST + " Third Generation"], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
-    [
-      /crkey.*devicetype\/([^/]*)/i
-      // Google Chromecast with specific device type
-    ],
-    [[MODEL, /^/, "Chromecast "], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
-    [
-      /fuchsia.*crkey/i
-      // Google Chromecast Nest Hub
-    ],
-    [[MODEL, CHROMECAST + " Nest Hub"], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
-    [
-      /crkey/i
-      // Google Chromecast, Linux-based or unknown
-    ],
-    [[MODEL, CHROMECAST], [VENDOR, GOOGLE], [TYPE, SMARTTV]],
-    [
-      /(portaltv)/i
-      // Facebook Portal TV
-    ],
-    [MODEL, [VENDOR, FACEBOOK], [TYPE, SMARTTV]],
-    [
-      /droid.+aft(\w+)( bui|\))/i
-      // Fire TV
-    ],
-    [MODEL, [VENDOR, AMAZON], [TYPE, SMARTTV]],
-    [
-      /(shield \w+ tv)/i
-      // Nvidia Shield TV
-    ],
-    [MODEL, [VENDOR, NVIDIA], [TYPE, SMARTTV]],
-    [
-      /\(dtv[\);].+(aquos)/i,
-      /(aquos-tv[\w ]+)\)/i
-      // Sharp
-    ],
-    [MODEL, [VENDOR, SHARP], [TYPE, SMARTTV]],
-    [
-      /(bravia[\w ]+)( bui|\))/i
-      // Sony
-    ],
-    [MODEL, [VENDOR, SONY], [TYPE, SMARTTV]],
-    [
-      /(mi(tv|box)-?\w+) bui/i
-      // Xiaomi
-    ],
-    [MODEL, [VENDOR, XIAOMI], [TYPE, SMARTTV]],
-    [
-      /Hbbtv.*(technisat) (.*);/i
-      // TechniSAT
-    ],
-    [VENDOR, MODEL, [TYPE, SMARTTV]],
-    [
-      /\b(roku)[\dx]*[\)\/]((?:dvp-)?[\d\.]*)/i,
-      // Roku
-      /hbbtv\/\d+\.\d+\.\d+ +\([\w\+ ]*; *([\w\d][^;]*);([^;]*)/i
-      // HbbTV devices
-    ],
-    [[VENDOR, /.+\/(\w+)/, "$1", strMapper, { "LG": "lge" }], [MODEL, trim], [TYPE, SMARTTV]],
-    [
-      // SmartTV from Unidentified Vendors
-      /droid.+; ([\w- ]+) (?:android tv|smart[- ]?tv)/i
-    ],
-    [MODEL, [TYPE, SMARTTV]],
-    [
-      /\b(android tv|smart[- ]?tv|opera tv|tv; rv:|large screen[\w ]+safari)\b/i
-    ],
-    [[TYPE, SMARTTV]],
-    [
-      ///////////////////
-      // CONSOLES
-      ///////////////////
-      /(playstation \w+)/i
-      // Playstation
-    ],
-    [MODEL, [VENDOR, SONY], [TYPE, CONSOLE]],
-    [
-      /\b(xbox(?: one)?(?!; xbox))[\); ]/i
-      // Microsoft Xbox
-    ],
-    [MODEL, [VENDOR, MICROSOFT], [TYPE, CONSOLE]],
-    [
-      /(ouya)/i,
-      // Ouya
-      /(nintendo) (\w+)/i,
-      // Nintendo
-      /(retroid) (pocket ([^\)]+))/i
-      // Retroid Pocket
-    ],
-    [VENDOR, MODEL, [TYPE, CONSOLE]],
-    [
-      /droid.+; (shield)( bui|\))/i
-      // Nvidia Portable
-    ],
-    [MODEL, [VENDOR, NVIDIA], [TYPE, CONSOLE]],
-    [
-      ///////////////////
-      // WEARABLES
-      ///////////////////
-      /\b(sm-[lr]\d\d[0156][fnuw]?s?|gear live)\b/i
-      // Samsung Galaxy Watch
-    ],
-    [MODEL, [VENDOR, SAMSUNG], [TYPE, WEARABLE]],
-    [
-      /((pebble))app/i,
-      // Pebble
-      /(asus|google|lg|oppo) ((pixel |zen)?watch[\w ]*)( bui|\))/i
-      // Asus ZenWatch / LG Watch / Pixel Watch
-    ],
-    [VENDOR, MODEL, [TYPE, WEARABLE]],
-    [
-      /(ow(?:19|20)?we?[1-3]{1,3})/i
-      // Oppo Watch
-    ],
-    [MODEL, [VENDOR, OPPO], [TYPE, WEARABLE]],
-    [
-      /(watch)(?: ?os[,\/]|\d,\d\/)[\d\.]+/i
-      // Apple Watch
-    ],
-    [MODEL, [VENDOR, APPLE], [TYPE, WEARABLE]],
-    [
-      /(opwwe\d{3})/i
-      // OnePlus Watch
-    ],
-    [MODEL, [VENDOR, ONEPLUS], [TYPE, WEARABLE]],
-    [
-      /(moto 360)/i
-      // Motorola 360
-    ],
-    [MODEL, [VENDOR, MOTOROLA], [TYPE, WEARABLE]],
-    [
-      /(smartwatch 3)/i
-      // Sony SmartWatch
-    ],
-    [MODEL, [VENDOR, SONY], [TYPE, WEARABLE]],
-    [
-      /(g watch r)/i
-      // LG G Watch R
-    ],
-    [MODEL, [VENDOR, LG], [TYPE, WEARABLE]],
-    [
-      /droid.+; (wt63?0{2,3})\)/i
-    ],
-    [MODEL, [VENDOR, ZEBRA], [TYPE, WEARABLE]],
-    [
-      ///////////////////
-      // XR
-      ///////////////////
-      /droid.+; (glass) \d/i
-      // Google Glass
-    ],
-    [MODEL, [VENDOR, GOOGLE], [TYPE, XR]],
-    [
-      /(pico) (4|neo3(?: link|pro)?)/i
-      // Pico
-    ],
-    [VENDOR, MODEL, [TYPE, XR]],
-    [
-      /(quest( \d| pro)?s?).+vr/i
-      // Meta Quest
-    ],
-    [MODEL, [VENDOR, FACEBOOK], [TYPE, XR]],
-    [
-      /mobile vr; rv.+firefox/i
-      // Unidentifiable VR device using Firefox Reality / Wolvic
-    ],
-    [[TYPE, XR]],
-    [
-      ///////////////////
-      // EMBEDDED
-      ///////////////////
-      /(tesla)(?: qtcarbrowser|\/[-\w\.]+)/i
-      // Tesla
-    ],
-    [VENDOR, [TYPE, EMBEDDED]],
-    [
-      /(aeobc)\b/i
-      // Echo Dot
-    ],
-    [MODEL, [VENDOR, AMAZON], [TYPE, EMBEDDED]],
-    [
-      /(homepod).+mac os/i
-      // Apple HomePod
-    ],
-    [MODEL, [VENDOR, APPLE], [TYPE, EMBEDDED]],
-    [
-      /windows iot/i
-      // Unidentifiable embedded device using Windows IoT
-    ],
-    [[TYPE, EMBEDDED]],
-    [
-      ////////////////////
-      // MIXED (GENERIC)
-      ///////////////////
-      /droid .+?; ([^;]+?)(?: bui|; wv\)|\) applew).+?(mobile|vr|\d) safari/i
-    ],
-    [MODEL, [TYPE, strMapper, { "mobile": "Mobile", "xr": "VR", "*": TABLET }]],
-    [
-      /\b((tablet|tab)[;\/]|focus\/\d(?!.+mobile))/i
-      // Unidentifiable Tablet
-    ],
-    [[TYPE, TABLET]],
-    [
-      /(phone|mobile(?:[;\/]| [ \w\/\.]*safari)|pda(?=.+windows ce))/i
-      // Unidentifiable Mobile
-    ],
-    [[TYPE, MOBILE]],
-    [
-      /droid .+?; ([\w\. -]+)( bui|\))/i
-      // Generic Android Device
-    ],
-    [MODEL, [VENDOR, "Generic"]]
-  ],
-  engine: [
-    [
-      /windows.+ edge\/([\w\.]+)/i
-      // EdgeHTML
-    ],
-    [VERSION, [NAME, EDGE + "HTML"]],
-    [
-      /(arkweb)\/([\w\.]+)/i
-      // ArkWeb
-    ],
-    [NAME, VERSION],
-    [
-      /webkit\/537\.36.+chrome\/(?!27)([\w\.]+)/i
-      // Blink
-    ],
-    [VERSION, [NAME, "Blink"]],
-    [
-      /(presto)\/([\w\.]+)/i,
-      // Presto
-      /(webkit|trident|netfront|netsurf|amaya|lynx|w3m|goanna|servo)\/([\w\.]+)/i,
-      // WebKit/Trident/NetFront/NetSurf/Amaya/Lynx/w3m/Goanna/Servo
-      /ekioh(flow)\/([\w\.]+)/i,
-      // Flow
-      /(khtml|tasman|links)[\/ ]\(?([\w\.]+)/i,
-      // KHTML/Tasman/Links
-      /(icab)[\/ ]([23]\.[\d\.]+)/i,
-      // iCab
-      /\b(libweb)/i
-      // LibWeb
-    ],
-    [NAME, VERSION],
-    [
-      /ladybird\//i
-    ],
-    [[NAME, "LibWeb"]],
-    [
-      /rv\:([\w\.]{1,9})\b.+(gecko)/i
-      // Gecko
-    ],
-    [VERSION, NAME]
-  ],
-  os: [
-    [
-      // Windows
-      /(windows nt) (6\.[23]); arm/i
-      // Windows RT
-    ],
-    [[NAME, /N/, "R"], [VERSION, strMapper, windowsVersionMap]],
-    [
-      /(windows (?:phone|mobile|iot))(?: os)?[\/ ]?([\d\.]*( se)?)/i,
-      // Windows IoT/Mobile/Phone
-      // Windows NT/3.1/95/98/ME/2000/XP/Vista/7/8/8.1/10/11
-      /(windows)[\/ ](1[01]|2000|3\.1|7|8(\.1)?|9[58]|me|server 20\d\d( r2)?|vista|xp)/i
-    ],
-    [NAME, VERSION],
-    [
-      /windows nt ?([\d\.\)]*)(?!.+xbox)/i,
-      /\bwin(?=3| ?9|n)(?:nt| 9x )?([\d\.;]*)/i
-    ],
-    [[VERSION, /(;|\))/g, "", strMapper, windowsVersionMap], [NAME, WINDOWS]],
-    [
-      /(windows ce)\/?([\d\.]*)/i
-      // Windows CE
-    ],
-    [NAME, VERSION],
-    [
-      // iOS/macOS
-      /[adehimnop]{4,7}\b(?:.*os ([\w]+) like mac|; opera)/i,
-      // iOS
-      /(?:ios;fbsv\/|iphone.+ios[\/ ])([\d\.]+)/i,
-      /cfnetwork\/.+darwin/i
-    ],
-    [[VERSION, /_/g, "."], [NAME, "iOS"]],
-    [
-      /(mac os x) ?([\w\. ]*)/i,
-      /(macintosh|mac_powerpc\b)(?!.+(haiku|morphos))/i
-      // Mac OS
-    ],
-    [[NAME, "macOS"], [VERSION, /_/g, "."]],
-    [
-      // Google Chromecast
-      /android ([\d\.]+).*crkey/i
-      // Google Chromecast, Android-based
-    ],
-    [VERSION, [NAME, CHROMECAST + " Android"]],
-    [
-      /fuchsia.*crkey\/([\d\.]+)/i
-      // Google Chromecast, Fuchsia-based
-    ],
-    [VERSION, [NAME, CHROMECAST + " Fuchsia"]],
-    [
-      /crkey\/([\d\.]+).*devicetype\/smartspeaker/i
-      // Google Chromecast, Linux-based Smart Speaker
-    ],
-    [VERSION, [NAME, CHROMECAST + " SmartSpeaker"]],
-    [
-      /linux.*crkey\/([\d\.]+)/i
-      // Google Chromecast, Legacy Linux-based
-    ],
-    [VERSION, [NAME, CHROMECAST + " Linux"]],
-    [
-      /crkey\/([\d\.]+)/i
-      // Google Chromecast, unknown
-    ],
-    [VERSION, [NAME, CHROMECAST]],
-    [
-      // Mobile OSes
-      /droid ([\w\.]+)\b.+(android[- ]x86)/i
-      // Android-x86
-    ],
-    [VERSION, NAME],
-    [
-      /(ubuntu) ([\w\.]+) like android/i
-      // Ubuntu Touch
-    ],
-    [[NAME, /(.+)/, "$1 Touch"], VERSION],
-    [
-      /(harmonyos)[\/ ]?([\d\.]*)/i,
-      // HarmonyOS
-      // Android/Blackberry/WebOS/QNX/Bada/RIM/KaiOS/Maemo/MeeGo/S40/Sailfish OS/OpenHarmony/Tizen
-      /(android|bada|blackberry|kaios|maemo|meego|openharmony|qnx|rim tablet os|sailfish|series40|symbian|tizen)\w*[-\/\.; ]?([\d\.]*)/i
-    ],
-    [NAME, VERSION],
-    [
-      /\(bb(10);/i
-      // BlackBerry 10
-    ],
-    [VERSION, [NAME, BLACKBERRY]],
-    [
-      /(?:symbian ?os|symbos|s60(?=;)|series ?60)[-\/ ]?([\w\.]*)/i
-      // Symbian
-    ],
-    [VERSION, [NAME, "Symbian"]],
-    [
-      /mozilla\/[\d\.]+ \((?:mobile|tablet|tv|mobile; [\w ]+); rv:.+ gecko\/([\w\.]+)/i
-      // Firefox OS
-    ],
-    [VERSION, [NAME, FIREFOX + " OS"]],
-    [
-      /\b(?:hp)?wos(?:browser)?\/([\w\.]+)/i,
-      // WebOS
-      /webos(?:[ \/]?|\.tv-20(?=2[2-9]))(\d[\d\.]*)/i
-    ],
-    [VERSION, [NAME, "webOS"]],
-    [
-      /web0s;.+?(?:chr[o0]me|safari)\/(\d+)/i
-      // https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine
-    ],
-    [[VERSION, strMapper, { "25": "120", "24": "108", "23": "94", "22": "87", "6": "79", "5": "68", "4": "53", "3": "38", "2": "538", "1": "537", "*": "TV" }], [NAME, "webOS"]],
-    [
-      /watch(?: ?os[,\/]|\d,\d\/)([\d\.]+)/i
-      // watchOS
-    ],
-    [VERSION, [NAME, "watchOS"]],
-    [
-      // Google ChromeOS
-      /(cros) [\w]+(?:\)| ([\w\.]+)\b)/i
-      // Chromium OS
-    ],
-    [[NAME, "Chrome OS"], VERSION],
-    [
-      // Smart TVs
-      /panasonic;(viera)/i,
-      // Panasonic Viera
-      /(netrange)mmh/i,
-      // Netrange
-      /(nettv)\/(\d+\.[\w\.]+)/i,
-      // NetTV
-      // Console
-      /(nintendo|playstation) (\w+)/i,
-      // Nintendo/Playstation
-      /(xbox); +xbox ([^\);]+)/i,
-      // Microsoft Xbox (360, One, X, S, Series X, Series S)
-      /(pico) .+os([\w\.]+)/i,
-      // Pico
-      // Other
-      /\b(joli|palm)\b ?(?:os)?\/?([\w\.]*)/i,
-      // Joli/Palm
-      /linux.+(mint)[\/\(\) ]?([\w\.]*)/i,
-      // Mint
-      /(mageia|vectorlinux|fuchsia|arcaos|arch(?= ?linux))[;l ]([\d\.]*)/i,
-      // Mageia/VectorLinux/Fuchsia/ArcaOS/Arch
-      /([kxln]?ubuntu|debian|suse|opensuse|gentoo|slackware|fedora|mandriva|centos|pclinuxos|red ?hat|zenwalk|linpus|raspbian|plan 9|minix|risc os|contiki|deepin|manjaro|elementary os|sabayon|linspire|knoppix)(?: gnu[\/ ]linux)?(?: enterprise)?(?:[- ]linux)?(?:-gnu)?[-\/ ]?(?!chrom|package)([-\w\.]*)/i,
-      // Ubuntu/Debian/SUSE/Gentoo/Slackware/Fedora/Mandriva/CentOS/PCLinuxOS/RedHat/Zenwalk/Linpus/Raspbian/Plan9/Minix/RISCOS/Contiki/Deepin/Manjaro/elementary/Sabayon/Linspire/Knoppix
-      /((?:open)?solaris)[-\/ ]?([\w\.]*)/i,
-      // Solaris
-      /\b(aix)[; ]([1-9\.]{0,4})/i,
-      // AIX
-      /(hurd|linux|morphos)(?: (?:arm|x86|ppc)\w*| ?)([\w\.]*)/i,
-      // Hurd/Linux/MorphOS
-      /(gnu) ?([\w\.]*)/i,
-      // GNU
-      /\b([-frentopcghs]{0,5}bsd|dragonfly)[\/ ]?(?!amd|[ix346]{1,2}86)([\w\.]*)/i,
-      // FreeBSD/NetBSD/OpenBSD/PC-BSD/GhostBSD/DragonFly
-      /(haiku) ?(r\d)?/i
-      // Haiku
-    ],
-    [NAME, VERSION],
-    [
-      /(sunos) ?([\d\.]*)/i
-      // Solaris
-    ],
-    [[NAME, "Solaris"], VERSION],
-    [
-      /\b(beos|os\/2|amigaos|openvms|hp-ux|serenityos)/i,
-      // BeOS/OS2/AmigaOS/OpenVMS/HP-UX/SerenityOS
-      /(unix) ?([\w\.]*)/i
-      // UNIX
-    ],
-    [NAME, VERSION]
-  ]
-};
-var defaultProps = function() {
-  var props = { init: {}, isIgnore: {}, isIgnoreRgx: {}, toString: {} };
-  setProps.call(props.init, [
-    [UA_BROWSER, [NAME, VERSION, MAJOR, TYPE]],
-    [UA_CPU, [ARCHITECTURE]],
-    [UA_DEVICE, [TYPE, MODEL, VENDOR]],
-    [UA_ENGINE, [NAME, VERSION]],
-    [UA_OS, [NAME, VERSION]]
-  ]);
-  setProps.call(props.isIgnore, [
-    [UA_BROWSER, [VERSION, MAJOR]],
-    [UA_ENGINE, [VERSION]],
-    [UA_OS, [VERSION]]
-  ]);
-  setProps.call(props.isIgnoreRgx, [
-    [UA_BROWSER, / ?browser$/i],
-    [UA_OS, / ?os$/i]
-  ]);
-  setProps.call(props.toString, [
-    [UA_BROWSER, [NAME, VERSION]],
-    [UA_CPU, [ARCHITECTURE]],
-    [UA_DEVICE, [VENDOR, MODEL]],
-    [UA_ENGINE, [NAME, VERSION]],
-    [UA_OS, [NAME, VERSION]]
-  ]);
-  return props;
-}();
-var createIData = function(item, itemType) {
-  var init_props = defaultProps.init[itemType], is_ignoreProps = defaultProps.isIgnore[itemType] || 0, is_ignoreRgx = defaultProps.isIgnoreRgx[itemType] || 0, toString_props = defaultProps.toString[itemType] || 0;
-  function IData() {
-    setProps.call(this, init_props);
-  }
-  IData.prototype.getItem = function() {
-    return item;
-  };
-  IData.prototype.withClientHints = function() {
-    if (!NAVIGATOR_UADATA) {
-      return item.parseCH().get();
-    }
-    return NAVIGATOR_UADATA.getHighEntropyValues(CH_ALL_VALUES).then(function(res) {
-      return item.setCH(new UACHData(res, false)).parseCH().get();
-    });
-  };
-  IData.prototype.withFeatureCheck = function() {
-    return item.detectFeature().get();
-  };
-  if (itemType != UA_RESULT) {
-    IData.prototype.is = function(strToCheck) {
-      var is = false;
-      for (var i in this) {
-        if (this.hasOwnProperty(i) && !has(is_ignoreProps, i) && lowerize(is_ignoreRgx ? strip(is_ignoreRgx, this[i]) : this[i]) == lowerize(is_ignoreRgx ? strip(is_ignoreRgx, strToCheck) : strToCheck)) {
-          is = true;
-          if (strToCheck != UNDEF_TYPE) break;
-        } else if (strToCheck == UNDEF_TYPE && is) {
-          is = !is;
-          break;
-        }
-      }
-      return is;
-    };
-    IData.prototype.toString = function() {
-      var str = EMPTY;
-      for (var i in toString_props) {
-        if (typeof this[toString_props[i]] !== UNDEF_TYPE) {
-          str += (str ? " " : EMPTY) + this[toString_props[i]];
-        }
-      }
-      return str || UNDEF_TYPE;
-    };
-  }
-  if (!NAVIGATOR_UADATA) {
-    IData.prototype.then = function(cb) {
-      var that = this;
-      var IDataResolve = function() {
-        for (var prop in that) {
-          if (that.hasOwnProperty(prop)) {
-            this[prop] = that[prop];
-          }
-        }
-      };
-      IDataResolve.prototype = {
-        is: IData.prototype.is,
-        toString: IData.prototype.toString
-      };
-      var resolveData = new IDataResolve();
-      cb(resolveData);
-      return resolveData;
-    };
-  }
-  return new IData();
-};
-function UACHData(uach, isHttpUACH) {
-  uach = uach || {};
-  setProps.call(this, CH_ALL_VALUES);
-  if (isHttpUACH) {
-    setProps.call(this, [
-      [BRANDS, itemListToArray(uach[CH_HEADER])],
-      [FULLVERLIST, itemListToArray(uach[CH_HEADER_FULL_VER_LIST])],
-      [MOBILE, /\?1/.test(uach[CH_HEADER_MOBILE])],
-      [MODEL, stripQuotes(uach[CH_HEADER_MODEL])],
-      [PLATFORM, stripQuotes(uach[CH_HEADER_PLATFORM])],
-      [PLATFORMVER, stripQuotes(uach[CH_HEADER_PLATFORM_VER])],
-      [ARCHITECTURE, stripQuotes(uach[CH_HEADER_ARCH])],
-      [FORMFACTORS, itemListToArray(uach[CH_HEADER_FORM_FACTORS])],
-      [BITNESS, stripQuotes(uach[CH_HEADER_BITNESS])]
-    ]);
-  } else {
-    for (var prop in uach) {
-      if (this.hasOwnProperty(prop) && typeof uach[prop] !== UNDEF_TYPE) this[prop] = uach[prop];
-    }
-  }
-}
-function UAItem(itemType, ua, rgxMap, uaCH) {
-  this.get = function(prop) {
-    if (!prop) return this.data;
-    return this.data.hasOwnProperty(prop) ? this.data[prop] : void 0;
-  };
-  this.set = function(prop, val) {
-    this.data[prop] = val;
-    return this;
-  };
-  this.setCH = function(ch) {
-    this.uaCH = ch;
-    return this;
-  };
-  this.detectFeature = function() {
-    if (NAVIGATOR && NAVIGATOR.userAgent == this.ua) {
-      switch (this.itemType) {
-        case UA_BROWSER:
-          if (NAVIGATOR.brave && typeof NAVIGATOR.brave.isBrave == FUNC_TYPE) {
-            this.set(NAME, "Brave");
-          }
-          break;
-        case UA_DEVICE:
-          if (!this.get(TYPE) && NAVIGATOR_UADATA && NAVIGATOR_UADATA[MOBILE]) {
-            this.set(TYPE, MOBILE);
-          }
-          if (this.get(MODEL) == "Macintosh" && NAVIGATOR && typeof NAVIGATOR.standalone !== UNDEF_TYPE && NAVIGATOR.maxTouchPoints && NAVIGATOR.maxTouchPoints > 2) {
-            this.set(MODEL, "iPad").set(TYPE, TABLET);
-          }
-          break;
-        case UA_OS:
-          if (!this.get(NAME) && NAVIGATOR_UADATA && NAVIGATOR_UADATA[PLATFORM]) {
-            this.set(NAME, NAVIGATOR_UADATA[PLATFORM]);
-          }
-          break;
-        case UA_RESULT:
-          var data = this.data;
-          var detect = function(itemType2) {
-            return data[itemType2].getItem().detectFeature().get();
-          };
-          this.set(UA_BROWSER, detect(UA_BROWSER)).set(UA_CPU, detect(UA_CPU)).set(UA_DEVICE, detect(UA_DEVICE)).set(UA_ENGINE, detect(UA_ENGINE)).set(UA_OS, detect(UA_OS));
-      }
-    }
-    return this;
-  };
-  this.parseUA = function() {
-    if (this.itemType != UA_RESULT) {
-      rgxMapper.call(this.data, this.ua, this.rgxMap);
-    }
-    if (this.itemType == UA_BROWSER) {
-      this.set(MAJOR, majorize(this.get(VERSION)));
-    }
-    return this;
-  };
-  this.parseCH = function() {
-    var uaCH2 = this.uaCH, rgxMap2 = this.rgxMap;
-    switch (this.itemType) {
-      case UA_BROWSER:
-      case UA_ENGINE:
-        var brands = uaCH2[FULLVERLIST] || uaCH2[BRANDS], prevName;
-        if (brands) {
-          for (var i in brands) {
-            var brandName = brands[i].brand || brands[i], brandVersion = brands[i].version;
-            if (this.itemType == UA_BROWSER && !/not.a.brand/i.test(brandName) && (!prevName || /Chrom/.test(prevName) && brandName != CHROMIUM || prevName == EDGE && /WebView2/.test(brandName))) {
-              brandName = strMapper(brandName, browserHintsMap);
-              prevName = this.get(NAME);
-              if (!(prevName && !/Chrom/.test(prevName) && /Chrom/.test(brandName))) {
-                this.set(NAME, brandName).set(VERSION, brandVersion).set(MAJOR, majorize(brandVersion));
-              }
-              prevName = brandName;
-            }
-            if (this.itemType == UA_ENGINE && brandName == CHROMIUM) {
-              this.set(VERSION, brandVersion);
-            }
-          }
-        }
-        break;
-      case UA_CPU:
-        var archName = uaCH2[ARCHITECTURE];
-        if (archName) {
-          if (archName && uaCH2[BITNESS] == "64") archName += "64";
-          rgxMapper.call(this.data, archName + ";", rgxMap2);
-        }
-        break;
-      case UA_DEVICE:
-        if (uaCH2[MOBILE]) {
-          this.set(TYPE, MOBILE);
-        }
-        if (uaCH2[MODEL]) {
-          this.set(MODEL, uaCH2[MODEL]);
-          if (!this.get(TYPE) || !this.get(VENDOR)) {
-            var reParse = {};
-            rgxMapper.call(reParse, "droid 9; " + uaCH2[MODEL] + ")", rgxMap2);
-            if (!this.get(TYPE) && !!reParse.type) {
-              this.set(TYPE, reParse.type);
-            }
-            if (!this.get(VENDOR) && !!reParse.vendor) {
-              this.set(VENDOR, reParse.vendor);
-            }
-          }
-        }
-        if (uaCH2[FORMFACTORS]) {
-          var ff;
-          if (typeof uaCH2[FORMFACTORS] !== "string") {
-            var idx = 0;
-            while (!ff && idx < uaCH2[FORMFACTORS].length) {
-              ff = strMapper(uaCH2[FORMFACTORS][idx++], formFactorsMap);
-            }
-          } else {
-            ff = strMapper(uaCH2[FORMFACTORS], formFactorsMap);
-          }
-          this.set(TYPE, ff);
-        }
-        break;
-      case UA_OS:
-        var osName = uaCH2[PLATFORM];
-        if (osName) {
-          var osVersion = uaCH2[PLATFORMVER];
-          if (osName == WINDOWS) osVersion = parseInt(majorize(osVersion), 10) >= 13 ? "11" : "10";
-          this.set(NAME, osName).set(VERSION, osVersion);
-        }
-        if (this.get(NAME) == WINDOWS && uaCH2[MODEL] == "Xbox") {
-          this.set(NAME, "Xbox").set(VERSION, void 0);
-        }
-        break;
-      case UA_RESULT:
-        var data = this.data;
-        var parse = function(itemType2) {
-          return data[itemType2].getItem().setCH(uaCH2).parseCH().get();
-        };
-        this.set(UA_BROWSER, parse(UA_BROWSER)).set(UA_CPU, parse(UA_CPU)).set(UA_DEVICE, parse(UA_DEVICE)).set(UA_ENGINE, parse(UA_ENGINE)).set(UA_OS, parse(UA_OS));
-    }
-    return this;
-  };
-  setProps.call(this, [
-    ["itemType", itemType],
-    ["ua", ua],
-    ["uaCH", uaCH],
-    ["rgxMap", rgxMap],
-    ["data", createIData(this, itemType)]
-  ]);
-  return this;
-}
-function UAParser(ua, extensions, headers) {
-  if (typeof ua === OBJ_TYPE) {
-    if (isExtensions(ua, true)) {
-      if (typeof extensions === OBJ_TYPE) {
-        headers = extensions;
-      }
-      extensions = ua;
-    } else {
-      headers = ua;
-      extensions = void 0;
-    }
-    ua = void 0;
-  } else if (typeof ua === STR_TYPE && !isExtensions(extensions, true)) {
-    headers = extensions;
-    extensions = void 0;
-  }
-  if (headers && typeof headers.append === FUNC_TYPE) {
-    var kv = {};
-    headers.forEach(function(v, k) {
-      kv[k] = v;
-    });
-    headers = kv;
-  }
-  if (!(this instanceof UAParser)) {
-    return new UAParser(ua, extensions, headers).getResult();
-  }
-  var userAgent = typeof ua === STR_TYPE ? ua : (
-    // Passed user-agent string
-    headers && headers[USER_AGENT] ? headers[USER_AGENT] : (
-      // User-Agent from passed headers
-      NAVIGATOR && NAVIGATOR.userAgent ? NAVIGATOR.userAgent : (
-        // navigator.userAgent
-        EMPTY
-      )
-    )
-  ), httpUACH = new UACHData(headers, true), regexMap = extensions ? extend(defaultRegexes, extensions) : defaultRegexes, createItemFunc = function(itemType) {
-    if (itemType == UA_RESULT) {
-      return function() {
-        return new UAItem(itemType, userAgent, regexMap, httpUACH).set("ua", userAgent).set(UA_BROWSER, this.getBrowser()).set(UA_CPU, this.getCPU()).set(UA_DEVICE, this.getDevice()).set(UA_ENGINE, this.getEngine()).set(UA_OS, this.getOS()).get();
-      };
-    } else {
-      return function() {
-        return new UAItem(itemType, userAgent, regexMap[itemType], httpUACH).parseUA().get();
-      };
-    }
-  };
-  setProps.call(this, [
-    ["getBrowser", createItemFunc(UA_BROWSER)],
-    ["getCPU", createItemFunc(UA_CPU)],
-    ["getDevice", createItemFunc(UA_DEVICE)],
-    ["getEngine", createItemFunc(UA_ENGINE)],
-    ["getOS", createItemFunc(UA_OS)],
-    ["getResult", createItemFunc(UA_RESULT)],
-    ["getUA", function() {
-      return userAgent;
-    }],
-    ["setUA", function(ua2) {
-      if (isString(ua2))
-        userAgent = ua2.length > UA_MAX_LENGTH ? trim(ua2, UA_MAX_LENGTH) : ua2;
-      return this;
-    }]
-  ]).setUA(userAgent);
-  return this;
-}
-UAParser.VERSION = LIBVERSION;
-UAParser.BROWSER = enumerize([NAME, VERSION, MAJOR, TYPE]);
-UAParser.CPU = enumerize([ARCHITECTURE]);
-UAParser.DEVICE = enumerize([MODEL, VENDOR, TYPE, CONSOLE, MOBILE, SMARTTV, TABLET, WEARABLE, EMBEDDED]);
-UAParser.ENGINE = UAParser.OS = enumerize([NAME, VERSION]);
 const Ticker = ({
   text,
   variant = "default",
@@ -30311,7 +30387,16 @@ const Ticker = ({
   ] }) });
 };
 const PlayerPage = () => {
-  const { nowPlaying, tickerText, queue, devices, connectionStatus } = useAppStore();
+  const {
+    nowPlaying,
+    tickerText,
+    queue,
+    devices,
+    connectionStatus,
+    playerDeviceId,
+    playerShowIdentify,
+    playerIsDisconnected
+  } = useAppStore();
   const videoRef = reactExports.useRef(null);
   const [isVideoLoaded, setIsVideoLoaded] = reactExports.useState(false);
   const [, setIsPlaying] = reactExports.useState(false);
@@ -30322,50 +30407,11 @@ const PlayerPage = () => {
     isSidebarVisible: false,
     isVideoPlayerVisible: true
   });
-  const [showIdentify, setShowIdentify] = reactExports.useState(false);
-  const [isDisconnected, setIsDisconnected] = reactExports.useState(false);
-  const [deviceId, setDeviceId] = reactExports.useState(null);
   reactExports.useEffect(() => {
-    if (connectionStatus === "connected") {
-      const parser = new UAParser(navigator.userAgent);
-      const result = parser.getResult();
-      websocketService.send({
-        type: "client_identify",
-        payload: {
-          type: "player",
-          userAgent: navigator.userAgent,
-          viewport: {
-            width: window.innerWidth,
-            height: window.innerHeight
-          },
-          os: `${result.os.name} ${result.os.version}`,
-          browser: `${result.browser.name} ${result.browser.version}`,
-          isApp: "kj-nomad" in window
-        }
-      });
-    }
-  }, [connectionStatus]);
+    websocketService.connect("player");
+  }, []);
   reactExports.useEffect(() => {
-    const handleMessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === "device_registered") {
-        setDeviceId(message.payload.deviceId);
-      } else if (message.type === "identify_screen" && message.payload.deviceId === deviceId) {
-        setShowIdentify(true);
-        setTimeout(() => setShowIdentify(false), 5e3);
-      } else if (message.type === "disconnect_screen" && message.payload.deviceId === deviceId) {
-        setIsDisconnected(true);
-        websocketService.disconnect();
-      }
-    };
-    const socket = useAppStore.getState().socket;
-    socket?.addEventListener("message", handleMessage);
-    return () => {
-      socket?.removeEventListener("message", handleMessage);
-    };
-  }, [deviceId]);
-  reactExports.useEffect(() => {
-    const myDevice = devices.find((d) => d.id === deviceId);
+    const myDevice = devices.find((d) => d.id === playerDeviceId);
     if (myDevice) {
       setDeviceSettings({
         isAudioEnabled: myDevice.isAudioEnabled,
@@ -30374,7 +30420,7 @@ const PlayerPage = () => {
         isVideoPlayerVisible: myDevice.isVideoPlayerVisible
       });
     }
-  }, [devices, deviceId]);
+  }, [devices, playerDeviceId]);
   reactExports.useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -30418,14 +30464,28 @@ const PlayerPage = () => {
     setIsPlaying(false);
   };
   const upcomingSingers = queue.slice(0, 3);
-  if (isDisconnected) {
+  if (playerIsDisconnected) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "player-container bg-gray-800 flex items-center justify-center text-white text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl font-bold mb-4", children: "Player Screen Disconnected" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl", children: "Thanks for using KJ-Nomad." })
     ] }) });
   }
+  const ConnectionStatusIndicator = () => {
+    const statusConfig = {
+      connected: { color: "bg-green-500", text: "Connected", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4" }) },
+      connecting: { color: "bg-yellow-500", text: "Connecting...", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 w-3 rounded-full bg-yellow-500 animate-pulse" }) },
+      error: { color: "bg-red-500", text: "Connection Error", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4" }) },
+      idle: { color: "bg-gray-500", text: "Disconnected", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4" }) }
+    };
+    const currentStatus = statusConfig[connectionStatus];
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: clsx("h-3 w-3 rounded-full", currentStatus.color) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: currentStatus.text })
+    ] });
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "player-container bg-gradient-to-br from-blue-900 to-slate-900", children: [
-    showIdentify && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/80 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-white text-9xl font-bold", children: devices.findIndex((d) => d.id === deviceId) + 1 }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(ConnectionStatusIndicator, {}),
+    playerShowIdentify && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/80 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-white text-9xl font-bold", children: devices.findIndex((d) => d.id === playerDeviceId) + 1 }) }),
     deviceSettings.isVideoPlayerVisible && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "video",
       {
@@ -30451,7 +30511,7 @@ const PlayerPage = () => {
     ] }),
     (!nowPlaying || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$e, { className: "w-16 h-16" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "w-16 h-16" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl md:text-6xl font-bold mb-4", children: "KJ-Nomad Ready" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl md:text-2xl text-white/80", children: "Waiting for the next performance..." })
       ] }),
@@ -30604,19 +30664,19 @@ const SingerPage = () => {
   const hasActiveRequest = myQueuePosition !== -1;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Container, { size: "md", className: "py-6 space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "h-12 w-12 text-blue-600 dark:text-blue-400" }) }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-12 w-12 text-blue-600 dark:text-blue-400" }) }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2", children: "Search for a song" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-600 dark:text-gray-300", children: "Search for your favorite karaoke songs and add yourself to the queue" })
     ] }),
     !isConnected && /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { variant: "bordered", className: "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 text-red-800 dark:text-red-200", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$p, { className: "h-6 w-6" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-6 w-6" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold", children: "Connection Issue" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Unable to connect to the karaoke system. Please try again later." })
       ] })
     ] }) }) }),
     requestStatus.type && /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { variant: "bordered", className: requestStatus.type === "success" ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20" : "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-center space-x-3 ${requestStatus.type === "success" ? "text-green-800 dark:text-green-200" : "text-red-800 dark:text-red-200"}`, children: [
-      requestStatus.type === "success" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-6 w-6" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$p, { className: "h-6 w-6" }),
+      requestStatus.type === "success" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-6 w-6" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-6 w-6" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium", children: requestStatus.message })
     ] }) }) }),
     hasActiveRequest && /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { variant: "elevated", className: "border-2 border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
@@ -30653,7 +30713,7 @@ const SingerPage = () => {
     ] }),
     !hasActiveRequest && /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "h-5 w-5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "h-5 w-5" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Find Your Song" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
@@ -30665,7 +30725,7 @@ const SingerPage = () => {
             onChange: (e) => setSearchQuery(e.target.value),
             placeholder: "Search by artist or song title...",
             hint: "Start typing to see available songs",
-            leftIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-5 w-5" }),
+            leftIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-5 w-5" }),
             disabled: !isConnected || !singerName.trim(),
             "data-testid": "song-search-input"
           }
@@ -30675,7 +30735,7 @@ const SingerPage = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 dark:text-gray-400", children: "Searching..." })
         ] }),
         !isSearching && searchQuery && songs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 text-gray-500 dark:text-gray-400", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-12 w-12 mx-auto mb-3 opacity-50" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 mx-auto mb-3 opacity-50" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No songs found" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Try a different search term" })
         ] }),
@@ -30772,7 +30832,10 @@ const AppContent = () => {
 };
 function App() {
   reactExports.useEffect(() => {
-    websocketService.connect();
+    const path = window.location.pathname;
+    if (!path.startsWith("/player") && !path.startsWith("/singer")) {
+      websocketService.connect("admin");
+    }
     useAppStore.getState().checkSetupStatus();
     let modeCleanup;
     let onlineModeCleanup;
@@ -30803,4 +30866,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-C6hk10fN.js.map
+//# sourceMappingURL=index-BwdqcAwz.js.map
