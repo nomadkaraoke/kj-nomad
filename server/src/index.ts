@@ -74,6 +74,15 @@ import { advancedQueueManager } from './advancedQueue.js';
 
 const app = express();
 const server = http.createServer(app);
+
+server.on('error', (e: Error & { code?: string }) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error(`Error: Port ${PORT} is already in use.`);
+    console.error('Please close the other application using this port or specify a different one.');
+    process.exit(1);
+  }
+});
+
 const wss = new WebSocketServer({ server });
 
 // Publish the server on the network

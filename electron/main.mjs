@@ -26,7 +26,18 @@ class KJNomadApp {
 
   setupApp() {
     // Handle app events
-    app.whenReady().then(() => this.createWindow());
+    if (process.env.HEADLESS === 'true') {
+      // In headless/test mode, bypass window creation and start the server directly
+      console.log('HEADLESS mode detected. Starting server directly for testing.');
+      app.whenReady().then(async () => {
+        // In test mode, we'll default to 'offline' as the UI isn't there to choose.
+        await this.startServer('offline');
+      });
+    } else {
+      // Normal GUI startup
+      app.whenReady().then(() => this.createWindow());
+    }
+    
     app.on('window-all-closed', () => this.handleWindowsClosed());
     app.on('activate', () => this.handleActivate());
     app.on('before-quit', () => this.handleBeforeQuit());
