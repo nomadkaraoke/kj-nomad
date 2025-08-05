@@ -19,12 +19,22 @@
             --pink: #ff7acc;
             --blue: #230a89;
             --yellow: #ffdf6b;
-            --dark-bg: #0a0a0f;
-            --dark-card: #1a1a2e;
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0c4;
             --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
             --gradient-accent: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%);
+
+            /* Light Theme */
+            --bg-light: #f0f0f8;
+            --card-light: #ffffff;
+            --text-primary-light: #0a0a0f;
+            --text-secondary-light: #5a5a6e;
+            --border-light: #e0e0e8;
+
+            /* Dark Theme */
+            --bg-dark: #0a0a0f;
+            --card-dark: #1a1a2e;
+            --text-primary-dark: #ffffff;
+            --text-secondary-dark: #b0b0c4;
+            --border-dark: rgba(255, 122, 204, 0.1);
         }
 
         * {
@@ -35,10 +45,16 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
+            background: var(--bg-light);
+            color: var(--text-primary-light);
             line-height: 1.6;
             overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark {
+            background: var(--bg-dark);
+            color: var(--text-primary-dark);
         }
 
         .container {
@@ -49,10 +65,19 @@
 
         /* Header */
         .header {
-            padding: 2rem 0;
-            background: rgba(26, 26, 46, 0.8);
+            padding: 1.5rem 0;
+            background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 122, 204, 0.1);
+            border-bottom: 1px solid var(--border-light);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        body.dark .header {
+            background: rgba(26, 26, 46, 0.8);
+            border-bottom: 1px solid var(--border-dark);
         }
 
         .nav {
@@ -78,9 +103,13 @@
         }
 
         .nav-links a {
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             text-decoration: none;
             transition: color 0.3s ease;
+        }
+        
+        body.dark .nav-links a {
+            color: var(--text-secondary-dark);
         }
 
         .nav-links a:hover {
@@ -100,8 +129,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(ellipse at center, rgba(255, 122, 204, 0.1) 0%, transparent 70%);
+            background: radial-gradient(ellipse at center, rgba(35, 10, 137, 0.05) 0%, transparent 70%);
             pointer-events: none;
+            transition: background 0.3s;
+        }
+
+        body.dark .hero-bg {
+            background: radial-gradient(ellipse at center, rgba(255, 122, 204, 0.1) 0%, transparent 70%);
         }
 
         .hero-content {
@@ -128,9 +162,13 @@
 
         .hero-description {
             font-size: 1.25rem;
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             max-width: 800px;
             margin: 0 auto 3rem;
+        }
+
+        body.dark .hero-description {
+            color: var(--text-secondary-dark);
         }
 
         /* Mode Selection */
@@ -158,14 +196,19 @@
         }
 
         .mode-card {
-            background: var(--dark-card);
+            background: var(--card-light);
             border-radius: 20px;
             padding: 3rem;
-            border: 2px solid transparent;
+            border: 1px solid var(--border-light);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
             overflow: hidden;
+        }
+
+        body.dark .mode-card {
+            background: var(--card-dark);
+            border: 2px solid transparent;
         }
 
         .mode-card::before {
@@ -190,6 +233,10 @@
 
         .mode-card:hover {
             transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(35, 10, 137, 0.1);
+        }
+
+        body.dark .mode-card:hover {
             box-shadow: 0 20px 40px rgba(255, 122, 204, 0.2);
         }
 
@@ -214,9 +261,13 @@
         }
 
         .mode-description {
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             margin-bottom: 2rem;
             font-size: 1.1rem;
+        }
+
+        body.dark .mode-description {
+            color: var(--text-secondary-dark);
         }
 
         .mode-features {
@@ -228,7 +279,11 @@
             display: flex;
             align-items: center;
             margin-bottom: 0.75rem;
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
+        }
+
+        body.dark .mode-features li {
+            color: var(--text-secondary-dark);
         }
 
         .mode-features li::before {
@@ -267,7 +322,7 @@
 
         .cta-button.secondary:hover {
             background: var(--yellow);
-            color: var(--dark-bg);
+            color: var(--bg-dark);
         }
 
         /* Features Section */
@@ -283,11 +338,16 @@
         }
 
         .feature-card {
-            background: var(--dark-card);
+            background: var(--card-light);
             padding: 2rem;
             border-radius: 15px;
             text-align: center;
-            border: 1px solid rgba(255, 122, 204, 0.1);
+            border: 1px solid var(--border-light);
+        }
+
+        body.dark .feature-card {
+            background: var(--card-dark);
+            border: 1px solid var(--border-dark);
         }
 
         .feature-icon {
@@ -299,19 +359,32 @@
         .feature-title {
             font-size: 1.5rem;
             margin-bottom: 1rem;
-            color: var(--text-primary);
+            color: var(--text-primary-light);
+        }
+        
+        body.dark .feature-title {
+            color: var(--text-primary-dark);
         }
 
         .feature-description {
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
+        }
+
+        body.dark .feature-description {
+            color: var(--text-secondary-dark);
         }
 
         /* Footer */
         .footer {
             padding: 4rem 0 2rem;
-            background: var(--dark-card);
-            border-top: 1px solid rgba(255, 122, 204, 0.1);
+            background: var(--card-light);
+            border-top: 1px solid var(--border-light);
             text-align: center;
+        }
+
+        body.dark .footer {
+            background: var(--card-dark);
+            border-top: 1px solid var(--border-dark);
         }
 
         .footer-content {
@@ -326,9 +399,13 @@
         }
 
         .footer-links a {
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             text-decoration: none;
             transition: color 0.3s ease;
+        }
+
+        body.dark .footer-links a {
+            color: var(--text-secondary-dark);
         }
 
         .footer-links a:hover {
@@ -336,8 +413,12 @@
         }
 
         .copyright {
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             font-size: 0.9rem;
+        }
+
+        body.dark .copyright {
+            color: var(--text-secondary-dark);
         }
 
         /* Responsive */
@@ -385,18 +466,49 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 1rem;
+        }
+        .theme-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--text-primary-light);
+            transition: color 0.3s;
+        }
+        body.dark .theme-icon {
+            color: var(--text-primary-dark);
+        }
+        #sun-icon { display: none; }
+        body.dark #sun-icon { display: block; }
+        body.dark #moon-icon { display: none; }
     </style>
 </head>
 <body>
     <header class="header">
         <nav class="nav container">
             <a href="/" class="logo">KJ-NOMAD</a>
-            <ul class="nav-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#modes">Get Started</a></li>
-                <li><a href="/pricing.html">Pricing</a></li>
-                <li><a href="https://nomadkaraoke.com">Nomad Karaoke</a></li>
-            </ul>
+            <div style="display: flex; align-items: center;">
+                <ul class="nav-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#modes">Get Started</a></li>
+                    <li><a href="/pricing.html">Pricing</a></li>
+                    <li><a href="https://nomadkaraoke.com">Nomad Karaoke</a></li>
+                </ul>
+                <button class="theme-toggle" id="theme-toggle-button" aria-label="Toggle theme">
+                    <svg id="moon-icon" class="theme-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    <svg id="sun-icon" class="theme-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </button>
+            </div>
         </nav>
     </header>
 
@@ -516,13 +628,19 @@
             </div>
         </section>
 
-        <section id="monetization" class="features" style="background: var(--dark-card); padding: 6rem 0;">
-            <div class="container">
+        <section id="monetization" class="features" style="padding: 6rem 0;">
+            <div class="container" style="
+                background: var(--card-light);
+                padding: 4rem;
+                border-radius: 20px;
+                border: 1px solid var(--border-light);
+            ">
                 <h2 class="section-title">Free Software, More Tips</h2>
                 <p class="hero-description" style="font-size: 1.2rem; margin-bottom: 3rem;">
                     KJ-Nomad is <strong>completely free</strong> for you to use. We make money by helping you make more money. 
                     Our platform includes a seamless tipping system, and we keep a small 10% commission on the tips you receive through the app.
                 </p>
+>>>>>>> Stashed changes
                 <div style="text-align: center;">
                     <a href="/pricing.html" class="cta-button">Learn More About Our Model</a>
                 </div>
@@ -553,7 +671,23 @@
     </div>
 
     <script>
-        // Download functionality
+        // --- Theme Switching ---
+        const themeToggleButton = document.getElementById('theme-toggle-button');
+        const body = document.body;
+
+        // Apply saved theme on load
+        const savedTheme = localStorage.getItem('kj-nomad-theme') || 'dark';
+        if (savedTheme === 'dark') {
+            body.classList.add('dark');
+        }
+
+        themeToggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            const newTheme = body.classList.contains('dark') ? 'dark' : 'light';
+            localStorage.setItem('kj-nomad-theme', newTheme);
+        });
+
+        // --- Download functionality ---
         const releaseData = {
             version: "1.0.0",
             repo: "nomadkaraoke/kj-nomad",
@@ -666,14 +800,15 @@
                                display: flex;
                                align-items: center;
                                padding: 1rem;
-                               background: rgba(255, 122, 204, 0.1);
+                               background: rgba(35, 10, 137, 0.05);
                                border-radius: 10px;
                                text-decoration: none;
-                               color: white;
+                               color: var(--text-primary-light);
                                transition: all 0.3s ease;
                            "
-                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
-                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
+                           onmouseover="this.style.background='rgba(35, 10, 137, 0.1)'"
+                           onmouseout="this.style.background='rgba(35, 10, 137, 0.05)'">
+>>>>>>> Stashed changes
                             <span style="font-size: 2rem; margin-right: 1rem;">🪟</span>
                             <div>
                                 <div style="font-weight: 600;">Windows Installer</div>

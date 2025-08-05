@@ -4,86 +4,184 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to KJ-Nomad</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --pink: #ff7acc;
             --blue: #230a89;
             --yellow: #ffdf6b;
-            --dark-bg: #0a0a0f;
-            --dark-card: #1a1a2e;
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0c4;
             --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%);
+
+            /* Light Theme */
+            --bg-light: #f0f0f8;
+            --card-light: #ffffff;
+            --text-primary-light: #0a0a0f;
+            --text-secondary-light: #5a5a6e;
+            --border-light: #e0e0e8;
+
+            /* Dark Theme */
+            --bg-dark: #0a0a0f;
+            --card-dark: #1a1a2e;
+            --text-primary-dark: #ffffff;
+            --text-secondary-dark: #b0b0c4;
+            --border-dark: rgba(255, 122, 204, 0.1);
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary-light);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
             overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
         }
+
+        body.dark {
+            background: var(--bg-dark);
+            color: var(--text-primary-dark);
+        }
+
         .container {
             text-align: center;
             padding: 2rem;
         }
+
         h1 {
-            font-size: 3rem;
+            font-family: 'Righteous', cursive;
+            font-size: 3.5rem;
             margin-bottom: 1rem;
             background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
         p {
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             font-size: 1.2rem;
             margin-bottom: 3rem;
         }
+        
+        body.dark p {
+            color: var(--text-secondary-dark);
+        }
+
         .button-grid {
             display: flex;
-            gap: 2rem;
+            gap: 1.5rem;
             justify-content: center;
         }
+
         .button {
-            padding: 1.5rem 3rem;
-            border: 2px solid var(--pink);
-            border-radius: 15px;
-            background: transparent;
-            color: var(--text-primary);
-            font-size: 1.2rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 300px;
-        }
-        .button:hover {
-            background: var(--pink);
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            background: var(--gradient-primary);
             color: white;
-            transform: translateY(-5px);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            min-width: 250px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .button .icon {
+            margin-right: 0.75rem;
+        }
+
+        .button:hover {
+            transform: translateY(-3px);
             box-shadow: 0 10px 20px rgba(255, 122, 204, 0.2);
         }
+
         .button.secondary {
-            border-color: var(--yellow);
-        }
-        .button.secondary:hover {
             background: var(--yellow);
-            color: var(--dark-bg);
+            color: var(--bg-dark);
+            border: 2px solid var(--yellow);
+        }
+
+        .button.secondary:hover {
+            filter: brightness(1.1);
             box-shadow: 0 10px 20px rgba(255, 223, 107, 0.2);
         }
+        
+        .button.tertiary {
+            background: linear-gradient(135deg, var(--blue) 0%, #0c0634 100%);
+            border: 2px solid var(--blue);
+            color: white;
+        }
+        
+        body.dark .button.tertiary {
+             background: linear-gradient(135deg, var(--blue) 0%, #0c0634 100%);
+             border-color: var(--blue);
+             color: white;
+        }
+
+        .button.tertiary:hover {
+            border-color: var(--pink);
+            color: var(--pink);
+            transform: translateY(-3px);
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            background: var(--card-light);
+            border: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+        }
+        body.dark .theme-toggle {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+        .theme-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--text-primary-light);
+        }
+        body.dark .theme-icon {
+            color: var(--text-primary-dark);
+        }
+        #sun-icon { display: none; }
+        body.dark #sun-icon { display: block; }
+        body.dark #moon-icon { display: none; }
+
     </style>
 </head>
 <body>
+    <div class="theme-toggle" id="theme-toggle-button">
+        <svg id="moon-icon" class="theme-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        <svg id="sun-icon" class="theme-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+    </div>
+
     <div id="welcome-view" class="container">
         <h1>Welcome to KJ-Nomad</h1>
         <p>Choose how you want to start your karaoke session.</p>
         <div class="button-grid">
-            <button id="start-offline" class="button">🏠 Start Offline Session</button>
-            <button id="connect-online" class="button secondary">☁️ Connect to Online Session</button>
-            <button id="setup-player" class="button">🖥️ Set up as Player</button>
+            <button id="start-offline" class="button"><span class="icon">🏠</span> Start Offline Session</button>
+            <button id="connect-online" class="button secondary"><span class="icon">☁️</span> Connect to Online Session</button>
+            <button id="setup-player" class="button tertiary"><span class="icon">🖥️</span> Set up as Player</button>
         </div>
     </div>
 
@@ -111,6 +209,24 @@
     </div>
 
     <script>
+        // --- Theme Switching ---
+        const themeToggleButton = document.getElementById('theme-toggle-button');
+        const body = document.body;
+
+        // Apply saved theme on load
+        const savedTheme = localStorage.getItem('kj-nomad-theme') || 'dark';
+        if (savedTheme === 'dark') {
+            body.classList.add('dark');
+        }
+
+        themeToggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            const newTheme = body.classList.contains('dark') ? 'dark' : 'light';
+            localStorage.setItem('kj-nomad-theme', newTheme);
+        });
+
+
+        // --- Application Logic ---
         const welcomeView = document.getElementById('welcome-view');
         const playerSearchView = document.getElementById('player-search-view');
         const searchStatus = document.getElementById('search-status');
@@ -187,7 +303,10 @@
         .manual-connect {
             margin-top: 2rem;
             padding-top: 2rem;
-            border-top: 1px solid var(--blue);
+            border-top: 1px solid var(--border-light);
+        }
+        body.dark .manual-connect {
+            border-top-color: var(--border-dark);
         }
         #manual-address {
             padding: 1rem;
@@ -195,25 +314,37 @@
             width: 80%;
             max-width: 400px;
             border-radius: 8px;
-            border: 1px solid var(--blue);
-            background: var(--dark-card);
-            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+            background: var(--card-light);
+            color: var(--text-primary-light);
             margin-bottom: 1rem;
         }
+        body.dark #manual-address {
+            border-color: var(--border-dark);
+            background: var(--card-dark);
+            color: var(--text-primary-dark);
+        }
         details {
-            background: var(--dark-card);
+            background: var(--card-light);
             border-radius: 8px;
-            border: 1px solid var(--blue);
+            border: 1px solid var(--border-light);
+        }
+        body.dark details {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
         }
         summary {
             padding: 1rem;
             cursor: pointer;
             outline: none;
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
+        }
+        body.dark summary {
+            color: var(--text-secondary-dark);
         }
         pre {
-            background: var(--dark-bg);
-            color: #a9a9a9;
+            background: var(--bg-light);
+            color: #333;
             padding: 1rem;
             max-height: 200px;
             overflow-y: auto;
@@ -223,6 +354,10 @@
             word-wrap: break-word;
             border-bottom-left-radius: 8px;
             border-bottom-right-radius: 8px;
+        }
+        body.dark pre {
+            background: var(--bg-dark);
+            color: #a9a9a9;
         }
     </style>
 </body>
