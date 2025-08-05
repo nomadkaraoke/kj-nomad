@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ThemeContext } from './theme';
 import type { Theme, ThemeContextType } from './theme';
 
@@ -15,10 +15,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const [isDark, setIsDark] = useState(false);
 
-  const updateTheme = () => {
+  const updateTheme = useCallback(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     let shouldBeDark = false;
-    
+
     if (theme === 'dark') {
       shouldBeDark = true;
     } else if (theme === 'light') {
@@ -27,16 +27,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       // system theme
       shouldBeDark = mediaQuery.matches;
     }
-    
+
     setIsDark(shouldBeDark);
-    
+
     // Update DOM
     if (shouldBeDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  };
+  }, [theme]);
 
   useEffect(() => {
     updateTheme();
@@ -49,7 +49,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     console.log('Theme set to:', theme);
     
     return () => mediaQuery.removeEventListener('change', updateTheme);
-  }, [theme]);
+  }, [theme, updateTheme]);
 
   const value: ThemeContextType = {
     theme,

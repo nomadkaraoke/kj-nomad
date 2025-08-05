@@ -21687,7 +21687,7 @@ const ThemeProvider = ({ children }) => {
     return savedTheme || "system";
   });
   const [isDark, setIsDark] = reactExports.useState(false);
-  const updateTheme = () => {
+  const updateTheme = reactExports.useCallback(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     let shouldBeDark = false;
     if (theme === "dark") {
@@ -21703,7 +21703,7 @@ const ThemeProvider = ({ children }) => {
     } else {
       document.documentElement.classList.remove("dark");
     }
-  };
+  }, [theme]);
   reactExports.useEffect(() => {
     updateTheme();
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -21711,7 +21711,7 @@ const ThemeProvider = ({ children }) => {
     localStorage.setItem("kj-nomad-theme", theme);
     console.log("Theme set to:", theme);
     return () => mediaQuery.removeEventListener("change", updateTheme);
-  }, [theme]);
+  }, [theme, updateTheme]);
   const value = {
     theme,
     setTheme,
@@ -30838,4 +30838,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DV6pYrVY.js.map
+//# sourceMappingURL=index-QsYrGWXA.js.map
