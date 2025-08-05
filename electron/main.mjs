@@ -122,7 +122,9 @@ class KJNomadApp {
       fullscreen: false,
       autoHideMenuBar: true,
       resizable: true,
-      title: 'Searching for Server...'
+      title: 'Searching for Server...',
+      // In E2E tests, the window is intentionally not shown.
+      show: process.env.E2E_TESTING !== 'true',
     });
 
     // Load the onboarding HTML with a query param to indicate player mode
@@ -251,12 +253,15 @@ class KJNomadApp {
         webSecurity: true,
         preload: path.join(__dirname, 'preload.js')
       },
-      show: false, // Don't show until maximized
+      show: false, // Always start hidden
       titleBarStyle: 'default'
     });
 
-    mainWindow.maximize();
-    mainWindow.show();
+    // In E2E tests, the window is intentionally not shown.
+    if (process.env.E2E_TESTING !== 'true') {
+      mainWindow.maximize();
+      mainWindow.show();
+    }
 
     // Load the onboarding HTML file first
     await mainWindow.loadFile(path.join(__dirname, 'onboarding.html'));
@@ -300,7 +305,9 @@ class KJNomadApp {
         const window = BrowserWindow.fromWebContents(event.sender);
         if (window && !window.isDestroyed()) {
             window.loadURL(`${url}/player`);
-            window.setFullScreen(true);
+            if (process.env.E2E_TESTING !== 'true') {
+                window.setFullScreen(true);
+            }
         }
     });
 
@@ -321,7 +328,9 @@ class KJNomadApp {
                     url = `http://${url}`;
                 }
                 window.loadURL(`${url}/player`);
-                window.setFullScreen(true);
+                if (process.env.E2E_TESTING !== 'true') {
+                    window.setFullScreen(true);
+                }
             } else {
                 window.webContents.send('server-discovery-failed', 'Invalid address format. Please use HOST:PORT.');
             }
@@ -617,9 +626,11 @@ class KJNomadApp {
 
       // Send the selected mode to the renderer process
       mainWindow.webContents.send('mode-selected', mode);
-      
-      mainWindow.show();
-      mainWindow.focus();
+
+      if (process.env.E2E_TESTING !== 'true') {
+        mainWindow.show();
+        mainWindow.focus();
+      }
       
       if (!this.isCleaningUp) console.log('✅ KJ-Nomad is ready!');
       
