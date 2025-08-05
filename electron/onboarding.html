@@ -122,6 +122,7 @@
         if (params.get('mode') === 'player-search') {
             welcomeView.style.display = 'none';
             playerSearchView.style.display = 'block';
+            window.electronAPI.send('scan-for-servers');
         }
 
         if (window.electronAPI) {
@@ -163,6 +164,11 @@
                     button.onclick = () => window.electronAPI.send('select-server', url);
                     serverList.appendChild(button);
                 });
+            });
+
+            window.electronAPI.onServerDiscovered((url) => {
+                searchStatus.textContent = `Server found! Connecting to ${url}...`;
+                window.electronAPI.send('connect-to-server', url);
             });
         }
     </script>

@@ -46,12 +46,15 @@ Given('the application is searching for a server', async ({ page, electronApp })
 });
 
 Given('a KJ-Nomad server is running on the local network at {float}.{float}:{int}', async ({}, arg, arg1, arg2) => {
-  serverProcess = fork('server/dist/index.js', ['--mode=offline'], { silent: true });
+  serverProcess = fork('server/dist/index.js', ['--mode=offline'], {
+    silent: true,
+    env: { ...process.env, NO_AUTO_LAUNCH: 'true' }
+  });
   (global as any).serverProcess = serverProcess;
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Server process timed out')), 10000);
     serverProcess.stdout?.on('data', (data) => {
-      if (data.toString().includes('[Server] Starting in offline mode.')) {
+      if (data.toString().includes('SERVER READY')) {
         clearTimeout(timeout);
         resolve();
       }
@@ -94,12 +97,12 @@ Then('provide a button to {string}', async ({ electronApp }, buttonName: string)
 
 Then('provide an input field to manually enter a server address', async ({ electronApp }) => {
   const playerWindow = electronApp.windows()[1];
-  await expect(playerWindow.getByPlaceholder('Enter server address')).toBeVisible();
+  await expect(playerWindow.getByPlaceholder('e.g., 192.168.1.100:8080')).toBeVisible();
 });
 
 When('the user enters {string} into the manual entry field', async ({ electronApp }, address: string) => {
   const playerWindow = electronApp.windows()[1];
-  await playerWindow.getByPlaceholder('Enter server address').fill(address);
+  await playerWindow.getByPlaceholder('e.g., 192.168.1.100:8080').fill(address);
 });
 
 When('clicks {string}', async ({ electronApp }, buttonName: string) => {

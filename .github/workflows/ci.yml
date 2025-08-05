@@ -75,6 +75,66 @@ jobs:
         path: ./client/dist/
         retention-days: 30
 
+  # E2E Testing
+  e2e-test:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Cache root node_modules
+      uses: actions/cache@v4
+      id: cache-root-modules
+      with:
+        path: ./node_modules
+        key: ${{ runner.os }}-node-root-${{ hashFiles('./package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-root-
+
+    - name: Install root dependencies
+      if: steps.cache-root-modules.outputs.cache-hit != 'true'
+      run: npm ci
+        
+    - name: Cache server node_modules
+      uses: actions/cache@v4
+      id: cache-server-modules
+      with:
+        path: ./server/node_modules
+        key: ${{ runner.os }}-node-server-${{ hashFiles('./server/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-server-
+
+    - name: Install backend dependencies
+      if: steps.cache-server-modules.outputs.cache-hit != 'true'
+      run: cd server && npm ci
+      
+    - name: Cache client node_modules
+      uses: actions/cache@v4
+      id: cache-client-modules
+      with:
+        path: ./client/node_modules
+        key: ${{ runner.os }}-node-client-${{ hashFiles('./client/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-client-
+
+    - name: Install frontend dependencies
+      if: steps.cache-client-modules.outputs.cache-hit != 'true'
+      run: cd client && npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Run E2E tests
+      run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:e2e
+
   # Code Quality Checks
   lint-and-typecheck:
     name: Lint & Type Check

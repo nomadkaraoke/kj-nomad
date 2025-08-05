@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Send-only channel from renderer to main
   send: (channel, data) => {
     // Whitelist channels
-    const validChannels = ['start-mode', 'log', 'select-server', 'manual-connect'];
+    const validChannels = ['start-mode', 'log', 'select-server', 'manual-connect', 'scan-for-servers', 'connect-to-server'];
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, data);
     }

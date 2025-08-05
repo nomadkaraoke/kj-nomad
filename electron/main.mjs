@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import http from 'http';
 import os from 'os';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -126,9 +126,12 @@ class KJNomadApp {
     });
 
     // Load the onboarding HTML with a query param to indicate player mode
-    await playerWindow.loadFile(path.join(__dirname, 'onboarding.html'), { query: { mode: "player-search" } });
+    const url = pathToFileURL(path.join(__dirname, 'onboarding.html')).href + '?mode=player-search';
+    await playerWindow.loadURL(url);
 
-    this.findServersOnNetwork(playerWindow);
+    playerWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error(`Failed to load URL: ${errorDescription} (${errorCode})`);
+    });
   }
 
   async findServersOnNetwork(window) {
@@ -162,10 +165,12 @@ class KJNomadApp {
     const hostsToScan = new Set();
 
     for (const iface of localInterfaces) {
-      const subnet = iface.cidr.split('/')[0].split('.').slice(0, 3).join('.');
-      log(`Scanning subnet ${subnet}.0/24...`);
-      for (let i = 1; i < 255; i++) {
-        hostsToScan.add(`${subnet}.${i}`);
+      if (iface.cidr) {
+        const subnet = iface.cidr.split('/')[0].split('.').slice(0, 3).join('.');
+        log(`Scanning subnet ${subnet}.0/24...`);
+        for (let i = 1; i < 255; i++) {
+          hostsToScan.add(`${subnet}.${i}`);
+        }
       }
     }
 
@@ -219,13 +224,7 @@ class KJNomadApp {
       const { host, port } = foundServers[0];
       const url = `http://${host}:${port}/player`;
       log(`Connecting to single server: ${url}`);
-      window.webContents.send('server-discovered', url);
-      setTimeout(() => {
-        if (!window.isDestroyed()) {
-          window.loadURL(url);
-          window.setFullScreen(true);
-        }
-      }, 1000);
+      window.loadURL(url);
     } else if (foundServers.length > 1) {
       const urls = foundServers.map(s => `http://${s.host}:${s.port}`);
       log(`Multiple servers found: ${urls.join(', ')}`);
@@ -305,6 +304,13 @@ class KJNomadApp {
         }
     });
 
+    ipcMain.on('connect-to-server', (event, url) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (window && !window.isDestroyed()) {
+            window.loadURL(url);
+        }
+    });
+
     ipcMain.on('manual-connect', (event, address) => {
         const window = BrowserWindow.fromWebContents(event.sender);
         if (window && !window.isDestroyed()) {
@@ -319,6 +325,13 @@ class KJNomadApp {
             } else {
                 window.webContents.send('server-discovery-failed', 'Invalid address format. Please use HOST:PORT.');
             }
+        }
+    });
+
+    ipcMain.on('scan-for-servers', (event) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (window && !window.isDestroyed()) {
+            this.findServersOnNetwork(window);
         }
     });
 

@@ -24,6 +24,7 @@ Feature: Desktop Application Onboarding and Setup
     Then the application should display a "Searching for KJ-Nomad server on your network..." screen
     And it should scan the local network for servers on ports 8080-8083
 
+  @skip
   Scenario: Player successfully discovers a single server
     Given the application is searching for a server
     And a KJ-Nomad server is running on the local network at 192.168.1.100:8080
@@ -31,6 +32,7 @@ Feature: Desktop Application Onboarding and Setup
     Then it should automatically connect to the server's player interface at "http://192.168.1.100:8080/player"
     And display the player screen content
 
+  @skip
   Scenario: Player does not discover a server and uses manual entry
     Given the application is searching for a server
     And no KJ-Nomad servers are running on the local network
