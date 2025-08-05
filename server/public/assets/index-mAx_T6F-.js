@@ -21682,36 +21682,30 @@ function useViewTransitionState(to, { relative } = {}) {
 var reactDomExports = requireReactDom();
 const ThemeContext = reactExports.createContext(void 0);
 const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = reactExports.useState(() => {
+  const [theme, setThemeState] = reactExports.useState(() => {
     const savedTheme = localStorage.getItem("kj-nomad-theme");
     return savedTheme || "system";
   });
   const [isDark, setIsDark] = reactExports.useState(false);
-  const updateTheme = reactExports.useCallback(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    let shouldBeDark = false;
-    if (theme === "dark") {
-      shouldBeDark = true;
-    } else if (theme === "light") {
-      shouldBeDark = false;
-    } else {
-      shouldBeDark = mediaQuery.matches;
-    }
-    setIsDark(shouldBeDark);
-    if (shouldBeDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [theme]);
   reactExports.useEffect(() => {
-    updateTheme();
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const updateTheme = () => {
+      const isSystemDark = mediaQuery.matches;
+      const shouldBeDark = theme === "dark" || theme === "system" && isSystemDark;
+      setIsDark(shouldBeDark);
+      document.documentElement.classList.toggle("dark", shouldBeDark);
+    };
+    updateTheme();
     mediaQuery.addEventListener("change", updateTheme);
-    localStorage.setItem("kj-nomad-theme", theme);
-    console.log("Theme set to:", theme);
-    return () => mediaQuery.removeEventListener("change", updateTheme);
-  }, [theme, updateTheme]);
+    return () => {
+      mediaQuery.removeEventListener("change", updateTheme);
+    };
+  }, [theme]);
+  const setTheme = (newTheme) => {
+    localStorage.setItem("kj-nomad-theme", newTheme);
+    console.log("Theme set to:", newTheme);
+    setThemeState(newTheme);
+  };
   const value = {
     theme,
     setTheme,
@@ -30838,4 +30832,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-QsYrGWXA.js.map
+//# sourceMappingURL=index-mAx_T6F-.js.map

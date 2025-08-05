@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ThemeContext } from './theme';
 import type { Theme, ThemeContextType } from './theme';
 
@@ -7,49 +7,38 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Check localStorage first, then default to system
+  const [theme, setThemeState] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem('kj-nomad-theme') as Theme;
     return savedTheme || 'system';
   });
 
   const [isDark, setIsDark] = useState(false);
 
-  const updateTheme = useCallback(() => {
+  useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    let shouldBeDark = false;
 
-    if (theme === 'dark') {
-      shouldBeDark = true;
-    } else if (theme === 'light') {
-      shouldBeDark = false;
-    } else {
-      // system theme
-      shouldBeDark = mediaQuery.matches;
-    }
+    const updateTheme = () => {
+      const isSystemDark = mediaQuery.matches;
+      const shouldBeDark = theme === 'dark' || (theme === 'system' && isSystemDark);
 
-    setIsDark(shouldBeDark);
+      setIsDark(shouldBeDark);
+      document.documentElement.classList.toggle('dark', shouldBeDark);
+    };
 
-    // Update DOM
-    if (shouldBeDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    updateTheme();
+
+    mediaQuery.addEventListener('change', updateTheme);
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateTheme);
+    };
   }, [theme]);
 
-  useEffect(() => {
-    updateTheme();
-    
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    mediaQuery.addEventListener('change', updateTheme);
-    
-    // Save theme preference
-    localStorage.setItem('kj-nomad-theme', theme);
-    console.log('Theme set to:', theme);
-    
-    return () => mediaQuery.removeEventListener('change', updateTheme);
-  }, [theme, updateTheme]);
+  const setTheme = (newTheme: Theme) => {
+    localStorage.setItem('kj-nomad-theme', newTheme);
+    console.log('Theme set to:', newTheme);
+    setThemeState(newTheme);
+  };
 
   const value: ThemeContextType = {
     theme,
