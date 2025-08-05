@@ -14,6 +14,10 @@ export const test = base.extend<MyFixtures>({
     const electronApp = await electron.launch({
       executablePath,
       args: ['electron/main.mjs'],
+      env: {
+        ...process.env,
+        E2E_TESTING: 'true',
+      },
     });
     await use(electronApp);
     await electronApp.close();

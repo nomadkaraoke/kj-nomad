@@ -291,9 +291,17 @@ The web E2E tests are run against the production build of the client-side code, 
 *   **Configuration:** `playwright.config.electron.ts`
 *   **Features:** `docs/features/desktop_app/**/*.feature`
 *   **Steps:** `e2e/steps/desktop_app/**/*.ts`
+*   **Fixtures:** `e2e/fixtures.ts`
+*   **Global Setup:** `e2e/global-setup.ts`
 *   **Command:** `npm run test:e2e:electron`
 
-The Electron E2E tests are run against the packaged Electron application.
+The Electron E2E tests are run against the application source code, not the packaged application. The test runner launches Electron directly.
+
+***Key Implementation Details:***
+*   **Application Launch:** The Electron application instance is launched within the Playwright test fixture defined in `e2e/fixtures.ts`. This is where the `_electron.launch()` method is called.
+*   **Test Environment Variable:** To allow the application to behave differently during tests (e.g., suppressing error dialogs), the `E2E_TESTING=true` environment variable is set within the `electron.launch()` configuration in `e2e/fixtures.ts`.
+*   **Pre-test Build:** The `global-setup.ts` script is executed once before the test suite runs. It is responsible for ensuring that any necessary prerequisites, such as building the server, are completed.
+*   **Step Definitions:** The Gherkin steps in the `.feature` files are implemented in the `*.steps.ts` files located in `e2e/steps/desktop_app/`.
 
 ### 7.3 **ENFORCEMENT** Development Workflow
 

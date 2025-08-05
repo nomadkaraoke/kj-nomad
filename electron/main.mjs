@@ -706,6 +706,14 @@ process.on('uncaughtException', (error) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+
+  // During E2E tests, a rejection is expected when the app is force-closed,
+  // so we don't want to show a blocking dialog.
+  if (process.env.E2E_TESTING === 'true') {
+    console.log('E2E_TESTING mode: Suppressing unhandled rejection dialog.');
+    return;
+  }
+
   const rejectionDetails = { reason: reason, promise: promise.toString(), timestamp: new Date().toISOString() };
   let fullMessage = `An unhandled promise rejection occurred${reason && reason.message ? `: ${reason.message}` : ''}\n\n--- Rejection Details ---\n${JSON.stringify(rejectionDetails, null, 2)}`;
   dialog.showErrorBox('Unhandled Promise Rejection', fullMessage);
