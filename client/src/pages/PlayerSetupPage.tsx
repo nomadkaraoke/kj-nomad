@@ -28,7 +28,7 @@ const PlayerSetupPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+    <div className="flex items-center justify-center h-screen bg-gray-900 text-white" data-testid="player-setup-page">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">Setting Up as Player Screen</h1>
         <p className="text-xl text-gray-400 mb-8">{status}</p>

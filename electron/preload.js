@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Send-only channel from renderer to main
   send: (channel, data) => {
     // Whitelist channels
-    const validChannels = ['start-mode'];
+    const validChannels = ['start-mode', 'log'];
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, data);
     }
@@ -40,5 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => {
       ipcRenderer.removeListener('server-discovered', handler);
     };
+  },
+  log: (message) => {
+    ipcRenderer.send('log', message);
   }
 });

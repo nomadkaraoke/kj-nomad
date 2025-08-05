@@ -30108,7 +30108,7 @@ const PlayerSetupPage = () => {
   const handleConnect = (serverUrl) => {
     window.location.href = `${serverUrl}/player`;
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-screen bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-screen bg-gray-900 text-white", "data-testid": "player-setup-page", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl font-bold mb-4", children: "Setting Up as Player Screen" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl text-gray-400 mb-8", children: status }),
     servers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: servers.map((url) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -30806,6 +30806,9 @@ const SingerPage = () => {
 };
 const AppContent = () => {
   const { mode, isSetupComplete, isSessionConnected, onlineSessionRequiresLibrary } = useAppStore();
+  if (mode === "player") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerSetupPage, {});
+  }
   if (window.location.pathname === "/player") {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerPage, {});
   }
@@ -30832,6 +30835,11 @@ const AppContent = () => {
 };
 function App() {
   reactExports.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeFromUrl = urlParams.get("mode");
+    if (modeFromUrl && ["offline", "online", "player", "unknown"].includes(modeFromUrl)) {
+      useAppStore.getState().setMode(modeFromUrl);
+    }
     const path = window.location.pathname;
     if (!path.startsWith("/player") && !path.startsWith("/singer")) {
       websocketService.connect("admin");
@@ -30866,4 +30874,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-Cu2ki34X.js.map
+//# sourceMappingURL=index-eKO94_or.js.map

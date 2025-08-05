@@ -1,12 +1,1 @@
-{
-  "mediaDirectory": "/Users/andrew/Music/KJ-Nomad",
-  "fillerMusicDirectory": "/Users/andrew/Music/KJ-Nomad",
-  "kjName": "Local KJ",
-  "venue": "",
-  "autoLaunchBrowser": true,
-  "defaultPort": 8080,
-  "enableNetworkAccess": true,
-  "setupComplete": false,
-  "lastModified": "2025-08-04T23:08:19.814Z",
-  "createdAt": "2025-08-04T23:03:43.861Z"
-}
+{"setupComplete":true,"mediaDirectory":"/Users/andrew/Projects/kj-nomad/server/data"}

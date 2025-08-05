@@ -58,9 +58,11 @@ export interface SessionState {
   queueLength: number;
 }
 
+export type AppMode = 'offline' | 'online' | 'player' | 'unknown';
+
 export interface AppState {
   // App mode
-  mode: 'offline' | 'online' | 'unknown';
+  mode: AppMode;
 
   // Connection state
   socket: WebSocket | null;
@@ -99,7 +101,7 @@ export interface AppState {
   searchResults: Song[];
   
   // Actions
-  setMode: (mode: 'offline' | 'online') => void;
+  setMode: (mode: AppMode) => void;
   setSocket: (socket: WebSocket | null) => void;
   setConnectionStatus: (status: 'idle' | 'connecting' | 'connected' | 'error') => void;
   setError: (error: string | null) => void;

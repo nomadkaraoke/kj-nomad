@@ -79,17 +79,19 @@ class KJNomadApp {
       this.handleUrl(url);
     });
 
-    const gotTheLock = app.requestSingleInstanceLock();
-    if (!gotTheLock) {
-      app.quit();
-    } else {
-      app.on('second-instance', (event, commandLine, workingDirectory) => {
-        if (mainWindow) {
-          if (mainWindow.isMinimized()) mainWindow.restore();
-          mainWindow.focus();
-        }
-        this.handleUrl(commandLine.pop());
-      });
+    if (process.env.E2E_TESTING !== 'true') {
+      const gotTheLock = app.requestSingleInstanceLock();
+      if (!gotTheLock) {
+        app.quit();
+      } else {
+        app.on('second-instance', (event, commandLine, workingDirectory) => {
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+          }
+          this.handleUrl(commandLine.pop());
+        });
+      }
     }
   }
 
@@ -124,9 +126,7 @@ class KJNomadApp {
     });
 
     // Load the main app URL and the router will handle the rest
-    playerWindow.loadURL(`http://${SERVER_HOST}:${serverPort}/player-setup`);
-
-    this.findServers(playerWindow);
+    playerWindow.loadURL(`http://${SERVER_HOST}:${serverPort}/player`);
   }
 
   findServers(window) {
@@ -182,15 +182,16 @@ class KJNomadApp {
     // Listen for the mode selection from the onboarding page
     ipcMain.on('start-mode', async (event, mode) => {
       console.log(`Received start-mode event: ${mode}`);
+      
+      console.log(`Using port: ${DEFAULT_PORT}`);
+      
       if (mode === 'player') {
         this.createPlayerWindow();
+        if (mainWindow) {
+          mainWindow.close();
+        }
       } else {
-        // Find an available port before starting
-        serverPort = await findAvailablePort(DEFAULT_PORT);
-        console.log(`Using port: ${serverPort}`);
-        // Once a mode is chosen, start the server and load the main app
-        await this.startServer(mode);
-        await this.loadApp(mode); // Pass mode to loadApp
+        await this.loadApp(mode);
       }
     });
 

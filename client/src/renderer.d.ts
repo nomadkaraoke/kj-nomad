@@ -9,6 +9,7 @@ declare global {
       onConnectWithAdminKey: (callback: (key: string) => void) => () => void;
       onSetModeOnline: (callback: () => void) => () => void;
       onServerDiscovered: (callback: (serverUrl: string) => void) => () => void;
+      log: (message: string) => void;
     };
   }
 }

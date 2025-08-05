@@ -15,10 +15,15 @@ import SingerPage from './pages/SingerPage';
 
 import './App.css';
 
+import type { AppMode } from './store/appStore';
+
 const AppContent: React.FC = () => {
   const { mode, isSetupComplete, isSessionConnected, onlineSessionRequiresLibrary } = useAppStore();
 
   // Player and Singer routes should be available regardless of setup status
+  if (mode === 'player') {
+    return <PlayerSetupPage />;
+  }
   if (window.location.pathname === '/player') {
     return <PlayerPage />;
   }
@@ -52,6 +57,13 @@ const AppContent: React.FC = () => {
 
 function App() {
   useEffect(() => {
+    // Determine mode from URL first
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeFromUrl = urlParams.get('mode');
+    if (modeFromUrl && ['offline', 'online', 'player', 'unknown'].includes(modeFromUrl)) {
+      useAppStore.getState().setMode(modeFromUrl as AppMode);
+    }
+
     // Don't connect if we are on a dedicated page like player or singer
     const path = window.location.pathname;
     if (!path.startsWith('/player') && !path.startsWith('/singer')) {
