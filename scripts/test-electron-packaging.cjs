@@ -146,7 +146,7 @@ function testServerStartup() {
     console.log('\n🚀 Testing server startup...');
     
     const executablePath = getExecutablePath();
-    const testPort = 8081; // Use different port to avoid conflicts
+    const testPort = 8080; // Use different port to avoid conflicts
     
     // Kill any existing processes on the test port
     try {

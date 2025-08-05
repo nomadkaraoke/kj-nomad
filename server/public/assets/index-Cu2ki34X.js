@@ -30866,4 +30866,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-Cl1OOC70.js.map
+//# sourceMappingURL=index-Cu2ki34X.js.map

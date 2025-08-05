@@ -17,7 +17,7 @@ const server = http.createServer(app);
 // Parse command line arguments
 const args = process.argv.slice(2);
 const portArg = args.find(arg => arg.startsWith('--port='))?.split('=')[1];
-const PORT = portArg ? parseInt(portArg, 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 8081);
+const PORT = portArg ? parseInt(portArg, 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 8080);
 
 // Serve static files from the React client
 const productionClientPath = path.join(__dirname, '../public');

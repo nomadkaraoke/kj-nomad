@@ -11,7 +11,7 @@ const path = require('path');
 const os = require('os');
 
 const TIMEOUT_MS = 10000; // 10 seconds timeout
-const TEST_PORT = 8081; // Use different port to avoid conflicts
+const TEST_PORT = 8080; // Use different port to avoid conflicts
 
 /**
  * Get the appropriate executable name for the current platform
