@@ -133,7 +133,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-0 libxtst6 libnss3 libxss1 libasound2
+        sudo apt-get install -y libgtk-3-0 libxtst6 libnss3 libxss1 libasound2t64
 
     - name: Cache Playwright Browsers
       id: cache-playwright-browsers
