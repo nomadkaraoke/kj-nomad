@@ -133,6 +133,9 @@ jobs:
       run: npx playwright install --with-deps
       
     - name: Run E2E tests
+      env:
+        KJ_NOMAD_USER_DATA_PATH: ${{ runner.temp }}/kj-nomad-data
+        DISPLAY: :99
       run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:e2e:all
 
   # Code Quality Checks
@@ -302,6 +305,9 @@ jobs:
       
     - name: Run packaging test (Linux)
       if: runner.os == 'Linux'
+      env:
+        KJ_NOMAD_USER_DATA_PATH: ${{ runner.temp }}/kj-nomad-data
+        DISPLAY: :99
       run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:packaging
       
     - name: Run packaging test (Windows & macOS)
