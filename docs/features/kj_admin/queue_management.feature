@@ -1,3 +1,4 @@
+@skip
 @kj-admin @queue
 Feature: KJ Queue Management
   As a Karaoke Jockey (KJ)

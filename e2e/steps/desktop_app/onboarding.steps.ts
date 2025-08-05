@@ -1,4 +1,4 @@
-import { Given, When, Then } from '../fixtures';
+import { Given, When, Then } from '../../fixtures';
 import { expect } from '@playwright/test';
 import { fork, ChildProcess } from 'child_process';
 
@@ -103,11 +103,6 @@ Then('provide an input field to manually enter a server address', async ({ elect
 When('the user enters {string} into the manual entry field', async ({ electronApp }, address: string) => {
   const playerWindow = electronApp.windows()[1];
   await playerWindow.getByPlaceholder('e.g., 192.168.1.100:8080').fill(address);
-});
-
-When('clicks {string}', async ({ electronApp }, buttonName: string) => {
-  const playerWindow = electronApp.windows()[1];
-  await playerWindow.getByRole('button', { name: buttonName }).click();
 });
 
 Then('the application should attempt to connect to {string}', async ({}, url: string) => {

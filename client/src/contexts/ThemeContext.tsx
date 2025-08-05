@@ -15,38 +15,38 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const [isDark, setIsDark] = useState(false);
 
-  useEffect(() => {
+  const updateTheme = () => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    let shouldBeDark = false;
     
-    const updateTheme = () => {
-      let shouldBeDark = false;
-      
-      if (theme === 'dark') {
-        shouldBeDark = true;
-      } else if (theme === 'light') {
-        shouldBeDark = false;
-      } else {
-        // system theme
-        shouldBeDark = mediaQuery.matches;
-      }
-      
-      setIsDark(shouldBeDark);
-      
-      // Update DOM
-      if (shouldBeDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
+    if (theme === 'dark') {
+      shouldBeDark = true;
+    } else if (theme === 'light') {
+      shouldBeDark = false;
+    } else {
+      // system theme
+      shouldBeDark = mediaQuery.matches;
+    }
+    
+    setIsDark(shouldBeDark);
+    
+    // Update DOM
+    if (shouldBeDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
+  useEffect(() => {
     updateTheme();
     
-    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     mediaQuery.addEventListener('change', updateTheme);
     
     // Save theme preference
     localStorage.setItem('kj-nomad-theme', theme);
+    console.log('Theme set to:', theme);
     
     return () => mediaQuery.removeEventListener('change', updateTheme);
   }, [theme]);

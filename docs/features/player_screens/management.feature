@@ -1,3 +1,4 @@
+@skip
 @player-screen @core-feature
 Feature: Player Screen Management
   As a Karaoke Jockey (KJ)

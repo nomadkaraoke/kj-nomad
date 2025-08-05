@@ -9,6 +9,7 @@ import {
   MagnifyingGlassIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 type WizardStep = 'welcome' | 'select_media' | 'scan_media' | 'complete';
 
@@ -254,6 +255,9 @@ const SetupWizardPage: React.FC = () => {
 
   return (
     <div className="h-screen w-screen bg-gray-100 dark:bg-dark-900 flex items-center justify-center font-sans">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <Container size="xl">
         <Card className="shadow-2xl">
           <div className="p-8">

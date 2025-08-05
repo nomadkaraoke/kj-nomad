@@ -46,11 +46,6 @@ import {
 } from './songQueue.js';
 import { scanFillerMusic, getNextFillerSong } from './fillerMusic.js';
 import { cloudConnector } from './cloudConnector.js';
-import { 
-  launchAdminInterface, 
-  shouldAutoLaunch, 
-  displayStartupInstructions 
-} from './browserLauncher.js';
 import {
   applySetupRoutes,
   loadSetupConfig,
@@ -1480,23 +1475,7 @@ server.listen(PORT, async () => {
 
   if (startMode === 'offline') {
     // For offline mode, behave as a standard local server
-    const localIP = cloudConnector.getStatus().localIP;
-    
-    displayStartupInstructions(PORT as number, {
-      localIP,
-      cloudMode: false
-    });
-
-    if (shouldAutoLaunch()) {
-      console.log('🚀 Auto-launching admin interface for offline mode...\n');
-      launchAdminInterface(PORT as number).then((success) => {
-        if (!success) {
-          console.log(`💡 Please manually open: http://localhost:${PORT}`);
-        }
-      });
-    } else {
-      console.log(`ℹ️  Auto-launch disabled. Manual access: http://localhost:${PORT}\n`);
-    }
+    console.log(`ℹ️  Manual access: http://localhost:${PORT}\n`);
   } else {
     // For online mode, the server is ready and waiting for connection details
     // from the Electron app UI (which isn't built yet).

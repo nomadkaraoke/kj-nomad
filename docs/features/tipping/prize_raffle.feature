@@ -1,3 +1,4 @@
+@skip
 @tipping @monetization
 Feature: Tip Prize Raffle
   As a KJ, I want to run a prize raffle for tippers

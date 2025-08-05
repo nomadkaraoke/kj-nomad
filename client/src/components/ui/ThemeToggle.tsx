@@ -42,6 +42,7 @@ export const ThemeToggle: React.FC = () => {
       onClick={cycleTheme}
       className="flex items-center space-x-2"
       title={`Current theme: ${getLabel()}. Click to cycle themes.`}
+      data-testid="theme-toggle"
     >
       {getIcon()}
       <span className="hidden sm:inline">{getLabel()}</span>

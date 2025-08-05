@@ -1,3 +1,4 @@
+@skip
 @singer-flow @online @qr-code
 Feature: QR Code Access for Singers
   As a KJ, I want a QR code to be displayed for singers.

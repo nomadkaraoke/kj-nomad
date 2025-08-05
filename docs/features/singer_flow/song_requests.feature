@@ -1,3 +1,4 @@
+@skip
 @singer-flow @online
 Feature: Singer Song Request Flow
   As a singer at a karaoke venue

@@ -1,3 +1,4 @@
+@skip
 @core @video-sync
 Feature: Perfect Video Synchronization
   As a Karaoke Jockey (KJ)

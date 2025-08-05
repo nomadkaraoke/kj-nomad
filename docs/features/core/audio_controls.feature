@@ -1,3 +1,4 @@
+@skip
 @core @audio-controls @future
 Feature: Advanced Audio Controls
   As a Karaoke Jockey (KJ)

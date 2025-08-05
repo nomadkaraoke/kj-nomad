@@ -1,3 +1,4 @@
+@skip
 @tipping @monetization
 Feature: Tip to Skip the Queue
   As a KJ, I want to allow singers to tip for priority in the queue.

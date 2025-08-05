@@ -21687,27 +21687,29 @@ const ThemeProvider = ({ children }) => {
     return savedTheme || "system";
   });
   const [isDark, setIsDark] = reactExports.useState(false);
-  reactExports.useEffect(() => {
+  const updateTheme = () => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const updateTheme = () => {
-      let shouldBeDark = false;
-      if (theme === "dark") {
-        shouldBeDark = true;
-      } else if (theme === "light") {
-        shouldBeDark = false;
-      } else {
-        shouldBeDark = mediaQuery.matches;
-      }
-      setIsDark(shouldBeDark);
-      if (shouldBeDark) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    };
+    let shouldBeDark = false;
+    if (theme === "dark") {
+      shouldBeDark = true;
+    } else if (theme === "light") {
+      shouldBeDark = false;
+    } else {
+      shouldBeDark = mediaQuery.matches;
+    }
+    setIsDark(shouldBeDark);
+    if (shouldBeDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
+  reactExports.useEffect(() => {
     updateTheme();
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     mediaQuery.addEventListener("change", updateTheme);
     localStorage.setItem("kj-nomad-theme", theme);
+    console.log("Theme set to:", theme);
     return () => mediaQuery.removeEventListener("change", updateTheme);
   }, [theme]);
   const value = {
@@ -29778,6 +29780,7 @@ const ThemeToggle = () => {
       onClick: cycleTheme,
       className: "flex items-center space-x-2",
       title: `Current theme: ${getLabel()}. Click to cycle themes.`,
+      "data-testid": "theme-toggle",
       children: [
         getIcon(),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden sm:inline", children: getLabel() })
@@ -30256,7 +30259,10 @@ const SetupWizardPage = () => {
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Unknown step" });
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-screen w-screen bg-gray-100 dark:bg-dark-900 flex items-center justify-center font-sans", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { size: "xl", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { className: "shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-8", children: renderStep() }) }) }) });
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-screen w-screen bg-gray-100 dark:bg-dark-900 flex items-center justify-center font-sans", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-4 right-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeToggle, {}) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { size: "xl", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Card, { className: "shadow-2xl", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-8", children: renderStep() }) }) })
+  ] });
 };
 const OnlineSessionConnectPage = () => {
   const [sessionId] = reactExports.useState("");
@@ -30832,4 +30838,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-Bm5PcECk.js.map
+//# sourceMappingURL=index-DV6pYrVY.js.map

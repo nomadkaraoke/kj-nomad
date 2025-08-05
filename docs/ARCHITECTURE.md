@@ -271,6 +271,30 @@ kj-nomad/
 - **Integration Tests:** All API endpoints must be covered, including success and error scenarios.
 - **End-to-End (E2E) Tests:** Critical user flows, as defined in the `.feature` files, must be automated using Playwright.
 
+#### E2E Testing Setup
+
+The E2E tests are split into two categories: web (Node / React) and desktop app (Electron).
+All tests should follow BDD best practices, with features spec files in `docs/features` and Playwright automated tests in `e2e/steps`.
+The `playwright-bdd` library (`npx bddgen`) is used to generate Playwright test files from the Gherkin syntax BDD `.feature` files in in `docs/features`, then the test files are executed by Playwright.
+
+**Web (Node / React) E2E Tests:**
+
+*   **Configuration:** `playwright.config.ts`
+*   **Features:** `docs/features/!(desktop_app)/**/*.feature`
+*   **Steps:** `e2e/steps/web/**/*.ts`
+*   **Command:** `npm run test:e2e:web`
+
+The web E2E tests are run against the production build of the client-side code, which is served by the Node.js server on port 8080.
+
+**Desktop App (Electron) E2E Tests:**
+
+*   **Configuration:** `playwright.config.electron.ts`
+*   **Features:** `docs/features/desktop_app/**/*.feature`
+*   **Steps:** `e2e/steps/desktop_app/**/*.ts`
+*   **Command:** `npm run test:e2e:electron`
+
+The Electron E2E tests are run against the packaged Electron application.
+
 ### 7.3 **ENFORCEMENT** Development Workflow
 
 **🚫 BLOCKING RULES (Non-negotiable):**

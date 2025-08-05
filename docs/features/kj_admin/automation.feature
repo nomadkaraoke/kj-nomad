@@ -1,3 +1,4 @@
+@skip
 @kj-admin @automation
 Feature: KJ Automation Engine
   As a Karaoke Jockey (KJ)

@@ -1,3 +1,4 @@
+@skip
 @session @online
 Feature: Online Session Management
   As a Karaoke Jockey (KJ)

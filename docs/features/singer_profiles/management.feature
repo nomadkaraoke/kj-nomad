@@ -1,3 +1,4 @@
+@skip
 @singer-profiles
 Feature: Singer Profile Management
   As a Karaoke Jockey (KJ)

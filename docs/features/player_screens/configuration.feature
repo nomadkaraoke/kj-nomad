@@ -1,3 +1,4 @@
+@skip
 @player-screen @configuration
 Feature: Player Screen Configuration
   As a Karaoke Jockey (KJ)

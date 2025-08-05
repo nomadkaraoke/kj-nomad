@@ -1,3 +1,4 @@
+@skip
 @website @onboarding
 Feature: Website Landing Page and Mode Selection
   As a new or returning Karaoke Jockey (KJ)

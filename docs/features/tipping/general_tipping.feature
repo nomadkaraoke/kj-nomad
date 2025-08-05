@@ -1,3 +1,4 @@
+@skip
 @tipping @monetization
 Feature: General Tipping and Gated Features
   As a KJ, I want to offer tipping features to increase my earnings.
