@@ -1,9 +1,10 @@
 import { test, expect, _electron as electron, ElectronApplication, Page } from '@playwright/test';
-import { execSync } from 'child_process';
+import { execSync, fork, ChildProcess } from 'child_process';
 
 test.describe('Desktop Application Onboarding and Setup', () => {
   let electronApp: ElectronApplication;
   let page: Page;
+  let serverProcess: ChildProcess;
 
   test.beforeAll(() => {
     // Build the server before running the tests
@@ -19,6 +20,10 @@ test.describe('Desktop Application Onboarding and Setup', () => {
   test.afterEach(async () => {
     // Close the app after each test
     await electronApp.close();
+    // Kill the server process if it's running
+    if (serverProcess) {
+      serverProcess.kill();
+    }
   });
 
   test('KJ launches the app and chooses to start an Offline Session', async () => {
@@ -35,14 +40,41 @@ test.describe('Desktop Application Onboarding and Setup', () => {
     await expect(page.getByPlaceholder('Admin Key')).toBeVisible({ timeout: 15000 });
   });
 
-  test.skip('KJ launches the app and chooses to set it up as a Player', async () => {
+  test('KJ launches the app and chooses to set it up as a Player', async () => {
+    // Start a local server process for the player to discover
+    // We use a separate server process to simulate a real network environment
+    serverProcess = fork('server/dist/index.js', ['--mode=offline'], { silent: true });
+
+    // Wait for the server to be ready by listening for a specific output message
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Server process timed out after 10 seconds'));
+      }, 10000);
+
+      serverProcess.stdout?.on('data', (data) => {
+        const output = data.toString();
+        // Match the actual server output
+        if (output.includes('[Server] Starting in offline mode.')) {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+
+      serverProcess.stderr?.on('data', (data) => {
+        console.error(`Server Process Error: ${data}`);
+      });
+    });
+
     await expect(page.getByText('Welcome to KJ-Nomad')).toBeVisible();
 
+    // The "Set up as Player" button opens a new window
     const newPagePromise = electronApp.waitForEvent('window');
     await page.getByRole('button', { name: 'Set up as Player' }).click();
     const newPage = await newPagePromise;
 
-    await expect(newPage.getByRole('heading', { name: 'Setting Up as Player Screen' })).toBeVisible({ timeout: 15000 });
-    await expect(newPage.getByText('Scanning for KJ-Nomad server on your network...')).toBeVisible();
+    // The player window should eventually find the server and display the ready screen
+    // We give it a generous timeout to allow for network discovery
+    await expect(newPage.getByRole('heading', { name: 'KJ-Nomad Ready' })).toBeVisible({ timeout: 20000 });
+    await expect(newPage.getByText('Waiting for the next performance...')).toBeVisible();
   });
 });

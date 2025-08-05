@@ -23,7 +23,7 @@ export const scanFillerMusic = (customDirectory?: string) => {
   try {
     // Ensure directory exists
     if (!fs.existsSync(scanDir)) {
-      console.error(`Filler music directory does not exist: ${scanDir}`);
+      console.warn(`Filler music directory does not exist: ${scanDir}`);
       fillerPlaylist = [];
       return;
     }
