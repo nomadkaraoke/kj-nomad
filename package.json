@@ -37,7 +37,7 @@
     "lint:fix:client": "cd client && npm run lint:fix",
     "clean": "rm -rf server/dist client/dist server/public/* */node_modules",
     "setup": "npm install && cd server && npm install && cd ../client && npm install",
-    "check-all": "npm run lint && npm run test && npm run build && npm run test:packaging",
+    "check-all": "npm run lint && npm run test && npm run build && npm run test:packaging && npm run test:e2e:all",
     "iterate": "npm run lint && npm run test && npm run build && npm run dev",
     "package": "npm run package:electron",
     "package:electron": "npm run generate:icons && npm run dist",

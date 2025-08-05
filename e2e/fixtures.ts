@@ -8,7 +8,11 @@ export type MyFixtures = {
 
 export const test = base.extend<MyFixtures>({
   electronApp: async ({}, use) => {
-    const electronApp = await electron.launch({ args: ['electron/main.mjs'] });
+    // Find the path to the electron executable
+    const mainProcessPath = 'electron/main.mjs';
+    const electronApp = await electron.launch({
+      args: [mainProcessPath],
+    });
     await use(electronApp);
     await electronApp.close();
   },

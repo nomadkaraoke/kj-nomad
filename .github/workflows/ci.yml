@@ -131,6 +131,11 @@ jobs:
       
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
+
+    - name: Setup Test Media and Config
+      run: |
+        mkdir -p ${{ runner.temp }}/kj-nomad-data/media
+        echo '{"mediaDirectory": "${{ runner.temp }}/kj-nomad-data/media", "setupComplete": true}' > ${{ runner.temp }}/kj-nomad-data/setup.json
       
     - name: Run E2E tests
       env:
@@ -308,7 +313,10 @@ jobs:
       env:
         KJ_NOMAD_USER_DATA_PATH: ${{ runner.temp }}/kj-nomad-data
         DISPLAY: :99
-      run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:packaging
+      run: |
+        mkdir -p ${{ runner.temp }}/kj-nomad-data/media
+        echo '{"mediaDirectory": "${{ runner.temp }}/kj-nomad-data/media", "setupComplete": true}' > ${{ runner.temp }}/kj-nomad-data/setup.json
+        xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:packaging
       
     - name: Run packaging test (Windows & macOS)
       if: runner.os != 'Linux'
