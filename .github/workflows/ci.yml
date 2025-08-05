@@ -133,7 +133,18 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-0 libxtst6 libnss3 libxss1 libasound2t64
+        sudo apt-get install -y \
+          libgtk-3-0 \
+          libxtst6 \
+          libnss3 \
+          libxss1 \
+          libasound2t64 \
+          libgbm-dev \
+          libatk1.0-0 \
+          libatk-bridge2.0-0 \
+          libcups2 \
+          libatspi2.0-0 \
+          libgdk-pixbuf2.0-0
 
     - name: Cache Playwright Browsers
       id: cache-playwright-browsers
@@ -156,12 +167,17 @@ jobs:
         mkdir -p "$MEDIA_PATH"
         mkdir -p "$CONFIG_PATH"
         echo "{\"mediaDirectory\": \"$MEDIA_PATH\", \"fillerMusicDirectory\": \"$MEDIA_PATH\", \"setupComplete\": true}" > "$CONFIG_PATH/setup.json"
+
+    - name: Make Electron executable
+      if: runner.os == 'Linux'
+      run: chmod +x node_modules/electron/dist/electron
       
     - name: Run E2E tests
       env:
         KJ_NOMAD_USER_DATA_PATH: ${{ runner.temp }}/kj-nomad-data
         DISPLAY: :99
-      run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:e2e:all
+        ELECTRON_ENABLE_LOGGING: true
+      run: xvfb-run --server-num=99 --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:e2e:all
 
   # Code Quality Checks
   lint-and-typecheck:
