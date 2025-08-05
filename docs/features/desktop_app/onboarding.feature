@@ -31,12 +31,16 @@ Feature: Desktop Application Onboarding and Setup
     Then it should automatically connect to the server's player interface at "http://192.168.1.100:8080/player"
     And display the player screen content
 
-  Scenario: Player does not discover a server
+  Scenario: Player does not discover a server and uses manual entry
     Given the application is searching for a server
     And no KJ-Nomad servers are running on the local network
-    When the search times out after 30 seconds
+    When the search times out
     Then the application should display a "No server found" message
-    And provide a button to "Retry Search"
+    And provide a button to "Retry Auto-Scan"
+    And provide an input field to manually enter a server address
+    When the user enters "192.168.1.100:8080" into the manual entry field
+    And clicks "Connect"
+    Then the application should attempt to connect to "http://192.168.1.100:8080/player"
 
   Scenario: Player discovers multiple servers
     Given the application is searching for a server
