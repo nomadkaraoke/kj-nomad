@@ -17,7 +17,7 @@ KJ-Nomad operates in two distinct modes, each optimized for different venue scen
 ### 1.1 Offline Mode
 - **Target**: Venues with unreliable internet or KJs preferring traditional paper-based requests
 - **Architecture**: Self-contained executable + local network PWA
-- **Discovery**: Manual IP address entry for player screens
+- **Discovery**: Automatic layer-2 network scan. Player screens scan the local /24 subnet on ports 8080-8090 to find the server, eliminating manual IP entry.
 - **Requests**: Paper slips entered via KJ admin interface
 - **Media**: Local video library only
 

@@ -19,7 +19,7 @@ const PlayerSetupPage: React.FC = () => {
     return () => {
       cleanup();
       clearTimeout(timer);
-    };
+    }; 
   }, [servers.length]);
 
   const handleConnect = (serverUrl: string) => {

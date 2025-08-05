@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Send-only channel from renderer to main
   send: (channel, data) => {
     // Whitelist channels
-    const validChannels = ['start-mode', 'log'];
+    const validChannels = ['start-mode', 'log', 'select-server', 'manual-connect'];
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, data);
     }
@@ -37,9 +37,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onServerDiscovered: (callback) => {
     const handler = (event, ...args) => callback(...args);
     ipcRenderer.on('server-discovered', handler);
-    return () => {
-      ipcRenderer.removeListener('server-discovered', handler);
-    };
+    return () => ipcRenderer.removeListener('server-discovered', handler);
+  },
+  onServerDiscoveryFailed: (callback) => {
+    const handler = (event, ...args) => callback(...args);
+    ipcRenderer.on('server-discovery-failed', handler);
+    return () => ipcRenderer.removeListener('server-discovery-failed', handler);
+  },
+  onServerDiscoveryMultiple: (callback) => {
+    const handler = (event, ...args) => callback(...args);
+    ipcRenderer.on('server-discovery-multiple', handler);
+    return () => ipcRenderer.removeListener('server-discovery-multiple', handler);
+  },
+  onServerDiscoveryStatus: (callback) => {
+    const handler = (event, ...args) => callback(...args);
+    ipcRenderer.on('server-discovery-status', handler);
+    return () => ipcRenderer.removeListener('server-discovery-status', handler);
+  },
+  onLogMessage: (callback) => {
+    const handler = (event, ...args) => callback(...args);
+    ipcRenderer.on('log-message', handler);
+    return () => ipcRenderer.removeListener('log-message', handler);
   },
   log: (message) => {
     ipcRenderer.send('log', message);

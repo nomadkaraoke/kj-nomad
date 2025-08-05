@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, dialog, shell, ipcMain, utilityProcess } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { Bonjour } from 'bonjour-service';
+import http from 'http';
 import os from 'os';
 import { fileURLToPath } from 'url';
 
@@ -109,36 +109,131 @@ class KJNomadApp {
     }
   }
 
-  createPlayerWindow() {
+  async createPlayerWindow() {
     const playerWindow = new BrowserWindow({
       width: 1200,
       height: 800,
-      minWidth: 800,
-      minHeight: 600,
       icon: this.getAppIcon(),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         preload: path.join(__dirname, 'preload.js')
       },
-      fullscreen: true,
+      fullscreen: false,
       autoHideMenuBar: true,
+      resizable: true,
+      title: 'Searching for Server...'
     });
 
-    // Load the main app URL and the router will handle the rest
-    playerWindow.loadURL(`http://${SERVER_HOST}:${serverPort}/player`);
+    // Load the onboarding HTML with a query param to indicate player mode
+    await playerWindow.loadFile(path.join(__dirname, 'onboarding.html'), { query: { mode: "player-search" } });
+
+    this.findServersOnNetwork(playerWindow);
   }
 
-  findServers(window) {
-    const bonjour = new Bonjour();
-    const browser = bonjour.find({ type: 'http' });
-
-    browser.on('up', (service) => {
-      if (service.name === 'KJ-Nomad Server') {
-        const serverUrl = `http://${service.referer.address}:${service.port}`;
-        window.webContents.send('server-discovered', serverUrl);
+  async findServersOnNetwork(window) {
+    const log = (message) => {
+      if (window && !window.isDestroyed()) {
+        window.webContents.send('log-message', message);
       }
-    });
+      console.log(message);
+    };
+
+    const interfaces = os.networkInterfaces();
+    const localInterfaces = [];
+    for (const name of Object.keys(interfaces)) {
+      for (const net of interfaces[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          localInterfaces.push(net);
+        }
+      }
+    }
+
+    if (localInterfaces.length === 0) {
+      log('Error: No active IPv4 network connection found.');
+      window.webContents.send('server-discovery-failed', 'No active network connection found.');
+      return;
+    }
+
+    log(`Found network interfaces: ${localInterfaces.map(i => i.address).join(', ')}`);
+    window.webContents.send('server-discovery-status', 'Scanning for servers...');
+
+    const servers = new Map();
+    const hostsToScan = new Set();
+
+    for (const iface of localInterfaces) {
+      const subnet = iface.cidr.split('/')[0].split('.').slice(0, 3).join('.');
+      log(`Scanning subnet ${subnet}.0/24...`);
+      for (let i = 1; i < 255; i++) {
+        hostsToScan.add(`${subnet}.${i}`);
+      }
+    }
+
+    const checkServer = (host, port) => {
+      return new Promise((resolve) => {
+        log(`Checking ${host}:${port}...`);
+        const req = http.get(`http://${host}:${port}/player`, { timeout: 1500 }, (res) => {
+          const { statusCode } = res;
+          res.resume(); // Consume response data
+          if (statusCode === 200) {
+            log(`✅ Found server at ${host}:${port}`);
+            resolve({ host, port });
+          } else {
+            log(`... ${host}:${port} responded with ${statusCode}`);
+            resolve(null);
+          }
+        });
+        req.on('error', (e) => {
+          log(`... ${host}:${port} error: ${e.code}`);
+          resolve(null);
+        });
+        req.on('timeout', () => {
+          req.destroy();
+          log(`... ${host}:${port} timed out`);
+          resolve(null);
+        });
+      });
+    };
+
+    // --- Scan port 8080 first ---
+    log('\n--- Pass 1: Scanning common port 8080 ---');
+    let promises = Array.from(hostsToScan).map(host => checkServer(host, 8080));
+    let results = await Promise.all(promises);
+    results.filter(r => r).forEach(s => servers.set(`${s.host}:${s.port}`, s));
+
+    // --- Scan other ports if no servers found yet ---
+    if (servers.size === 0) {
+      log('\n--- Pass 2: Scanning other ports (8081-8083) ---');
+      const otherPorts = [8081, 8082, 8083];
+      for (const port of otherPorts) {
+        promises = Array.from(hostsToScan).map(host => checkServer(host, port));
+        results = await Promise.all(promises);
+        results.filter(r => r).forEach(s => servers.set(`${s.host}:${s.port}`, s));
+      }
+    }
+
+    const foundServers = Array.from(servers.values());
+    log(`\nScan complete. Found ${foundServers.length} server(s).`);
+
+    if (foundServers.length === 1) {
+      const { host, port } = foundServers[0];
+      const url = `http://${host}:${port}/player`;
+      log(`Connecting to single server: ${url}`);
+      window.webContents.send('server-discovered', url);
+      setTimeout(() => {
+        if (!window.isDestroyed()) {
+          window.loadURL(url);
+          window.setFullScreen(true);
+        }
+      }, 1000);
+    } else if (foundServers.length > 1) {
+      const urls = foundServers.map(s => `http://${s.host}:${s.port}`);
+      log(`Multiple servers found: ${urls.join(', ')}`);
+      window.webContents.send('server-discovery-multiple', urls);
+    } else {
+      log('No servers found.');
+      window.webContents.send('server-discovery-failed', 'No KJ-Nomad servers found on the network.');
+    }
   }
 
   async createWindow() {
@@ -157,9 +252,12 @@ class KJNomadApp {
         webSecurity: true,
         preload: path.join(__dirname, 'preload.js')
       },
-      show: true, // Show immediately for onboarding
-      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default'
+      show: false, // Don't show until maximized
+      titleBarStyle: 'default'
     });
+
+    mainWindow.maximize();
+    mainWindow.show();
 
     // Load the onboarding HTML file first
     await mainWindow.loadFile(path.join(__dirname, 'onboarding.html'));
@@ -183,16 +281,45 @@ class KJNomadApp {
     ipcMain.on('start-mode', async (event, mode) => {
       console.log(`Received start-mode event: ${mode}`);
       
-      console.log(`Using port: ${DEFAULT_PORT}`);
-      
       if (mode === 'player') {
-        this.createPlayerWindow();
-        if (mainWindow) {
+        // Close the main window and open the player window
+        if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.close();
         }
+        this.createPlayerWindow();
       } else {
+        // Find an available port before starting
+        serverPort = await findAvailablePort(DEFAULT_PORT);
+        console.log(`Using port: ${serverPort}`);
+        // Once a mode is chosen, start the server and load the main app
+        await this.startServer(mode);
         await this.loadApp(mode);
       }
+    });
+
+    ipcMain.on('select-server', (event, url) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (window && !window.isDestroyed()) {
+            window.loadURL(`${url}/player`);
+            window.setFullScreen(true);
+        }
+    });
+
+    ipcMain.on('manual-connect', (event, address) => {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        if (window && !window.isDestroyed()) {
+            // Basic validation, could be improved
+            if (address.includes(':') && address.length > 5) {
+                let url = address;
+                if (!url.startsWith('http')) {
+                    url = `http://${url}`;
+                }
+                window.loadURL(`${url}/player`);
+                window.setFullScreen(true);
+            } else {
+                window.webContents.send('server-discovery-failed', 'Invalid address format. Please use HOST:PORT.');
+            }
+        }
     });
 
     ipcMain.handle('select-directory', async () => {
