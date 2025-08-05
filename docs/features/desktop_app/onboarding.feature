@@ -22,7 +22,7 @@ Feature: Desktop Application Onboarding and Setup
     Given the KJ launches the application for the first time
     When the KJ clicks "Set up as Player"
     Then the application should display a "Searching for KJ-Nomad server on your network..." screen
-    And it should scan the local network for servers on ports 8080-8090
+    And it should scan the local network for servers on ports 8080-8083
 
   Scenario: Player successfully discovers a single server
     Given the application is searching for a server

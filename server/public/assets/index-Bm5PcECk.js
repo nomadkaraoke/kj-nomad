@@ -30087,44 +30087,6 @@ const HomePage = () => {
     ] }) })
   ] }) });
 };
-const PlayerSetupPage = () => {
-  const [status, setStatus] = reactExports.useState("Scanning for KJ-Nomad server on your network...");
-  const [servers, setServers] = reactExports.useState([]);
-  reactExports.useEffect(() => {
-    const cleanup = window.electronAPI.onServerDiscovered((serverUrl) => {
-      setServers((prev) => [...prev, serverUrl]);
-      setStatus("Found servers! Select one to connect.");
-    });
-    const timer = setTimeout(() => {
-      if (servers.length === 0) {
-        setStatus("No servers found yet. Make sure your KJ-Nomad server is running.");
-      }
-    }, 1e4);
-    return () => {
-      cleanup();
-      clearTimeout(timer);
-    };
-  }, [servers.length]);
-  const handleConnect = (serverUrl) => {
-    window.location.href = `${serverUrl}/player`;
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-screen bg-gray-900 text-white", "data-testid": "player-setup-page", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl font-bold mb-4", children: "Setting Up as Player Screen" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl text-gray-400 mb-8", children: status }),
-    servers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: servers.map((url) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "button",
-      {
-        onClick: () => handleConnect(url),
-        className: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg",
-        children: [
-          "Connect to ",
-          url
-        ]
-      },
-      url
-    )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "animate-pulse", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-4 bg-gray-700 rounded w-2/3 mx-auto" }) })
-  ] }) });
-};
 const SetupWizardPage = () => {
   const [step, setStep] = reactExports.useState("welcome");
   const setIsSetupComplete = useAppStore((state) => state.setIsSetupComplete);
@@ -30806,9 +30768,6 @@ const SingerPage = () => {
 };
 const AppContent = () => {
   const { mode, isSetupComplete, isSessionConnected, onlineSessionRequiresLibrary } = useAppStore();
-  if (mode === "player") {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerSetupPage, {});
-  }
   if (window.location.pathname === "/player") {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerPage, {});
   }
@@ -30828,7 +30787,6 @@ const AppContent = () => {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(SetupWizardPage, {});
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Routes, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/player-setup", element: /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerSetupPage, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/connect-online", element: /* @__PURE__ */ jsxRuntimeExports.jsx(OnlineSessionConnectPage, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/*", element: /* @__PURE__ */ jsxRuntimeExports.jsx(HomePage, {}) })
   ] });
@@ -30874,4 +30832,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-eKO94_or.js.map
+//# sourceMappingURL=index-Bm5PcECk.js.map

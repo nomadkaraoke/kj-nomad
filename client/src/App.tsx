@@ -6,7 +6,6 @@ import { useAppStore } from './store/appStore';
 
 // Import page components
 import HomePage from './pages/HomePage';
-import PlayerSetupPage from './pages/PlayerSetupPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import OnlineSessionConnectPage from './pages/OnlineSessionConnectPage';
 import OnlineSessionConnectedPage from './pages/OnlineSessionConnectedPage';
@@ -21,9 +20,6 @@ const AppContent: React.FC = () => {
   const { mode, isSetupComplete, isSessionConnected, onlineSessionRequiresLibrary } = useAppStore();
 
   // Player and Singer routes should be available regardless of setup status
-  if (mode === 'player') {
-    return <PlayerSetupPage />;
-  }
   if (window.location.pathname === '/player') {
     return <PlayerPage />;
   }
@@ -48,7 +44,6 @@ const AppContent: React.FC = () => {
   
   return (
     <Routes>
-      <Route path="/player-setup" element={<PlayerSetupPage />} />
       <Route path="/connect-online" element={<OnlineSessionConnectPage />} />
       <Route path="/*" element={<HomePage />} />
     </Routes>
