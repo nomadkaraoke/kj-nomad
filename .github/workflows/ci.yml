@@ -134,8 +134,12 @@ jobs:
 
     - name: Setup Test Media and Config
       run: |
-        mkdir -p ${{ runner.temp }}/kj-nomad-data/media
-        echo '{"mediaDirectory": "${{ runner.temp }}/kj-nomad-data/media", "setupComplete": true}' > ${{ runner.temp }}/kj-nomad-data/setup.json
+        DATA_PATH="${{ runner.temp }}/kj-nomad-data"
+        MEDIA_PATH="$DATA_PATH/media"
+        CONFIG_PATH="$DATA_PATH/data"
+        mkdir -p "$MEDIA_PATH"
+        mkdir -p "$CONFIG_PATH"
+        echo "{\"mediaDirectory\": \"$MEDIA_PATH\", \"setupComplete\": true}" > "$CONFIG_PATH/setup.json"
       
     - name: Run E2E tests
       env:
@@ -314,8 +318,12 @@ jobs:
         KJ_NOMAD_USER_DATA_PATH: ${{ runner.temp }}/kj-nomad-data
         DISPLAY: :99
       run: |
-        mkdir -p ${{ runner.temp }}/kj-nomad-data/media
-        echo '{"mediaDirectory": "${{ runner.temp }}/kj-nomad-data/media", "setupComplete": true}' > ${{ runner.temp }}/kj-nomad-data/setup.json
+        DATA_PATH="${{ runner.temp }}/kj-nomad-data"
+        MEDIA_PATH="$DATA_PATH/media"
+        CONFIG_PATH="$DATA_PATH/data"
+        mkdir -p "$MEDIA_PATH"
+        mkdir -p "$CONFIG_PATH"
+        echo "{\"mediaDirectory\": \"$MEDIA_PATH\", \"setupComplete\": true}" > "$CONFIG_PATH/setup.json"
         xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:packaging
       
     - name: Run packaging test (Windows & macOS)

@@ -1,5 +1,8 @@
 import { test as base, createBdd } from 'playwright-bdd';
 import { _electron as electron, ElectronApplication, Page } from '@playwright/test';
+import electronPath from 'electron';
+
+const executablePath = electronPath as unknown as string;
 
 export type MyFixtures = {
   electronApp: ElectronApplication;
@@ -8,10 +11,9 @@ export type MyFixtures = {
 
 export const test = base.extend<MyFixtures>({
   electronApp: async ({}, use) => {
-    // Find the path to the electron executable
-    const mainProcessPath = 'electron/main.mjs';
     const electronApp = await electron.launch({
-      args: [mainProcessPath],
+      executablePath,
+      args: ['electron/main.mjs'],
     });
     await use(electronApp);
     await electronApp.close();
