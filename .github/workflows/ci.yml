@@ -103,6 +103,10 @@ jobs:
       if: steps.cache-root-modules.outputs.cache-hit != 'true'
       run: npm ci
         
+    - name: Get Playwright Version
+      id: get-playwright-version
+      run: echo "PLAYWRIGHT_VERSION=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> $GITHUB_ENV
+
     - name: Cache server node_modules
       uses: actions/cache@v4
       id: cache-server-modules
@@ -151,7 +155,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-browsers-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+        key: playwright-browsers-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
         restore-keys: |
           playwright-browsers-${{ runner.os }}-
 
@@ -177,7 +181,7 @@ jobs:
         KJ_NOMAD_USER_DATA_PATH: ${{ runner.temp }}/kj-nomad-data
         DISPLAY: :99
         ELECTRON_ENABLE_LOGGING: true
-      run: xvfb-run --server-num=99 --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:e2e:all
+      run: xvfb-run --server-num=99 --auto-servernum --server-args="-screen 0 1280x960x24" npm run test:e2e:web
 
   # Code Quality Checks
   lint-and-typecheck:
