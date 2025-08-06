@@ -8,103 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <style>
-        :root {
-            --pink: #ff7acc;
-            --blue: #230a89;
-            --yellow: #ffdf6b;
-            --dark-bg: #0a0a0f;
-            --dark-card: #1a1a2e;
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0c4;
-            --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 2rem;
-        }
-        .dashboard {
-            background: var(--dark-card);
-            border-radius: 20px;
-            padding: 3rem;
-            max-width: 800px;
-            width: 100%;
-            border: 2px solid var(--pink);
-            text-align: center;
-        }
-        h1 {
-            font-family: 'Righteous', cursive;
-            font-size: 3rem;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 1rem;
-        }
-        p {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-        }
-        .key-display {
-            background: rgba(0,0,0,0.3);
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .key-display h2 {
-            font-family: 'Righteous', cursive;
-            color: var(--yellow);
-            margin-bottom: 0.5rem;
-        }
-        .key-display code {
-            font-size: 1.5rem;
-            font-weight: bold;
-            word-break: break-all;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-        .key-display code:hover {
-            background: rgba(255,255,255,0.1);
-        }
-        .instructions {
-            text-align: left;
-            margin-top: 2rem;
-            padding: 1.5rem;
-            border-top: 1px solid rgba(255, 122, 204, 0.2);
-        }
-        .instructions h3 {
-            font-family: 'Righteous', cursive;
-            color: var(--pink);
-            margin-bottom: 1rem;
-        }
-        .instructions li {
-            margin-bottom: 0.5rem;
-        }
-        .cta-button {
-            display: inline-block;
-            padding: 1rem 2rem;
-            background: var(--gradient-primary);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            margin-top: 1rem;
-        }
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(255, 122, 204, 0.3);
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
     <div class="dashboard">
@@ -136,7 +40,7 @@
             </div>
         </div>
     </div>
-
+    <script src="assets/js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const sessionDataString = sessionStorage.getItem('kj-nomad-session');
@@ -159,8 +63,6 @@
             const downloadLink = document.getElementById('download-link');
             downloadLink.onclick = (e) => {
                 e.preventDefault();
-                // This reuses the download logic from the main page.
-                // In a real app, this might be a shared module.
                 showDownloadOptions(); 
             };
 
@@ -177,93 +79,4 @@
                 alert(`Failed to copy ${type}.`);
             });
         }
-        
-        // --- START: Download Functionality (Copied from index.html) ---
-        const releaseData = {
-            version: "1.0.0",
-            repo: "nomadkaraoke/kj-nomad",
-            downloads: {
-                windows_installer: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-Setup-1.0.0.exe`,
-                windows_portable: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0-win.zip`,
-                macos_intel: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.dmg`,
-                macos_apple_silicon: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0-arm64.dmg`,
-                linux_appimage: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.AppImage`,
-                linux_deb: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/kj-nomad_1.0.0_amd64.deb`
-            }
-        };
-
-        function showDownloadOptions() {
-            const platform = detectPlatform();
-            const downloadUrl = getDownloadUrl(platform);
-            
-            if (downloadUrl) {
-                // Direct download for detected platform
-                window.open(downloadUrl, '_blank');
-            } else {
-                // Show all options if detection fails
-                showAllDownloadOptions();
-            }
-        }
-
-        function detectPlatform() {
-            const userAgent = navigator.userAgent.toLowerCase();
-            const platform = navigator.platform.toLowerCase();
-            
-            if (userAgent.includes('win') || platform.includes('win')) return 'windows';
-            if (userAgent.includes('mac') || platform.includes('mac')) {
-                return userAgent.includes('arm') || userAgent.includes('aarch64') ? 'macos_apple_silicon' : 'macos_intel';
-            }
-            if (userAgent.includes('linux') || platform.includes('linux')) return 'linux';
-            return null;
-        }
-
-        function getDownloadUrl(platform) {
-            if (!releaseData || !releaseData.downloads) return null;
-            switch (platform) {
-                case 'windows': return releaseData.downloads.windows_installer;
-                case 'macos_intel': return releaseData.downloads.macos_intel;
-                case 'macos_apple_silicon': return releaseData.downloads.macos_apple_silicon;
-                case 'linux': return releaseData.downloads.linux_appimage;
-                default: return null;
-            }
-        }
-
-        function showAllDownloadOptions() {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8);
-                display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px);
-            `;
-            modal.innerHTML = `
-                <div style="background: var(--dark-card); border-radius: 20px; padding: 3rem; max-width: 600px; width: 90%; border: 2px solid var(--pink);">
-                    <h3 style="font-family: 'Righteous', cursive; font-size: 2rem; margin-bottom: 2rem; text-align: center; color: var(--pink);">Download KJ-Nomad v${releaseData?.version || 'latest'}</h3>
-                    <div style="display: grid; gap: 1rem;">
-                        <a href="${releaseData?.downloads?.windows_installer || '#'}" style="display: flex; align-items: center; padding: 1rem; background: rgba(255, 122, 204, 0.1); border-radius: 10px; text-decoration: none; color: white; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'" onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🪟</span>
-                            <div><div style="font-weight: 600;">Windows Installer</div><div style="font-size: 0.9rem; color: var(--text-secondary);">Recommended</div></div>
-                        </a>
-                        <a href="${releaseData?.downloads?.macos_apple_silicon || '#'}" style="display: flex; align-items: center; padding: 1rem; background: rgba(255, 122, 204, 0.1); border-radius: 10px; text-decoration: none; color: white; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'" onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🍎</span>
-                            <div><div style="font-weight: 600;">macOS (Apple Silicon)</div><div style="font-size: 0.9rem; color: var(--text-secondary);">For M1/M2/M3 Macs</div></div>
-                        </a>
-                        <a href="${releaseData?.downloads?.macos_intel || '#'}" style="display: flex; align-items: center; padding: 1rem; background: rgba(255, 122, 204, 0.1); border-radius: 10px; text-decoration: none; color: white; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'" onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🍎</span>
-                            <div><div style="font-weight: 600;">macOS (Intel)</div><div style="font-size: 0.9rem; color: var(--text-secondary);">For older Macs</div></div>
-                        </a>
-                        <a href="${releaseData?.downloads?.linux_appimage || '#'}" style="display: flex; align-items: center; padding: 1rem; background: rgba(255, 122, 204, 0.1); border-radius: 10px; text-decoration: none; color: white; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'" onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🐧</span>
-                            <div><div style="font-weight: 600;">Linux AppImage</div><div style="font-size: 0.9rem; color: var(--text-secondary);">Universal Linux app</div></div>
-                        </a>
-                    </div>
-                    <div style="text-align: center; margin-top: 2rem;">
-                        <button onclick="document.body.removeChild(this.closest('div').parentElement)" style="background: transparent; border: 2px solid var(--text-secondary); color: var(--text-secondary); padding: 0.5rem 1.5rem; border-radius: 25px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.borderColor='var(--pink)'; this.style.color='var(--pink)'" onmouseout="this.style.borderColor='var(--text-secondary)'; this.style.color='var(--text-secondary)'">Close</button>
-                    </div>
-                </div>
-            `;
-            modal.onclick = (e) => { if (e.target === modal) document.body.removeChild(modal); };
-            document.body.appendChild(modal);
-        }
-        // --- END: Download Functionality ---
     </script>
-</body>
-</html>

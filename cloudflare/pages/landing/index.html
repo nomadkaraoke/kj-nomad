@@ -14,484 +14,7 @@
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     
-    <style>
-        :root {
-            --pink: #ff7acc;
-            --blue: #230a89;
-            --yellow: #ffdf6b;
-            --gradient-primary: linear-gradient(135deg, var(--pink) 0%, var(--blue) 100%);
-            --gradient-accent: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%);
-
-            /* Light Theme */
-            --bg-light: #f0f0f8;
-            --card-light: #ffffff;
-            --text-primary-light: #0a0a0f;
-            --text-secondary-light: #5a5a6e;
-            --border-light: #e0e0e8;
-
-            /* Dark Theme */
-            --bg-dark: #0a0a0f;
-            --card-dark: #1a1a2e;
-            --text-primary-dark: #ffffff;
-            --text-secondary-dark: #b0b0c4;
-            --border-dark: rgba(255, 122, 204, 0.1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-light);
-            color: var(--text-primary-light);
-            line-height: 1.6;
-            overflow-x: hidden;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        body.dark {
-            background: var(--bg-dark);
-            color: var(--text-primary-dark);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1.5rem;
-        }
-
-        /* Header */
-        .header {
-            padding: 1.5rem 0;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border-light);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-
-        body.dark .header {
-            background: rgba(26, 26, 46, 0.8);
-            border-bottom: 1px solid var(--border-dark);
-        }
-
-        .nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Righteous', cursive;
-            font-size: 2rem;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-decoration: none;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary-light);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-        
-        body.dark .nav-links a {
-            color: var(--text-secondary-dark);
-        }
-
-        .nav-links a:hover {
-            color: var(--pink);
-        }
-
-        /* Hero Section */
-        .hero {
-            padding: 6rem 0;
-            text-align: center;
-            position: relative;
-        }
-
-        .hero-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(ellipse at center, rgba(35, 10, 137, 0.05) 0%, transparent 70%);
-            pointer-events: none;
-            transition: background 0.3s;
-        }
-
-        body.dark .hero-bg {
-            background: radial-gradient(ellipse at center, rgba(255, 122, 204, 0.1) 0%, transparent 70%);
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero h1 {
-            font-family: 'Righteous', cursive;
-            font-size: clamp(3rem, 8vw, 6rem);
-            margin-bottom: 1rem;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-subtitle {
-            font-size: 1.5rem;
-            color: var(--yellow);
-            margin-bottom: 1rem;
-            font-weight: 300;
-        }
-
-        .hero-description {
-            font-size: 1.25rem;
-            color: var(--text-secondary-light);
-            max-width: 800px;
-            margin: 0 auto 3rem;
-        }
-
-        body.dark .hero-description {
-            color: var(--text-secondary-dark);
-        }
-
-        /* Mode Selection */
-        .mode-selection {
-            padding: 6rem 0;
-            background: linear-gradient(180deg, transparent 0%, rgba(26, 26, 46, 0.5) 100%);
-        }
-
-        .section-title {
-            font-family: 'Righteous', cursive;
-            font-size: 3rem;
-            text-align: center;
-            margin-bottom: 3rem;
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .modes-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 3rem;
-            margin-top: 4rem;
-        }
-
-        .mode-card {
-            background: var(--card-light);
-            border-radius: 20px;
-            padding: 3rem;
-            border: 1px solid var(--border-light);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        body.dark .mode-card {
-            background: var(--card-dark);
-            border: 2px solid transparent;
-        }
-
-        .mode-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 20px;
-            padding: 2px;
-            background: var(--gradient-primary);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: exclude;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .mode-card:hover::before {
-            opacity: 1;
-        }
-
-        .mode-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(35, 10, 137, 0.1);
-        }
-
-        body.dark .mode-card:hover {
-            box-shadow: 0 20px 40px rgba(255, 122, 204, 0.2);
-        }
-
-        .mode-icon {
-            font-size: 4rem;
-            margin-bottom: 2rem;
-            display: block;
-        }
-
-        .local-mode .mode-icon {
-            color: var(--yellow);
-        }
-
-        .online-mode .mode-icon {
-            color: var(--pink);
-        }
-
-        .mode-title {
-            font-family: 'Righteous', cursive;
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .mode-description {
-            color: var(--text-secondary-light);
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-        }
-
-        body.dark .mode-description {
-            color: var(--text-secondary-dark);
-        }
-
-        .mode-features {
-            list-style: none;
-            margin-bottom: 2rem;
-        }
-
-        .mode-features li {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.75rem;
-            color: var(--text-secondary-light);
-        }
-
-        body.dark .mode-features li {
-            color: var(--text-secondary-dark);
-        }
-
-        .mode-features li::before {
-            content: '✓';
-            color: var(--pink);
-            font-weight: bold;
-            margin-right: 0.75rem;
-            font-size: 1.2rem;
-        }
-
-        .cta-button {
-            display: inline-block;
-            padding: 1rem 2rem;
-            background: var(--gradient-primary);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-align: center;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1rem;
-        }
-
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(255, 122, 204, 0.3);
-        }
-
-        .cta-button.secondary {
-            background: transparent;
-            border: 2px solid var(--yellow);
-            color: var(--yellow);
-        }
-
-        .cta-button.secondary:hover {
-            background: var(--yellow);
-            color: var(--bg-dark);
-        }
-
-        /* Features Section */
-        .features {
-            padding: 6rem 0;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-
-        .feature-card {
-            background: var(--card-light);
-            padding: 2rem;
-            border-radius: 15px;
-            text-align: center;
-            border: 1px solid var(--border-light);
-        }
-
-        body.dark .feature-card {
-            background: var(--card-dark);
-            border: 1px solid var(--border-dark);
-        }
-
-        .feature-icon {
-            font-size: 3rem;
-            color: var(--pink);
-            margin-bottom: 1rem;
-        }
-
-        .feature-title {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-            color: var(--text-primary-light);
-        }
-        
-        body.dark .feature-title {
-            color: var(--text-primary-dark);
-        }
-
-        .feature-description {
-            color: var(--text-secondary-light);
-        }
-
-        body.dark .feature-description {
-            color: var(--text-secondary-dark);
-        }
-
-        /* Footer */
-        .footer {
-            padding: 4rem 0 2rem;
-            background: var(--card-light);
-            border-top: 1px solid var(--border-light);
-            text-align: center;
-        }
-
-        body.dark .footer {
-            background: var(--card-dark);
-            border-top: 1px solid var(--border-dark);
-        }
-
-        .footer-content {
-            margin-bottom: 2rem;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .footer-links a {
-            color: var(--text-secondary-light);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        body.dark .footer-links a {
-            color: var(--text-secondary-dark);
-        }
-
-        .footer-links a:hover {
-            color: var(--pink);
-        }
-
-        .copyright {
-            color: var(--text-secondary-light);
-            font-size: 0.9rem;
-        }
-
-        body.dark .copyright {
-            color: var(--text-secondary-dark);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .modes-grid {
-                grid-template-columns: 1fr;
-                gap: 2rem;
-            }
-
-            .mode-card {
-                padding: 2rem;
-            }
-
-            .nav-links {
-                display: none;
-            }
-
-            .hero {
-                padding: 4rem 0;
-            }
-
-            .section-title {
-                font-size: 2rem;
-            }
-        }
-
-        /* Loading animation */
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .spinner {
-            border: 3px solid rgba(255, 122, 204, 0.3);
-            border-top: 3px solid var(--pink);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Theme Toggle */
-        .theme-toggle {
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 50%;
-            background: transparent;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 1rem;
-        }
-        .theme-icon {
-            width: 24px;
-            height: 24px;
-            color: var(--text-primary-light);
-            transition: color 0.3s;
-        }
-        body.dark .theme-icon {
-            color: var(--text-primary-dark);
-        }
-        #sun-icon { display: none; }
-        body.dark #sun-icon { display: block; }
-        body.dark #moon-icon { display: none; }
-    </style>
+    <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
     <header class="header">
@@ -533,8 +56,10 @@
                 <div class="modes-grid">
                     <!-- Offline Mode -->
                     <div class="mode-card local-mode" onclick="selectMode('local')">
-                        <span class="mode-icon">🏠</span>
-                        <h3 class="mode-title">Offline Mode</h3>
+                        <div class="mode-header">
+                            <span class="mode-icon">🏠</span>
+                            <h3 class="mode-title">Offline Mode</h3>
+                        </div>
                         <p class="mode-description">
                             Perfect for venues with unreliable internet or KJs who prefer traditional paper-based requests. 
                             Runs completely offline with professional multi-screen synchronization.
@@ -552,8 +77,10 @@
 
                     <!-- Online Mode -->
                     <div class="mode-card online-mode" onclick="selectMode('online')">
-                        <span class="mode-icon">☁️</span>
-                        <h3 class="mode-title">Online Mode</h3>
+                        <div class="mode-header">
+                            <span class="mode-icon">☁️</span>
+                            <h3 class="mode-title">Online Mode</h3>
+                        </div>
                         <p class="mode-description">
                             Cloud-coordinated experience with singer self-service. Combines your local library with 
                             YouTube downloads for the ultimate modern karaoke experience.
@@ -629,12 +156,7 @@
         </section>
 
         <section id="monetization" class="features" style="padding: 6rem 0;">
-            <div class="container" style="
-                background: var(--card-light);
-                padding: 4rem;
-                border-radius: 20px;
-                border: 1px solid var(--border-light);
-            ">
+            <div class="container monetization-card">
                 <h2 class="section-title">Free Software, More Tips</h2>
                 <p class="hero-description" style="font-size: 1.2rem; margin-bottom: 3rem;">
                     KJ-Nomad is <strong>completely free</strong> for you to use. We make money by helping you make more money. 
@@ -645,6 +167,7 @@
                 </div>
             </div>
         </section>
+
     </main>
 
     <footer class="footer">
@@ -669,298 +192,65 @@
         <p>Setting up your karaoke session...</p>
     </div>
 
+    <script src="assets/js/main.js"></script>
     <script>
-        // --- Theme Switching ---
-        const themeToggleButton = document.getElementById('theme-toggle-button');
-        const body = document.body;
-
-        // Apply saved theme on load
-        const savedTheme = localStorage.getItem('kj-nomad-theme') || 'dark';
-        if (savedTheme === 'dark') {
-            body.classList.add('dark');
-        }
-
-        themeToggleButton.addEventListener('click', () => {
-            body.classList.toggle('dark');
-            const newTheme = body.classList.contains('dark') ? 'dark' : 'light';
-            localStorage.setItem('kj-nomad-theme', newTheme);
-        });
-
-        // --- Download functionality ---
-        const releaseData = {
-            version: "1.0.0",
-            repo: "nomadkaraoke/kj-nomad",
-            downloads: {
-                windows_installer: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-Setup-1.0.0.exe`,
-                windows_portable: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0-win.zip`,
-                macos_intel: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.dmg`,
-                macos_apple_silicon: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0-arm64.dmg`,
-                linux_appimage: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/KJ-Nomad-1.0.0.AppImage`,
-                linux_deb: `https://github.com/nomadkaraoke/kj-nomad/releases/download/latest/kj-nomad_1.0.0_amd64.deb`
-            }
-        };
-
-        function updateDownloadButtons() {
+        document.addEventListener('DOMContentLoaded', () => {
             const localButton = document.querySelector('.local-mode .cta-button');
             const onlineButton = document.querySelector('.online-mode .cta-button');
-            
+
             if (localButton) {
-                localButton.textContent = `Download v${releaseData.version}`;
+                localButton.onclick = () => showDownloadOptions();
             }
+
+            async function selectMode(mode) {
+                if (mode === 'local') {
+                    showDownloadOptions();
+                    return;
+                }
+
+                if (mode === 'online') {
+                    // Show loading
+                    document.getElementById('loading').style.display = 'block';
+                    
+                    try {
+                        // Create new session
+                        const response = await fetch('/api/sessions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                allowYouTube: true,
+                                hasLocalLibrary: false
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to create session');
+                        }
+
+                        const data = await response.json();
+                        
+                        if (data.success && data.data) {
+                            // Store session details in sessionStorage to pass to the next page
+                            sessionStorage.setItem('kj-nomad-session', JSON.stringify(data.data));
+                            // Redirect to the admin dashboard page
+                            window.location.href = `/admin.html`;
+                        } else {
+                            throw new Error(data.error || 'Unknown error');
+                        }
+                    } catch (error) {
+                        console.error('Failed to create session:', error);
+                        alert('Failed to create session. Please try again.');
+                    } finally {
+                        document.getElementById('loading').style.display = 'none';
+                    }
+                }
+            }
+
             if (onlineButton) {
-                onlineButton.textContent = `Download v${releaseData.version}`;
+                onlineButton.onclick = () => selectMode('online');
             }
-        }
-
-        function showDownloadOptions() {
-            const platform = detectPlatform();
-            const downloadUrl = getDownloadUrl(platform);
-            
-            if (downloadUrl) {
-                // Direct download for detected platform
-                window.open(downloadUrl, '_blank');
-            } else {
-                // Show all options
-                showAllDownloadOptions();
-            }
-        }
-
-        function detectPlatform() {
-            const userAgent = navigator.userAgent.toLowerCase();
-            const platform = navigator.platform.toLowerCase();
-            
-            if (userAgent.includes('win') || platform.includes('win')) {
-                return 'windows';
-            } else if (userAgent.includes('mac') || platform.includes('mac')) {
-                // Detect Apple Silicon vs Intel
-                if (userAgent.includes('arm') || userAgent.includes('aarch64')) {
-                    return 'macos_apple_silicon';
-                }
-                return 'macos_intel';
-            } else if (userAgent.includes('linux') || platform.includes('linux')) {
-                return 'linux';
-            }
-            return null;
-        }
-
-        function getDownloadUrl(platform) {
-            if (!releaseData || !releaseData.downloads) return null;
-            
-            switch (platform) {
-                case 'windows':
-                    return releaseData.downloads.windows_installer;
-                case 'macos_intel':
-                    return releaseData.downloads.macos_intel;
-                case 'macos_apple_silicon':
-                    return releaseData.downloads.macos_apple_silicon;
-                case 'linux':
-                    return releaseData.downloads.linux_appimage;
-                default:
-                    return null;
-            }
-        }
-
-        function showAllDownloadOptions() {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-                backdrop-filter: blur(10px);
-            `;
-            
-            modal.innerHTML = `
-                <div style="
-                    background: var(--dark-card);
-                    border-radius: 20px;
-                    padding: 3rem;
-                    max-width: 600px;
-                    width: 90%;
-                    border: 2px solid var(--pink);
-                ">
-                    <h3 style="
-                        font-family: 'Righteous', cursive;
-                        font-size: 2rem;
-                        margin-bottom: 2rem;
-                        text-align: center;
-                        color: var(--pink);
-                    ">Download KJ-Nomad v${releaseData?.version || 'latest'}</h3>
-                    
-                    <div style="display: grid; gap: 1rem;">
-                        <a href="${releaseData?.downloads?.windows_installer || '#'}" 
-                           style="
-                               display: flex;
-                               align-items: center;
-                               padding: 1rem;
-                               background: rgba(35, 10, 137, 0.05);
-                               border-radius: 10px;
-                               text-decoration: none;
-                               color: var(--text-primary-light);
-                               transition: all 0.3s ease;
-                           "
-                           onmouseover="this.style.background='rgba(35, 10, 137, 0.1)'"
-                           onmouseout="this.style.background='rgba(35, 10, 137, 0.05)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🪟</span>
-                            <div>
-                                <div style="font-weight: 600;">Windows Installer</div>
-                                <div style="font-size: 0.9rem; color: var(--text-secondary);">Recommended for Windows users</div>
-                            </div>
-                        </a>
-                        
-                        <a href="${releaseData?.downloads?.macos_intel || '#'}" 
-                           style="
-                               display: flex;
-                               align-items: center;
-                               padding: 1rem;
-                               background: rgba(255, 122, 204, 0.1);
-                               border-radius: 10px;
-                               text-decoration: none;
-                               color: white;
-                               transition: all 0.3s ease;
-                           "
-                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
-                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🍎</span>
-                            <div>
-                                <div style="font-weight: 600;">macOS (Intel)</div>
-                                <div style="font-size: 0.9rem; color: var(--text-secondary);">For Intel-based Macs</div>
-                            </div>
-                        </a>
-                        
-                        <a href="${releaseData?.downloads?.macos_apple_silicon || '#'}" 
-                           style="
-                               display: flex;
-                               align-items: center;
-                               padding: 1rem;
-                               background: rgba(255, 122, 204, 0.1);
-                               border-radius: 10px;
-                               text-decoration: none;
-                               color: white;
-                               transition: all 0.3s ease;
-                           "
-                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
-                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🍎</span>
-                            <div>
-                                <div style="font-weight: 600;">macOS (Apple Silicon)</div>
-                                <div style="font-size: 0.9rem; color: var(--text-secondary);">For M1/M2/M3 Macs</div>
-                            </div>
-                        </a>
-                        
-                        <a href="${releaseData?.downloads?.linux_appimage || '#'}" 
-                           style="
-                               display: flex;
-                               align-items: center;
-                               padding: 1rem;
-                               background: rgba(255, 122, 204, 0.1);
-                               border-radius: 10px;
-                               text-decoration: none;
-                               color: white;
-                               transition: all 0.3s ease;
-                           "
-                           onmouseover="this.style.background='rgba(255, 122, 204, 0.2)'"
-                           onmouseout="this.style.background='rgba(255, 122, 204, 0.1)'">
-                            <span style="font-size: 2rem; margin-right: 1rem;">🐧</span>
-                            <div>
-                                <div style="font-weight: 600;">Linux AppImage</div>
-                                <div style="font-size: 0.9rem; color: var(--text-secondary);">Universal Linux application</div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 2rem;">
-                        <button onclick="document.body.removeChild(this.closest('div').parentElement)" 
-                                style="
-                                    background: transparent;
-                                    border: 2px solid var(--text-secondary);
-                                    color: var(--text-secondary);
-                                    padding: 0.5rem 1.5rem;
-                                    border-radius: 25px;
-                                    cursor: pointer;
-                                    transition: all 0.3s ease;
-                                "
-                                onmouseover="this.style.borderColor='var(--pink)'; this.style.color='var(--pink)'"
-                                onmouseout="this.style.borderColor='var(--text-secondary)'; this.style.color='var(--text-secondary)'">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            modal.onclick = (e) => {
-                if (e.target === modal) {
-                    document.body.removeChild(modal);
-                }
-            };
-            
-            document.body.appendChild(modal);
-        }
-
-        async function selectMode(mode) {
-            if (mode === 'local') {
-                showDownloadOptions();
-                return;
-            }
-
-            if (mode === 'online') {
-                // Show loading
-                document.getElementById('loading').style.display = 'block';
-                
-                try {
-                    // Create new session
-                    const response = await fetch('/api/sessions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            allowYouTube: true,
-                            hasLocalLibrary: false
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Failed to create session');
-                    }
-
-                    const data = await response.json();
-                    
-                    if (data.success && data.data) {
-                        // Store session details in sessionStorage to pass to the next page
-                        sessionStorage.setItem('kj-nomad-session', JSON.stringify(data.data));
-                        // Redirect to the admin dashboard page
-                        window.location.href = `/admin.html`;
-                    } else {
-                        throw new Error(data.error || 'Unknown error');
-                    }
-                } catch (error) {
-                    console.error('Failed to create session:', error);
-                    alert('Failed to create session. Please try again.');
-                } finally {
-                    document.getElementById('loading').style.display = 'none';
-                }
-            }
-        }
-
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
         });
     </script>
 </body>
