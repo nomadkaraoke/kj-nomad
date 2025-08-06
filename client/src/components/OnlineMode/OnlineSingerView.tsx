@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import OnlineSessionManager from './OnlineSessionManager';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
 interface Song {
@@ -214,9 +212,9 @@ const OnlineSingerView: React.FC = () => {
       {(sessionData, isLoading, error) => {
         if (isLoading) {
           return (
-            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+            <div className="min-h-screen bg-bg-dark text-text-primary-dark flex items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-pink mx-auto mb-4"></div>
                 <p>Connecting to session...</p>
               </div>
             </div>
@@ -225,36 +223,36 @@ const OnlineSingerView: React.FC = () => {
 
         if (error) {
           return (
-            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-              <Card className="max-w-md mx-auto p-6 bg-red-900/20 border-red-500">
+            <div className="min-h-screen bg-bg-dark text-text-primary-dark flex items-center justify-center">
+              <div className="card max-w-md mx-auto p-6 bg-red-500/10 border-red-500">
                 <h2 className="text-xl font-bold text-red-400 mb-4">Connection Error</h2>
                 <p className="text-red-300 mb-4">{error}</p>
-                <Button 
+                <button 
                   onClick={() => window.location.reload()} 
-                  className="w-full bg-red-600 hover:bg-red-700"
+                  className="btn-primary w-full bg-red-600 hover:bg-red-700"
                 >
                   Try Again
-                </Button>
-              </Card>
+                </button>
+              </div>
             </div>
           );
         }
 
         if (!sessionData) {
           return (
-            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-              <Card className="max-w-md mx-auto p-6">
+            <div className="min-h-screen bg-bg-dark text-text-primary-dark flex items-center justify-center">
+              <div className="card max-w-md mx-auto p-6">
                 <h2 className="text-xl font-bold mb-4">Session Not Found</h2>
-                <p className="text-gray-300 mb-4">
+                <p className="text-text-secondary-dark mb-4">
                   The session you're looking for doesn't exist or has ended.
                 </p>
-                <Button 
+                <button 
                   onClick={() => window.location.href = 'https://sing.nomadkaraoke.com'} 
-                  className="w-full"
+                  className="btn-primary w-full"
                 >
                   Enter New Session
-                </Button>
-              </Card>
+                </button>
+              </div>
             </div>
           );
         }
@@ -263,15 +261,15 @@ const OnlineSingerView: React.FC = () => {
         const mySongs = getSingerSongsInQueue(singerName);
 
         return (
-          <div className="min-h-screen bg-gray-900 text-white">
+          <div className="min-h-screen bg-bg-dark text-text-primary-dark">
             <div className="container mx-auto px-4 py-6">
               {/* Header */}
               <div className="mb-6">
-                <h1 className="text-3xl font-bold text-center mb-2">
+                <h1 className="font-display text-4xl text-center mb-2">
                   🎤 Request a Song
                 </h1>
-                <div className="text-center text-gray-400">
-                  <p>Session: <span className="text-blue-400 font-mono">{sessionData.sessionId}</span></p>
+                <div className="text-center text-text-secondary-dark">
+                  <p>Session: <span className="text-brand-pink font-mono">{sessionData.sessionId}</span></p>
                   {sessionData.venue && (
                     <p>Venue: <span className="text-green-400">{sessionData.venue}</span></p>
                   )}
@@ -279,7 +277,7 @@ const OnlineSingerView: React.FC = () => {
               </div>
 
               {/* Singer Name Input */}
-              <Card className="mb-6 p-4">
+              <div className="card mb-6 p-4">
                 <label className="block text-sm font-medium mb-2">Your Name</label>
                 <Input
                   type="text"
@@ -288,11 +286,11 @@ const OnlineSingerView: React.FC = () => {
                   onChange={(e) => setSingerName(e.target.value)}
                   className="w-full"
                 />
-              </Card>
+              </div>
 
               {/* Queue Status */}
               {singerName && mySongs.length > 0 && (
-                <Card className="mb-6 p-4 bg-green-900/20 border-green-500">
+                <div className="card mb-6 p-4 bg-green-500/10 border-green-500">
                   <h3 className="text-lg font-semibold text-green-400 mb-2">
                     Your Songs in Queue
                   </h3>
@@ -304,25 +302,25 @@ const OnlineSingerView: React.FC = () => {
                   <div className="space-y-2">
                     {mySongs.map((entry) => (
                       <div key={entry.id} className="flex justify-between items-center">
-                        <span className="text-white">
+                        <span>
                           {entry.song.artist} - {entry.song.title}
                         </span>
                         <span className="text-green-400">#{entry.position}</span>
                       </div>
                     ))}
                   </div>
-                </Card>
+                </div>
               )}
 
               {/* Status Messages */}
               {requestStatus && (
-                <Card className="mb-6 p-4 bg-blue-900/20 border-blue-500">
-                  <p className="text-blue-300">{requestStatus}</p>
-                </Card>
+                <div className="card mb-6 p-4 bg-brand-blue/20 border-brand-pink">
+                  <p className="text-brand-pink">{requestStatus}</p>
+                </div>
               )}
 
               {/* Song Search */}
-              <Card className="mb-6 p-4">
+              <div className="card mb-6 p-4">
                 <label className="block text-sm font-medium mb-2">Search for Songs</label>
                 <div className="flex gap-2">
                   <Input
@@ -337,31 +335,31 @@ const OnlineSingerView: React.FC = () => {
                     }}
                     className="flex-1"
                   />
-                  <Button 
+                  <button 
                     onClick={() => searchSongs(searchQuery, sessionData)}
                     disabled={isSearching || !searchQuery.trim()}
-                    className="px-6"
+                    className="btn-primary px-6"
                   >
                     {isSearching ? 'Searching...' : 'Search'}
-                  </Button>
+                  </button>
                 </div>
                 
                 {sessionData.allowYouTube && (
-                  <p className="text-sm text-gray-400 mt-2">
+                  <p className="text-sm text-text-secondary-dark mt-2">
                     💡 Searches both local library and YouTube
                   </p>
                 )}
-              </Card>
+              </div>
 
               {/* Search Results */}
               {songs.length > 0 && (
-                <Card className="p-4">
+                <div className="card p-4">
                   <h3 className="text-lg font-semibold mb-4">Search Results</h3>
                   <div className="space-y-3">
                     {songs.map((song) => (
                       <div 
                         key={`${song.source}-${song.id}`}
-                        className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-card-dark rounded-lg"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -378,38 +376,38 @@ const OnlineSingerView: React.FC = () => {
                             )}
                           </div>
                           {song.duration && (
-                            <p className="text-sm text-gray-400">Duration: {song.duration}</p>
+                            <p className="text-sm text-text-secondary-dark">{song.duration}</p>
                           )}
                           {song.downloadStatus === 'downloading' && song.downloadProgress && (
                             <div className="mt-2">
                               <div className="w-full bg-gray-700 rounded-full h-2">
                                 <div 
-                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                  className="bg-brand-blue h-2 rounded-full transition-all duration-300"
                                   style={{ width: `${song.downloadProgress}%` }}
                                 ></div>
                               </div>
-                              <p className="text-xs text-gray-400 mt-1">
+                              <p className="text-xs text-text-secondary-dark mt-1">
                                 Downloading... {song.downloadProgress}%
                               </p>
                             </div>
                           )}
                         </div>
-                        <Button
+                        <button
                           onClick={() => requestSong(song, sessionData)}
                           disabled={!singerName.trim() || song.downloadStatus === 'downloading'}
-                          className="ml-4"
+                          className="btn-primary ml-4"
                         >
                           {song.downloadStatus === 'downloading' ? 'Downloading...' : 'Request'}
-                        </Button>
+                        </button>
                       </div>
                     ))}
                   </div>
-                </Card>
+                </div>
               )}
 
               {/* Current Queue Display */}
               {queue.length > 0 && (
-                <Card className="mt-6 p-4">
+                <div className="card mt-6 p-4">
                   <h3 className="text-lg font-semibold mb-4">Current Queue</h3>
                   <div className="space-y-2">
                     {queue.slice(0, 10).map((entry, index) => (
@@ -417,26 +415,26 @@ const OnlineSingerView: React.FC = () => {
                         key={entry.id}
                         className={`flex justify-between items-center p-2 rounded ${
                           entry.singerName.toLowerCase() === singerName.toLowerCase()
-                            ? 'bg-blue-900/30 border border-blue-500'
-                            : 'bg-gray-800'
+                            ? 'bg-brand-blue/30 border border-brand-pink'
+                            : 'bg-card-dark'
                         }`}
                       >
                         <div>
                           <span className="font-medium">
                             {entry.song.artist} - {entry.song.title}
                           </span>
-                          <span className="text-gray-400 ml-2">by {entry.singerName}</span>
+                          <span className="text-text-secondary-dark ml-2">by {entry.singerName}</span>
                         </div>
-                        <span className="text-gray-400">#{index + 1}</span>
+                        <span className="text-text-secondary-dark">#{index + 1}</span>
                       </div>
                     ))}
                     {queue.length > 10 && (
-                      <p className="text-center text-gray-400 text-sm">
+                      <p className="text-center text-text-secondary-dark text-sm">
                         ... and {queue.length - 10} more songs
                       </p>
                     )}
                   </div>
-                </Card>
+                </div>
               )}
             </div>
           </div>

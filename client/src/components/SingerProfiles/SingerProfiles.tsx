@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+
 import { Input } from '../ui/Input';
 
 interface SingerProfile {
@@ -178,9 +177,9 @@ export const SingerProfiles: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Singer Profiles</h1>
-        <Button onClick={() => setShowCreateForm(true)}>
+        <button onClick={() => setShowCreateForm(true)}>
           Add New Singer
-        </Button>
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -200,7 +199,7 @@ export const SingerProfiles: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profiles List */}
         <div className="lg:col-span-1">
-          <Card className="p-4">
+          <div className="p-4">
             <h2 className="text-xl font-semibold mb-4">
               Singers ({filteredProfiles.length})
             </h2>
@@ -236,7 +235,7 @@ export const SingerProfiles: React.FC = () => {
                 ))}
               </div>
             )}
-          </Card>
+          </div>
         </div>
 
         {/* Profile Details */}
@@ -244,7 +243,7 @@ export const SingerProfiles: React.FC = () => {
           {selectedProfile ? (
             <div className="space-y-6">
               {/* Profile Info */}
-              <Card className="p-6">
+              <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h2 className="text-2xl font-bold">{selectedProfile.name}</h2>
@@ -252,12 +251,12 @@ export const SingerProfiles: React.FC = () => {
                       Member since {new Date(selectedProfile.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <Button
+                  <button
                     onClick={() => toggleVipStatus(selectedProfile)}
                     variant={selectedProfile.vipStatus ? "primary" : "secondary"}
                   >
                     {selectedProfile.vipStatus ? 'Remove VIP' : 'Make VIP'}
-                  </Button>
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -283,11 +282,11 @@ export const SingerProfiles: React.FC = () => {
                     </p>
                   </div>
                 )}
-              </Card>
+              </div>
 
               {/* Statistics */}
               {stats && (
-                <Card className="p-6">
+                <div className="p-6">
                   <h3 className="text-xl font-semibold mb-4">Performance Statistics</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center">
@@ -327,15 +326,15 @@ export const SingerProfiles: React.FC = () => {
                       </div>
                     </div>
                   )}
-                </Card>
+                </div>
               )}
             </div>
           ) : (
-            <Card className="p-6 text-center">
+            <div className="p-6 text-center">
               <p className="text-gray-600 dark:text-gray-400">
                 Select a singer to view their profile and statistics
               </p>
-            </Card>
+            </div>
           )}
         </div>
       </div>
@@ -343,7 +342,7 @@ export const SingerProfiles: React.FC = () => {
       {/* Create Profile Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-6 w-full max-w-md mx-4">
+          <div className="p-6 w-full max-w-md mx-4">
             <h2 className="text-xl font-bold mb-4">Add New Singer</h2>
             
             <div className="space-y-4">
@@ -401,20 +400,20 @@ export const SingerProfiles: React.FC = () => {
             </div>
             
             <div className="flex justify-end space-x-2 mt-6">
-              <Button
+              <button
                 variant="secondary"
                 onClick={() => setShowCreateForm(false)}
               >
                 Cancel
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={createProfile}
                 disabled={!newProfile.name.trim()}
               >
                 Create Profile
-              </Button>
+              </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>

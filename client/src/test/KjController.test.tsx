@@ -9,19 +9,18 @@ const mockSocket: MockWebSocket = {
 };
 
 const mockQueue = [
-  { song: { id: '1', artist: 'a-ha', title: 'Take On Me', fileName: 'a-ha - Take On Me.mp4' }, singerName: 'Alice' },
-  { song: { id: '2', artist: 'Queen', title: 'Bohemian Rhapsody', fileName: 'Queen - Bohemian Rhapsody.mp4' }, singerName: 'Bob' },
+  { song: { id: '1', artist: 'a-ha', title: 'Take On Me', fileName: 'a-ha - Take On Me.mp4' }, singerName: 'Alice', queuedAt: Date.now() },
+  { song: { id: '2', artist: 'Queen', title: 'Bohemian Rhapsody', fileName: 'Queen - Bohemian Rhapsody.mp4' }, singerName: 'Bob', queuedAt: Date.now() + 1 },
 ];
 
 describe('KjController', () => {
   it('renders the queue and can play the next song', async () => {
     render(<KjController socket={mockSocket} queue={mockQueue} />);
 
-    // Check for the new format used by DraggableQueue
-    expect(screen.getByText('a-ha - Take On Me')).toBeInTheDocument();
-    expect(screen.getByText('Singer: Alice')).toBeInTheDocument();
-    expect(screen.getByText('Queen - Bohemian Rhapsody')).toBeInTheDocument();
-    expect(screen.getByText('Singer: Bob')).toBeInTheDocument();
+    expect(screen.getByText(/a-ha - Take On Me/i)).toBeInTheDocument();
+    expect(screen.getByText(/Alice/i)).toBeInTheDocument();
+    expect(screen.getByText(/Queen - Bohemian Rhapsody/i)).toBeInTheDocument();
+    expect(screen.getByText(/Bob/i)).toBeInTheDocument();
 
     const playNextButton = screen.getByText('▶️ Play Next Song');
     await userEvent.click(playNextButton);

@@ -26,7 +26,7 @@ export const Input: React.FC<InputProps> = ({
       {label && (
         <label 
           htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          className="block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2"
         >
           {label}
         </label>
@@ -35,7 +35,7 @@ export const Input: React.FC<InputProps> = ({
       <div className="relative">
         {leftIcon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <div className="text-gray-400 dark:text-gray-500">
+            <div className="text-text-secondary-light dark:text-text-secondary-dark">
               {leftIcon}
             </div>
           </div>
@@ -45,13 +45,13 @@ export const Input: React.FC<InputProps> = ({
           id={inputId}
           className={clsx(
             'w-full px-3 py-2 border rounded-lg transition-colors duration-200',
-            'bg-white dark:bg-dark-800',
-            'text-gray-900 dark:text-gray-100',
-            'placeholder-gray-400 dark:placeholder-gray-500',
+            'bg-card-light dark:bg-card-dark',
+            'text-text-primary-light dark:text-text-primary-dark',
+            'placeholder-text-secondary-light dark:placeholder-text-secondary-dark',
             'focus:outline-none focus:ring-2 focus:ring-offset-2',
             error 
               ? 'border-red-300 dark:border-red-600 focus:border-red-500 focus:ring-red-500' 
-              : 'border-gray-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500',
+              : 'border-border-light dark:border-border-dark focus:border-brand-pink focus:ring-brand-pink',
             leftIcon && 'pl-10',
             rightIcon && 'pr-10',
             className
@@ -61,7 +61,7 @@ export const Input: React.FC<InputProps> = ({
         
         {rightIcon && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <div className="text-gray-400 dark:text-gray-500">
+            <div className="text-text-secondary-light dark:text-text-secondary-dark">
               {rightIcon}
             </div>
           </div>
@@ -69,7 +69,7 @@ export const Input: React.FC<InputProps> = ({
       </div>
       
       {hint && !error && (
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-text-secondary-light dark:text-text-secondary-dark">
           {hint}
         </p>
       )}

@@ -257,6 +257,16 @@ kj-nomad/
 - **Capacity:** Support up to 100 concurrent sessions per region
 - **Geographic:** Leverage Cloudflare's global edge network
 
+### 6.5 Frontend Styling Conventions
+
+The `client` application uses **Tailwind CSS v4**. All styling should adhere to the conventions and best practices outlined in the official [Tailwind CSS v4 documentation](https://tailwindcss.com/docs).
+
+- **Colors**: Brand and theme colors are defined as CSS variables in `client/src/index.css` (e.g., `--color-brand-pink`) and then referenced as theme colors in `client/tailwind.config.js`.
+
+- **Fonts**: Custom font families are defined as CSS variables in `client/src/index.css` using the `--font-<family-name>` syntax. The `font-display` utility class, which applies the `Righteous` font, should be used for headings and logos. The `font-sans` utility (`Inter`) is the default for all body and UI text.
+
+- **Gradient Text**: To apply a gradient to text, use the combination of `text-transparent`, `bg-clip-text`, and the desired `bg-gradient-*` utilities (e.g., `bg-gradient-to-r from-brand-pink to-brand-blue`). The gradient color stops must be defined in `tailwind.config.js`.
+
 ## 7. Development Principles & Quality Standards
 
 ### 7.1 **MANDATORY** Code Quality Standards

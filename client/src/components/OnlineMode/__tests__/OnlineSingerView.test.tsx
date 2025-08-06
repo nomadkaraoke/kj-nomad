@@ -181,7 +181,7 @@ describe('OnlineSingerView', () => {
       // Find the main container div with min-h-screen class
       const container = document.querySelector('.min-h-screen');
       expect(container).toHaveClass('min-h-screen');
-      expect(container).toHaveClass('bg-gray-900');
+      expect(container).toHaveClass('bg-bg-dark');
     });
   });
 

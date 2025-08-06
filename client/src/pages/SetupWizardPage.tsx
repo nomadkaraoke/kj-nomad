@@ -1,7 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Container } from '../components/ui/Layout';
 import { useAppStore } from '../store/appStore';
 import { 
   SparklesIcon,
@@ -99,53 +96,50 @@ const SetupWizardPage: React.FC = () => {
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                <SparklesIcon className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+              <div className="p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full">
+                <SparklesIcon className="h-12 w-12 text-brand-blue dark:text-brand-pink" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            <h1 className="font-display text-5xl mb-4">
               Welcome to KJ-Nomad
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
+            <p className="text-text-secondary-light dark:text-text-secondary-dark mb-8 max-w-md mx-auto">
               This setup wizard will guide you through configuring your local media library for your karaoke show.
             </p>
-            <Button
-              variant="primary"
-              size="lg"
+            <button
+              className="btn-primary"
               onClick={() => setStep('select_media')}
             >
               Get Started
-            </Button>
+            </button>
           </div>
         );
       case 'select_media':
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                <FolderOpenIcon className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+              <div className="p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full">
+                <FolderOpenIcon className="h-12 w-12 text-brand-blue dark:text-brand-pink" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            <h1 className="font-display text-4xl mb-4">
               Select Media Library
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-text-secondary-light dark:text-text-secondary-dark mb-6">
               Choose the folder on your computer that contains your karaoke video files.
             </p>
             
             <div className="mb-6">
-              <Button
-                variant="secondary"
-                size="lg"
+              <button
+                className="btn-secondary w-full"
                 onClick={handleSelectDirectory}
-                className="w-full"
               >
                 <FolderOpenIcon className="h-5 w-5 mr-2" />
                 Choose Folder
-              </Button>
+              </button>
               {mediaDirectory && (
-                <div className="mt-4 p-3 bg-gray-100 dark:bg-dark-800 rounded-lg text-sm text-left">
-                  <p className="font-mono truncate">{mediaDirectory}</p>
+                <div className="mt-4 p-3 bg-bg-light dark:bg-bg-dark rounded-lg text-sm text-left border border-border-light dark:border-border-dark">
+                  <p className="font-mono truncate text-text-secondary-light dark:text-text-secondary-dark">{mediaDirectory}</p>
                 </div>
               )}
               {error && (
@@ -154,20 +148,20 @@ const SetupWizardPage: React.FC = () => {
             </div>
 
             <div className="flex justify-between items-center">
-              <Button variant="ghost" onClick={() => setStep('welcome')}>
+              <button className="btn-tertiary" onClick={() => setStep('welcome')}>
                 Back
-              </Button>
+              </button>
               <div className="flex items-center space-x-4">
-                <Button variant="ghost" onClick={handleSkip}>
+                <button className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-brand-pink" onClick={handleSkip}>
                   Skip for now
-                </Button>
-                <Button
-                  variant="primary"
+                </button>
+                <button
+                  className="btn-primary"
                   onClick={() => setStep('scan_media')}
                   disabled={!mediaDirectory}
                 >
                   Next: Scan Library
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -176,38 +170,38 @@ const SetupWizardPage: React.FC = () => {
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                <MagnifyingGlassIcon className="h-12 w-12 text-blue-600 dark:text-blue-400 animate-pulse" />
+              <div className="p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full">
+                <MagnifyingGlassIcon className="h-12 w-12 text-brand-blue dark:text-brand-pink animate-pulse" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            <h1 className="font-display text-4xl mb-4">
               Scanning Library
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-text-secondary-light dark:text-text-secondary-dark mb-6">
               Please wait while we scan your media files...
             </p>
             
-            <div className="w-full bg-gray-200 dark:bg-dark-700 rounded-full h-4 mb-4">
+            <div className="w-full bg-card-dark rounded-full h-2.5 mb-4">
               <div
-                className="bg-blue-600 h-4 rounded-full transition-all duration-500"
-                style={{ width: `${scanStatus.total > 0 ? (scanStatus.progress / scanStatus.total) * 100 : 0}%` }}
+                className="bg-brand-pink h-2.5 rounded-full transition-all duration-500"
+                style={{ width: `${scanStatus.complete ? 100 : 50}%` }} // Simulate progress
               ></div>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {scanStatus.progress} / {scanStatus.total} files scanned
+            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              {scanStatus.complete ? `Scan Complete!` : `Scanning...`}
             </p>
             {error && (
-              <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-700 dark:text-red-300">
+              <div className="mt-4 p-4 bg-red-500/10 rounded-lg text-red-500">
                 <p className="font-bold">An error occurred:</p>
                 <p className="text-sm mb-4">{error}</p>
                 <div className="flex justify-center space-x-4">
-                  <Button variant="ghost" onClick={() => setStep('select_media')}>
+                  <button className="btn-tertiary" onClick={() => setStep('select_media')}>
                     Go Back
-                  </Button>
+                  </button>
                   <a href="/api/debug/download" download>
-                    <Button variant="secondary">
+                    <button className="btn-secondary">
                       Download Debug Log
-                    </Button>
+                    </button>
                   </a>
                 </div>
               </div>
@@ -218,34 +212,33 @@ const SetupWizardPage: React.FC = () => {
         return (
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-full">
-                <CheckCircleIcon className="h-12 w-12 text-green-600 dark:text-green-400" />
+              <div className="p-4 bg-green-500/10 rounded-full">
+                <CheckCircleIcon className="h-12 w-12 text-green-500" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            <h1 className="font-display text-4xl mb-4">
               Setup Complete!
             </h1>
-            <div className="text-gray-600 dark:text-gray-300 mb-8">
+            <div className="text-text-secondary-light dark:text-text-secondary-dark mb-8">
               {mediaDirectory ? (
                 <p>
-                  We found <span className="font-bold text-green-500">{scanStatus.songCount}</span> songs in your library. You're all set to start your show.
+                  We found <span className="font-bold text-brand-pink">{scanStatus.songCount}</span> songs in your library. You're all set to start your show.
                 </p>
               ) : (
                 <div className="space-y-2">
                   <p>You've skipped selecting a local media library.</p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                  <p className="text-sm text-brand-yellow bg-brand-yellow/10 p-3 rounded-lg">
                     <strong>Note:</strong> No local files will be available for playback. You can add a library later in the application settings.
                   </p>
                 </div>
               )}
             </div>
-            <Button
-              variant="primary"
-              size="lg"
+            <button
+              className="btn-primary"
               onClick={() => setIsSetupComplete(true)}
             >
               Finish Setup
-            </Button>
+            </button>
           </div>
         );
       default:
@@ -254,17 +247,15 @@ const SetupWizardPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-gray-100 dark:bg-dark-900 flex items-center justify-center font-sans">
-      <div className="absolute top-4 right-4">
+    <div className="h-screen w-screen bg-bg-light dark:bg-bg-dark flex items-center justify-center text-text-primary-light dark:text-text-primary-dark">
+      <div className="absolute top-6 right-6">
         <ThemeToggle />
       </div>
-      <Container size="xl">
-        <Card className="shadow-2xl">
-          <div className="p-8">
-            {renderStep()}
-          </div>
-        </Card>
-      </Container>
+      <div className="card w-full max-w-2xl">
+        <div className="p-4 sm:p-8">
+          {renderStep()}
+        </div>
+      </div>
     </div>
   );
 };

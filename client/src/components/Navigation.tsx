@@ -1,12 +1,10 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { Header, Container } from './ui/Layout';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useAppStore } from '../store/appStore';
 import { 
-  Cog6ToothIcon, 
-  MicrophoneIcon,
+  Cog6ToothIcon,
   WifiIcon,
   ExclamationTriangleIcon,
   UserGroupIcon
@@ -38,32 +36,31 @@ export const Navigation: React.FC = () => {
   ];
   
   return (
-    <Header sticky>
-      <Container>
+    <header className="sticky top-0 z-50 glass">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-4">
           {/* Brand */}
           <div className="flex items-center space-x-4">
-            <Link to="/" className="flex items-center space-x-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
-              <MicrophoneIcon className="h-8 w-8" />
-              <span>KJ-Nomad</span>
+            <Link to="/" className="font-display text-2xl text-transparent bg-clip-text bg-gradient-to-r from-brand-pink to-brand-blue">
+              KJ-NOMAD
             </Link>
             
             {/* Connection Status */}
             <div className="flex items-center space-x-2">
               {connectionStatus === 'connected' ? (
-                <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+                <div className="flex items-center space-x-2 text-green-500">
                   <WifiIcon className="h-5 w-5" />
                   <div className="flex flex-col items-start leading-tight">
                     <span className="text-xs font-medium">Connected</span>
                     {serverInfo.localIps.length > 0 && (
-                      <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
+                      <span className="text-xs font-mono text-text-secondary-light dark:text-text-secondary-dark">
                         {serverInfo.localIps[0]}:{serverInfo.port}
                       </span>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center space-x-1 text-red-600 dark:text-red-400">
+                <div className="flex items-center space-x-1 text-red-500">
                   <ExclamationTriangleIcon className="h-4 w-4" />
                   <span className="text-xs font-medium hidden sm:inline">
                     {error || 'Disconnected'}
@@ -86,8 +83,8 @@ export const Navigation: React.FC = () => {
                   className={clsx(
                     'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                      ? 'bg-brand-blue/10 text-brand-pink'
+                      : 'text-text-secondary-dark hover:text-brand-pink hover:bg-brand-blue/10'
                   )}
                   title={item.description}
                 >
@@ -103,7 +100,7 @@ export const Navigation: React.FC = () => {
             <select 
               value={location.pathname}
               onChange={(e) => window.location.hash = `#${e.target.value}`}
-              className="bg-white dark:bg-dark-800 border border-gray-300 dark:border-dark-600 rounded-lg px-3 py-1 text-sm"
+              className="input-primary py-1"
             >
               {navItems.map((item) => (
                 <option key={item.path} value={item.path}>
@@ -118,7 +115,7 @@ export const Navigation: React.FC = () => {
             <ThemeToggle />
           </div>
         </div>
-      </Container>
-    </Header>
+      </div>
+    </header>
   );
 };

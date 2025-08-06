@@ -34,7 +34,7 @@ export const ManualRequestForm: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
+    <div className="card">
       <h2 className="text-2xl font-bold mb-4">Add Manual Request</h2>
       <div className="space-y-4">
         <input
@@ -42,7 +42,7 @@ export const ManualRequestForm: React.FC = () => {
           value={singerName}
           onChange={(e) => setSingerName(e.target.value)}
           placeholder="Singer Name"
-          className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700"
+          className="input-primary w-full"
         />
         <div className="relative">
           <input
@@ -53,15 +53,15 @@ export const ManualRequestForm: React.FC = () => {
               handleSearch();
             }}
             placeholder="Search for a song..."
-            className="w-full px-4 py-2 rounded-lg border-2 border-gray-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700"
+            className="input-primary w-full"
           />
           {searchResults.length > 0 && (
-            <ul className="absolute z-10 w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg mt-1 max-h-60 overflow-y-auto">
+            <ul className="absolute z-10 w-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg mt-1 max-h-60 overflow-y-auto">
               {searchResults.map((song) => (
                 <li
                   key={song.id}
                   onClick={() => handleSelectSong(song)}
-                  className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-600 cursor-pointer"
+                  className="px-4 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer"
                 >
                   {song.artist} - {song.title}
                 </li>
@@ -72,7 +72,7 @@ export const ManualRequestForm: React.FC = () => {
         <button
           onClick={handleAddToQueue}
           disabled={!selectedSong || singerName.trim() === ''}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="btn-primary w-full"
         >
           Add to Queue
         </button>

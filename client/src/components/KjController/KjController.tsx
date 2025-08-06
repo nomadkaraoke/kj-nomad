@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import DraggableQueue from '../QueueManager/DraggableQueue';
-import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Card } from '../ui/Card';
 
 interface Song {
     id: string;
@@ -120,81 +118,81 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
   const playbackState = sessionState?.playbackState || 'stopped';
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        <h1 className="font-display text-3xl">
           KJ Controller
         </h1>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
           {sessionState?.totalSongsPlayed || 0} songs played
         </div>
       </div>
 
       {/* Now Playing Section */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+      <div className="card">
+        <h2 className="text-xl font-semibold mb-4">
           Now Playing
         </h2>
         
         {nowPlaying ? (
           <div className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-              <div className="font-semibold text-lg text-gray-900 dark:text-white">
+            <div className="bg-brand-blue/10 dark:bg-brand-blue/20 p-4 rounded-lg">
+              <div className="font-semibold text-lg">
                 {nowPlaying.song.artist} - {nowPlaying.song.title}
               </div>
-              <div className="text-gray-600 dark:text-gray-400">
+              <div className="text-text-secondary-light dark:text-text-secondary-dark">
                 Singer: {nowPlaying.singerName}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+              <div className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-2">
                 Status: <span className="capitalize font-medium">{playbackState}</span>
               </div>
             </div>
             
             <div className="flex flex-wrap gap-2">
               {playbackState === 'playing' && (
-                <Button onClick={handlePause} variant="secondary">
+                <button onClick={handlePause} className="btn-secondary">
                   ⏸️ Pause
-                </Button>
+                </button>
               )}
               {playbackState === 'paused' && (
-                <Button onClick={handleResume} variant="secondary">
+                <button onClick={handleResume} className="btn-secondary">
                   ▶️ Resume
-                </Button>
+                </button>
               )}
-              <Button onClick={handleRestart} variant="secondary">
+              <button onClick={handleRestart} className="btn-tertiary">
                 🔄 Restart
-              </Button>
-              <Button onClick={handleStop} variant="secondary">
+              </button>
+              <button onClick={handleStop} className="btn text-red-500 hover:bg-red-500/10">
                 ⏹️ Stop
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-8 text-text-secondary-light dark:text-text-secondary-dark">
             <div className="text-4xl mb-2">🎵</div>
             <div>No song currently playing</div>
             {queue.length > 0 && (
-              <Button onClick={playNextSong} className="mt-4">
+              <button onClick={playNextSong} className="btn-primary mt-4">
                 ▶️ Play Next Song
-              </Button>
+              </button>
             )}
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Queue Management Section */}
-      <Card className="p-6">
+      <div className="card">
         <DraggableQueue
           queue={queue}
           onReorder={handleReorderQueue}
           onPlay={handlePlaySong}
           onRemove={handleRemoveSong}
         />
-      </Card>
+      </div>
 
       {/* Ticker Control Section */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+      <div className="card">
+        <h2 className="text-xl font-semibold mb-4">
           Ticker Control
         </h2>
         <div className="flex gap-2">
@@ -206,11 +204,11 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
             className="flex-grow"
             data-testid="ticker-input"
           />
-          <Button onClick={updateTicker} data-testid="update-ticker-button">
+          <button onClick={updateTicker} data-testid="update-ticker-button" className="btn-primary">
             Update Ticker
-          </Button>
+          </button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../hooks/useTheme';
-import { Button } from './Button';
+
 import { SunIcon, MoonIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 
 export const ThemeToggle: React.FC = () => {
@@ -36,16 +36,14 @@ export const ThemeToggle: React.FC = () => {
   };
   
   return (
-    <Button
-      variant="ghost"
-      size="sm"
+    <button
       onClick={cycleTheme}
-      className="flex items-center space-x-2"
+      className="btn bg-card-light dark:bg-card-dark hover:bg-bg-light dark:hover:bg-bg-dark text-text-primary-light dark:text-text-primary-dark"
       title={`Current theme: ${getLabel()}. Click to cycle themes.`}
       data-testid="theme-toggle"
     >
       {getIcon()}
-      <span className="hidden sm:inline">{getLabel()}</span>
-    </Button>
+      <span className="hidden sm:inline ml-2">{getLabel()}</span>
+    </button>
   );
 };
