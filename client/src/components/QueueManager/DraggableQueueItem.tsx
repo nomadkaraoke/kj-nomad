@@ -46,6 +46,7 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
+      data-testid={`queue-item-${index}`}
       className={`
         flex items-center justify-between p-4 mb-2 
         bg-white dark:bg-gray-800 rounded-lg shadow-sm border

@@ -33,6 +33,7 @@ const HomePage: React.FC = () => {
     skipSong,
     updateTicker,
     removeFromQueue,
+    reorderQueue,
     setShowHistory
   } = useAppStore();
   
@@ -47,6 +48,10 @@ const HomePage: React.FC = () => {
   };
 
   const handleReorderQueue = async (fromIndex: number, toIndex: number) => {
+    // Optimistically update the UI
+    reorderQueue(fromIndex, toIndex);
+
+    // Then, send the update to the server
     try {
       const response = await fetch('/api/queue/reorder', {
         method: 'POST',
@@ -58,9 +63,11 @@ const HomePage: React.FC = () => {
 
       if (!response.ok) {
         console.error('Failed to reorder queue:', response.statusText);
+        // TODO: Implement a rollback mechanism if the server fails
       }
     } catch (error) {
       console.error('Error reordering queue:', error);
+      // TODO: Implement a rollback mechanism
     }
   };
 

@@ -25,6 +25,10 @@ export const ensureDataDirExists = () => {
 };
 
 export const getMediaDefaultPath = () => {
+  // In E2E testing, use the local media directory
+  if (process.env.E2E_TESTING === 'true') {
+    return path.join(__dirname, '..', 'media');
+  }
   const homeDir = process.env.HOME || process.env.USERPROFILE || '';
   return path.join(homeDir, 'Music', 'KJ-Nomad');
 };

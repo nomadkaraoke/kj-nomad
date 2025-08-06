@@ -1,60 +1,32 @@
-import { execSync, exec } from 'child_process';
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import waitOn from 'wait-on';
+import os from 'os';
 
-async function globalSetup() {
-  console.log('Building server for E2E tests...');
-  execSync('npm run build:server', { stdio: 'inherit' });
-  console.log('Server built successfully.');
+export default async () => {
+  console.log('🚀 E2E Global Setup: Starting...');
 
-  // Start the web server in the background and wait for it to be ready
-  const serverProcess = exec('npm run dev:server', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
-  (global as any).serverProcess = serverProcess;
-  console.log('Web server started in background.');
+  // 1. Create a temporary directory for media files
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kj-nomad-e2e-'));
+  console.log(`📁 Created temporary media directory: ${tmpDir}`);
 
-  // Ensure `wait-on` is installed in the root project (it's already in the devDependencies)
-  // execSync('npm install wait-on', { stdio: 'inherit' }); // No need to install again
+  // 2. Create a dummy song file
+  fs.writeFileSync(path.join(tmpDir, 'Test Artist - Test Song.mp4'), 'dummy content');
+  console.log('🎵 Created dummy song file.');
 
-  await waitOn({ resources: ['http://localhost:8080'], timeout: 5000 });
-  console.log('Web server is ready.');
+  // 3. Write the temp directory to a .env file for the webServer to use
+  fs.writeFileSync(path.join(__dirname, '..', '.env.test'), `MEDIA_DIR=${tmpDir}`);
+  console.log(`✅ Wrote MEDIA_DIR to .env.test file: ${tmpDir}`);
 
-  // Setup dummy media and config for server
-  const serverDataPath = path.join(__dirname, '..', 'server', 'data');
-  const setupFilePath = path.join(serverDataPath, 'setup.json');
-  const mediaDirectoryPath = path.join(__dirname, '..', 'server', 'media');
-
-  // Ensure server/data directory exists
-  if (!fs.existsSync(serverDataPath)) {
-    fs.mkdirSync(serverDataPath, { recursive: true });
+  // 4. Ensure the server is built
+  try {
+    console.log('📦 Building server for E2E tests...');
+    execSync('npm run build:server', { stdio: 'inherit' });
+    console.log('✅ Server built successfully.');
+  } catch (error) {
+    console.error('🔥 Failed to build server:', error);
+    process.exit(1);
   }
 
-  // Create dummy setup.json
-  const setupConfig = {
-    mediaDirectory: mediaDirectoryPath,
-    fillerMusicDirectory: mediaDirectoryPath,
-    kjName: 'Test KJ',
-    venue: 'Test Venue',
-    autoLaunchBrowser: false,
-    defaultPort: 8080,
-    enableNetworkAccess: true,
-    setupComplete: true,
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
-  };
-  fs.writeFileSync(setupFilePath, JSON.stringify(setupConfig, null, 2));
-  console.log(`Dummy setup.json created at: ${setupFilePath}`);
-
-  // Ensure server/media directory exists
-  if (!fs.existsSync(mediaDirectoryPath)) {
-    fs.mkdirSync(mediaDirectoryPath, { recursive: true });
-  }
-
-  // Create dummy video files for testing
-  fs.writeFileSync(path.join(mediaDirectoryPath, 'Test Artist - Test Song.mp4'), '');
-  fs.writeFileSync(path.join(mediaDirectoryPath, 'Another Artist - Another Song.mp4'), '');
-  fs.writeFileSync(path.join(mediaDirectoryPath, 'filler-song.mp4'), '');
-  console.log(`Dummy media files created in: ${mediaDirectoryPath}`);
-}
-
-export default globalSetup;
+  console.log('🎉 E2E Global Setup: Complete.');
+};

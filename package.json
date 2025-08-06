@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "npm run build && lsof -ti :8080 | xargs kill -9 || true && npm run dev:server &",
     "dev:server": "cd server && npm run dev",
+    "dev:server:debug": "cd server && npm run dev:debug",
     "dev:client": "cd client && npm run dev",
     "build": "npm run build:client && npm run copy:client && npm run build:server",
     "build:client": "cd client && npm run build",
@@ -26,7 +27,7 @@
     "test:server": "cd server && npm run test",
     "test:client": "cd client && npm run test",
     "test:e2e:electron": "npx bddgen --config=playwright.config.electron.ts && npx playwright test --config=playwright.config.electron.ts",
-    "test:e2e:web": "npx bddgen && npx playwright test --browser=chromium",
+    "test:e2e:web": "npm run build:client && E2E_TESTING=true npx bddgen && E2E_TESTING=true npx playwright test --browser=chromium",
     "test:e2e:all": "npm run test:e2e:web && npm run test:e2e:electron",
     "test:e2e:report": "npx playwright show-report e2e/report",
     "lint": "npm run lint:server && npm run lint:client",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@playwright/test": ">=1.54",
     "concurrently": ">=9",
+    "dotenv": "^17.2.1",
     "electron": ">=37",
     "electron-builder": ">=26",
     "esbuild": ">=0.20",

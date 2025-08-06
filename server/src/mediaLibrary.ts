@@ -67,6 +67,10 @@ export const scanMediaLibrary = (customDirectory?: string): Song[] => {
   } catch (error) {
     console.error('Error scanning media library:', error);
     songLibrary = [];
+    fuse = new Fuse(songLibrary, {
+      keys: ['artist', 'title'],
+      threshold: 0.4,
+    });
     // Re-throw the error to be handled by the caller
     throw error;
   }

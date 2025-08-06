@@ -22024,6 +22024,12 @@ const useAppStore = create()(
       setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
       setError: (error) => set({ error }),
       setQueue: (queue) => set({ queue }),
+      reorderQueue: (fromIndex, toIndex) => set((state) => {
+        const newQueue = [...state.queue];
+        const [movedItem] = newQueue.splice(fromIndex, 1);
+        newQueue.splice(toIndex, 0, movedItem);
+        return { queue: newQueue };
+      }),
       addToQueue: (entry) => set((state) => ({
         queue: [...state.queue, entry]
       })),
@@ -22149,12 +22155,18 @@ const useAppStore = create()(
           set({ connectionStatus: "error", error: "WebSocket is not connected." });
         }
       },
-      requestSong: (songId, singerName) => {
-        const { socket } = get();
+      requestSong: (song, singerName) => {
+        const { socket, addToQueue } = get();
+        const newEntry = {
+          song,
+          singerName,
+          queuedAt: Date.now()
+        };
+        addToQueue(newEntry);
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({
             type: "request_song",
-            payload: { songId, singerName }
+            payload: { songId: song.id, singerName }
           }));
         }
       },
@@ -29227,6 +29239,7 @@ const DraggableQueueItem = ({
     {
       ref: setNodeRef,
       style,
+      "data-testid": `queue-item-${index}`,
       className: `
         flex items-center justify-between p-4 mb-2 
         bg-white dark:bg-gray-800 rounded-lg shadow-sm border
@@ -29383,20 +29396,51 @@ const DraggableQueue = ({
     )
   ] });
 };
+const debounce = (func, delay) => {
+  let timeoutId = null;
+  return (...args) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 const ManualRequestForm = () => {
   const [singerName, setSingerName] = reactExports.useState("");
   const [searchQuery, setSearchQuery] = reactExports.useState("");
   const [searchResults, setSearchResults] = reactExports.useState([]);
   const [selectedSong, setSelectedSong] = reactExports.useState(null);
   const { requestSong } = useAppStore();
-  const handleSearch = async () => {
-    if (searchQuery.trim() === "") {
-      setSearchResults([]);
-      return;
-    }
-    const response = await fetch(`/api/songs?q=${encodeURIComponent(searchQuery)}`);
-    const data = await response.json();
-    setSearchResults(data);
+  const debouncedSearch = reactExports.useMemo(
+    () => debounce(async (query) => {
+      if (query.trim() === "") {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        const response = await fetch(
+          `/api/songs?q=${encodeURIComponent(query)}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSearchResults(data);
+        } else {
+          console.error("Search failed:", response.statusText);
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error("Search request failed:", error);
+        setSearchResults([]);
+      }
+    }, 300),
+    []
+  );
+  const handleSearchChange = (e) => {
+    const newQuery = e.target.value;
+    setSearchQuery(newQuery);
+    debouncedSearch(newQuery);
   };
   const handleSelectSong = (song) => {
     setSelectedSong(song);
@@ -29405,7 +29449,7 @@ const ManualRequestForm = () => {
   };
   const handleAddToQueue = () => {
     if (selectedSong && singerName.trim() !== "") {
-      requestSong(selectedSong.id, singerName);
+      requestSong(selectedSong, singerName);
       setSingerName("");
       setSearchQuery("");
       setSelectedSong(null);
@@ -29430,27 +29474,31 @@ const ManualRequestForm = () => {
           {
             type: "text",
             value: searchQuery,
-            onChange: (e) => {
-              setSearchQuery(e.target.value);
-              handleSearch();
-            },
+            onChange: handleSearchChange,
             placeholder: "Search for a song...",
             className: "input-primary w-full"
           }
         ),
-        searchResults.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "absolute z-10 w-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg mt-1 max-h-60 overflow-y-auto", children: searchResults.map((song) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "li",
+        searchResults.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "ul",
           {
-            onClick: () => handleSelectSong(song),
-            className: "px-4 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer",
-            children: [
-              song.artist,
-              " - ",
-              song.title
-            ]
-          },
-          song.id
-        )) })
+            role: "listbox",
+            className: "absolute z-10 w-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg mt-1 max-h-60 overflow-y-auto",
+            children: searchResults.map((song) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "li",
+              {
+                onClick: () => handleSelectSong(song),
+                className: "px-4 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer",
+                children: [
+                  song.artist,
+                  " - ",
+                  song.title
+                ]
+              },
+              song.id
+            ))
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
@@ -29729,6 +29777,7 @@ const HomePage = () => {
     skipSong,
     updateTicker,
     removeFromQueue,
+    reorderQueue,
     setShowHistory
   } = useAppStore();
   const [newTickerText, setNewTickerText] = reactExports.useState(tickerText);
@@ -29739,6 +29788,7 @@ const HomePage = () => {
     removeFromQueue(songId);
   };
   const handleReorderQueue = async (fromIndex, toIndex) => {
+    reorderQueue(fromIndex, toIndex);
     try {
       const response = await fetch("/api/queue/reorder", {
         method: "POST",
@@ -30662,4 +30712,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-WsNlFfLz.js.map
+//# sourceMappingURL=index-DSZdo_Qy.js.map

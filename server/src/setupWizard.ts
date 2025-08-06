@@ -61,6 +61,17 @@ const DEFAULT_CONFIG: SetupConfig = {
  */
 export function loadSetupConfig(): SetupConfig {
   ensureDataDirExists();
+
+  // If in E2E testing mode, force a specific configuration
+  if (process.env.E2E_TESTING === 'true') {
+    console.log('[SetupWizard] E2E_TESTING mode enabled. Using test configuration.');
+    return {
+      ...DEFAULT_CONFIG,
+      mediaDirectory: process.env.MEDIA_DIR || '',
+      fillerMusicDirectory: process.env.MEDIA_DIR || '',
+      setupComplete: true, // Assume setup is complete for tests
+    };
+  }
   
   try {
     if (fs.existsSync(CONFIG_FILE)) {

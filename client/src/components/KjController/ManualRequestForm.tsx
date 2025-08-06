@@ -1,5 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppStore, type Song } from '../../store/appStore';
+
+// A fully generic debounce function
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const debounce = <F extends (...args: any[]) => any>(
+  func: F,
+  delay: number,
+): ((...args: Parameters<F>) => void) => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<F>) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 
 export const ManualRequestForm: React.FC = () => {
   const [singerName, setSingerName] = useState('');
@@ -8,14 +26,39 @@ export const ManualRequestForm: React.FC = () => {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const { requestSong } = useAppStore();
 
-  const handleSearch = async () => {
-    if (searchQuery.trim() === '') {
-      setSearchResults([]);
-      return;
-    }
-    const response = await fetch(`/api/songs?q=${encodeURIComponent(searchQuery)}`);
-    const data = await response.json();
-    setSearchResults(data);
+  // useMemo is used here to ensure that the debounced function is created only once
+  // and persists across re-renders. This provides a stable function reference,
+  // resolving the exhaustive-deps linting rule.
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (query: string) => {
+        if (query.trim() === '') {
+          setSearchResults([]);
+          return;
+        }
+        try {
+          const response = await fetch(
+            `/api/songs?q=${encodeURIComponent(query)}`,
+          );
+          if (response.ok) {
+            const data = await response.json();
+            setSearchResults(data);
+          } else {
+            console.error('Search failed:', response.statusText);
+            setSearchResults([]);
+          }
+        } catch (error) {
+          console.error('Search request failed:', error);
+          setSearchResults([]); // Clear results on error
+        }
+      }, 300),
+    [],
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setSearchQuery(newQuery);
+    debouncedSearch(newQuery);
   };
 
   const handleSelectSong = (song: Song) => {
@@ -26,7 +69,7 @@ export const ManualRequestForm: React.FC = () => {
 
   const handleAddToQueue = () => {
     if (selectedSong && singerName.trim() !== '') {
-      requestSong(selectedSong.id, singerName);
+      requestSong(selectedSong, singerName);
       setSingerName('');
       setSearchQuery('');
       setSelectedSong(null);
@@ -48,15 +91,15 @@ export const ManualRequestForm: React.FC = () => {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              handleSearch();
-            }}
+            onChange={handleSearchChange}
             placeholder="Search for a song..."
             className="input-primary w-full"
           />
           {searchResults.length > 0 && (
-            <ul className="absolute z-10 w-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg mt-1 max-h-60 overflow-y-auto">
+            <ul
+              role="listbox"
+              className="absolute z-10 w-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg mt-1 max-h-60 overflow-y-auto"
+            >
               {searchResults.map((song) => (
                 <li
                   key={song.id}

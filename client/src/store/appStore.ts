@@ -106,6 +106,7 @@ export interface AppState {
   setConnectionStatus: (status: 'idle' | 'connecting' | 'connected' | 'error') => void;
   setError: (error: string | null) => void;
   setQueue: (queue: QueueEntry[]) => void;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
   addToQueue: (entry: QueueEntry) => void;
   removeFromQueue: (songId: string) => void;
   setNowPlaying: (nowPlaying: NowPlaying | null) => void;
@@ -141,7 +142,7 @@ export interface AppState {
   identifyDevice: (deviceId: string) => Promise<void>;
   disconnectDevice: (deviceId: string) => Promise<void>;
   connectToOnlineSession: (sessionId: string, adminKey: string) => void;
-  requestSong: (songId: string, singerName: string) => void;
+  requestSong: (song: Song, singerName: string) => void;
   playNext: () => void;
   pausePlayback: () => void;
   resumePlayback: () => void;
@@ -193,8 +194,14 @@ export const useAppStore = create<AppState>()(
       setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
       setError: (error) => set({ error }),
       setQueue: (queue) => set({ queue }),
+      reorderQueue: (fromIndex, toIndex) => set(state => {
+        const newQueue = [...state.queue];
+        const [movedItem] = newQueue.splice(fromIndex, 1);
+        newQueue.splice(toIndex, 0, movedItem);
+        return { queue: newQueue };
+      }),
       addToQueue: (entry) => set((state) => ({
-        queue: [...state.queue, entry] 
+        queue: [...state.queue, entry]
       })),
       removeFromQueue: (songId) => set((state) => ({
         queue: state.queue.filter(entry => entry.song.id !== songId)
@@ -329,12 +336,21 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      requestSong: (songId, singerName) => {
-        const { socket } = get();
+      requestSong: (song, singerName) => {
+        const { socket, addToQueue } = get();
+
+        // Optimistic update
+        const newEntry: QueueEntry = {
+          song,
+          singerName,
+          queuedAt: Date.now(),
+        };
+        addToQueue(newEntry);
+
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({
             type: 'request_song',
-            payload: { songId, singerName }
+            payload: { songId: song.id, singerName }
           }));
         }
       },

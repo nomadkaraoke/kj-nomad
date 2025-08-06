@@ -7,6 +7,7 @@
   "bin": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "dev:debug": "DEBUG=express:* tsx src/index.ts",
     "start": "tsx src/index.ts",
     "build": "tsc",
     "package": "npm run build && pkg . --out-path dist",
