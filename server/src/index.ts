@@ -1449,7 +1449,8 @@ server.listen(PORT, async () => {
   // Now scan libraries using configured paths
   console.log('[Server] Initializing media libraries from config...');
   try {
-    scanMediaLibrary(config.mediaDirectory);
+    const scannedSongs = scanMediaLibrary(config.mediaDirectory);
+    console.log(`[Server Startup] Media library scanned. Found ${scannedSongs.length} songs.`);
     if (config.fillerMusicDirectory) {
         scanFillerMusic(config.fillerMusicDirectory);
     } else {
