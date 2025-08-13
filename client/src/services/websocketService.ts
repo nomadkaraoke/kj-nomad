@@ -220,6 +220,55 @@ class WebSocketService {
         store.setTickerText(payload as string);
         break;
 
+      // Sync engine protocol
+      case 'clock_sync_ping': {
+        if (payload && typeof payload === 'object') {
+          const { pingId, serverTime } = payload as { pingId: string; serverTime: number };
+          this.send({
+            type: 'clock_sync_response',
+            payload: {
+              pingId,
+              serverTime,
+              clientTime: Date.now(),
+              responseTime: Date.now(),
+            },
+          });
+        }
+        break;
+      }
+
+      case 'sync_preload': {
+        if (payload && typeof payload === 'object') {
+          const { commandId, videoUrl } = payload as { commandId: string; videoUrl: string };
+          store.setSyncPreload({ commandId, videoUrl });
+        }
+        break;
+      }
+
+      case 'sync_play': {
+        if (payload && typeof payload === 'object') {
+          const { commandId, scheduledTime, videoTime, videoUrl } = payload as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string };
+          store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl });
+        }
+        break;
+      }
+
+      case 'sync_pause': {
+        if (payload && typeof payload === 'object') {
+          const { commandId, scheduledTime } = payload as { commandId: string; scheduledTime: number };
+          store.setSyncPause({ commandId, scheduledTime });
+        }
+        break;
+      }
+
+      case 'sync_check_position': {
+        // Respond with current playback time if available
+        const video = document.querySelector('video');
+        const currentTime = video && !isNaN(video.currentTime) ? video.currentTime : 0;
+        this.send({ type: 'sync_report_position', payload: { currentTime, reportedAt: Date.now() } });
+        break;
+      }
+
       // Player-specific messages
       case 'device_registered':
         if (this.clientType === 'player' && payload && typeof payload === 'object' && 'deviceId' in payload) {

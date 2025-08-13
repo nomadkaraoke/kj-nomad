@@ -22013,6 +22013,10 @@ const useAppStore = create()(
       playerDeviceId: null,
       playerShowIdentify: false,
       playerIsDisconnected: false,
+      // Sync commands
+      syncPreload: null,
+      syncPlay: null,
+      syncPause: null,
       serverInfo: { port: 0, localIps: [] },
       devices: [],
       // Search state
@@ -22056,6 +22060,9 @@ const useAppStore = create()(
       setPlayerDeviceId: (id) => set({ playerDeviceId: id }),
       setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
       setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
+      setSyncPreload: (cmd) => set({ syncPreload: cmd }),
+      setSyncPlay: (cmd) => set({ syncPlay: cmd }),
+      setSyncPause: (cmd) => set({ syncPause: cmd }),
       // Complex actions
       checkServerInfo: async () => {
         try {
@@ -24124,6 +24131,49 @@ class WebSocketService {
       case "ticker_updated":
         store.setTickerText(payload);
         break;
+      // Sync engine protocol
+      case "clock_sync_ping": {
+        if (payload && typeof payload === "object") {
+          const { pingId, serverTime } = payload;
+          this.send({
+            type: "clock_sync_response",
+            payload: {
+              pingId,
+              serverTime,
+              clientTime: Date.now(),
+              responseTime: Date.now()
+            }
+          });
+        }
+        break;
+      }
+      case "sync_preload": {
+        if (payload && typeof payload === "object") {
+          const { commandId, videoUrl } = payload;
+          store.setSyncPreload({ commandId, videoUrl });
+        }
+        break;
+      }
+      case "sync_play": {
+        if (payload && typeof payload === "object") {
+          const { commandId, scheduledTime, videoTime, videoUrl } = payload;
+          store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl });
+        }
+        break;
+      }
+      case "sync_pause": {
+        if (payload && typeof payload === "object") {
+          const { commandId, scheduledTime } = payload;
+          store.setSyncPause({ commandId, scheduledTime });
+        }
+        break;
+      }
+      case "sync_check_position": {
+        const video = document.querySelector("video");
+        const currentTime = video && !isNaN(video.currentTime) ? video.currentTime : 0;
+        this.send({ type: "sync_report_position", payload: { currentTime, reportedAt: Date.now() } });
+        break;
+      }
       // Player-specific messages
       case "device_registered":
         if (this.clientType === "player" && payload && typeof payload === "object" && "deviceId" in payload) {
@@ -29577,6 +29627,13 @@ const PlayerScreenManager = () => {
             device.isApp ? "KJ-Nomad App" : "Web Browser",
             " - ",
             device.ipAddress
+          ] }),
+          "syncStats" in device && typeof device.syncStats?.lastSyncError === "number" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs mt-1", children: [
+            "Drift: ",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: clsx((device.syncStats?.lastSyncError ?? 0) > 100 || (device.syncStats?.lastSyncError ?? 0) < -100 ? "text-red-500" : "text-green-600"), children: [
+              Math.round(device.syncStats?.lastSyncError ?? 0),
+              " ms"
+            ] })
           ] })
         ] })
       ] }),
@@ -30238,7 +30295,10 @@ const PlayerPage = () => {
     connectionStatus,
     playerDeviceId,
     playerShowIdentify,
-    playerIsDisconnected
+    playerIsDisconnected,
+    syncPreload,
+    syncPlay,
+    syncPause
   } = useAppStore();
   const videoRef = reactExports.useRef(null);
   const [isVideoLoaded, setIsVideoLoaded] = reactExports.useState(false);
@@ -30300,6 +30360,56 @@ const PlayerPage = () => {
       setIsVideoLoaded(false);
     }
   }, [nowPlaying]);
+  reactExports.useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !syncPreload) return;
+    setError(null);
+    setIsVideoLoaded(false);
+    video.src = syncPreload.videoUrl;
+    const onCanPlay = () => {
+      setIsVideoLoaded(true);
+      websocketService.send({
+        type: "sync_ready",
+        payload: {
+          commandId: syncPreload.commandId,
+          bufferLevel: Math.min(1, (video.buffered.length > 0 ? video.buffered.end(0) - video.currentTime : 0) / 2),
+          videoDuration: isNaN(video.duration) ? void 0 : video.duration
+        }
+      });
+    };
+    video.addEventListener("canplay", onCanPlay);
+    return () => video.removeEventListener("canplay", onCanPlay);
+  }, [syncPreload]);
+  reactExports.useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !syncPlay) return;
+    const { scheduledTime, videoTime } = syncPlay;
+    const delay = Math.max(0, scheduledTime - Date.now());
+    const timer = window.setTimeout(() => {
+      try {
+        if (!isNaN(videoTime)) {
+          video.currentTime = videoTime;
+        }
+        video.play().catch(() => {
+        });
+      } catch {
+      }
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [syncPlay]);
+  reactExports.useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !syncPause) return;
+    const { scheduledTime } = syncPause;
+    const delay = Math.max(0, scheduledTime - Date.now());
+    const timer = window.setTimeout(() => {
+      try {
+        video.pause();
+      } catch {
+      }
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [syncPause]);
   const onEnded = () => {
     if (nowPlaying) {
       console.log("Song ended, should trigger next song");
@@ -30712,4 +30822,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DSZdo_Qy.js.map
+//# sourceMappingURL=index-BVIujU35.js.map

@@ -88,6 +88,13 @@ const PlayerScreenManager: React.FC = () => {
                   <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark opacity-70">
                     {device.isApp ? 'KJ-Nomad App' : 'Web Browser'} - {device.ipAddress}
                   </p>
+                  {'syncStats' in device && typeof (device as Device & { syncStats?: { lastSyncError?: number } }).syncStats?.lastSyncError === 'number' && (
+                    <p className="text-xs mt-1">
+                      Drift: <span className={clsx((((device as Device & { syncStats?: { lastSyncError?: number } }).syncStats?.lastSyncError ?? 0) > 100 || (((device as Device & { syncStats?: { lastSyncError?: number } }).syncStats?.lastSyncError ?? 0) < -100)) ? 'text-red-500' : 'text-green-600')}>
+                        {Math.round(((device as Device & { syncStats?: { lastSyncError?: number } }).syncStats?.lastSyncError ?? 0))} ms
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center space-x-1">

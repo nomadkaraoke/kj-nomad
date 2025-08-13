@@ -16,6 +16,9 @@ const PlayerPage: React.FC = () => {
     playerDeviceId,
     playerShowIdentify,
     playerIsDisconnected,
+    syncPreload,
+    syncPlay,
+    syncPause,
   } = useAppStore();
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -86,6 +89,57 @@ const PlayerPage: React.FC = () => {
       setIsVideoLoaded(false);
     }
   }, [nowPlaying]);
+
+  // Handle sync preload: set src and buffer, then report readiness
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !syncPreload) return;
+    setError(null);
+    setIsVideoLoaded(false);
+    video.src = syncPreload.videoUrl;
+    const onCanPlay = () => {
+      setIsVideoLoaded(true);
+      websocketService.send({
+        type: 'sync_ready',
+        payload: {
+          commandId: syncPreload.commandId,
+          bufferLevel: Math.min(1, (video.buffered.length > 0 ? (video.buffered.end(0) - video.currentTime) : 0) / 2),
+          videoDuration: isNaN(video.duration) ? undefined : video.duration,
+        },
+      });
+    };
+    video.addEventListener('canplay', onCanPlay);
+    return () => video.removeEventListener('canplay', onCanPlay);
+  }, [syncPreload]);
+
+  // Handle sync play: schedule exact start respecting scheduledTime
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !syncPlay) return;
+    const { scheduledTime, videoTime } = syncPlay;
+    const delay = Math.max(0, scheduledTime - Date.now());
+    const timer = window.setTimeout(() => {
+      try {
+        if (!isNaN(videoTime)) {
+          video.currentTime = videoTime;
+        }
+        video.play().catch(() => {/* ignore, handled elsewhere */});
+      } catch {/* ignore */}
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [syncPlay]);
+
+  // Handle sync pause
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !syncPause) return;
+    const { scheduledTime } = syncPause;
+    const delay = Math.max(0, scheduledTime - Date.now());
+    const timer = window.setTimeout(() => {
+      try { video.pause(); } catch {/* ignore */}
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [syncPause]);
 
   const onEnded = () => {
     if (nowPlaying) {

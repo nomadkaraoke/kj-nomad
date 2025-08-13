@@ -236,6 +236,10 @@ const getMappedDevices = () => {
     isTickerVisible: d.isTickerVisible,
     isSidebarVisible: d.isSidebarVisible,
     isVideoPlayerVisible: d.isVideoPlayerVisible,
+    syncStats: d.syncStats ? {
+      averageLatency: d.syncStats.averageLatency,
+      lastSyncError: d.syncStats.lastSyncError
+    } : undefined,
   }));
 };
 
@@ -256,6 +260,10 @@ deviceManager.on('deviceStatusChanged', (device) => {
 });
 
 // Video Sync endpoints
+// Track last sync schedule to estimate drift from client reports
+let lastSyncBaseScheduledTime: number | null = null;
+let lastSyncVideoStartTimeSec: number | null = null;
+
 app.get('/api/sync/status', (req, res) => {
     console.log('[API] GET /api/sync/status - Get sync engine status');
     const stats = videoSyncEngine.getSyncStats();
@@ -271,12 +279,18 @@ app.post('/api/sync/play', async (req, res) => {
     }
     
     try {
+        // Estimate the scheduled time similarly to engine for drift calculations
+        const stats = videoSyncEngine.getSyncStats();
+        const coordinationBuffer = Math.max(2000, stats.averageLatency * 3 + 500);
+        lastSyncBaseScheduledTime = Date.now() + coordinationBuffer;
+        lastSyncVideoStartTimeSec = startTime;
+
         const success = await videoSyncEngine.syncPlayVideo(videoUrl, startTime);
         if (success) {
             res.json({ 
                 success: true, 
                 message: 'Sync play command sent',
-                data: { videoUrl, startTime }
+                data: { videoUrl, startTime, scheduledTime: lastSyncBaseScheduledTime }
             });
         } else {
             res.status(500).json({ success: false, error: 'No player clients available' });
@@ -1254,6 +1268,33 @@ wss.on('connection', (ws, req) => {
         case 'sync_ready': {
             // Handle client ready status for video sync
             videoSyncEngine.handleClientReady(clientId, payload);
+            break;
+        }
+        case 'sync_report_position': {
+            // Player reports current playback position (seconds)
+            try {
+                const reportedTimeSec = (payload && typeof payload === 'object' && 'currentTime' in payload)
+                    ? Number((payload as { currentTime: number }).currentTime)
+                    : NaN;
+                if (!isNaN(reportedTimeSec) && lastSyncBaseScheduledTime !== null && lastSyncVideoStartTimeSec !== null) {
+                    const now = Date.now();
+                    const elapsedMs = now - lastSyncBaseScheduledTime;
+                    const expectedTimeSec = Math.max(0, lastSyncVideoStartTimeSec + (elapsedMs / 1000));
+                    const driftMs = Math.round((reportedTimeSec - expectedTimeSec) * 1000);
+                    // Update device sync stats
+                    deviceManager.updateDeviceStatus(clientId, 'playing', {
+                        syncStats: {
+                            clockOffset: 0,
+                            averageLatency: videoSyncEngine.getSyncStats().averageLatency,
+                            lastSyncError: driftMs
+                        }
+                    });
+                    // Broadcast updated device list so admin UI reflects drift
+                    broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+                }
+            } catch (err) {
+                console.error('[Sync] Failed to process sync_report_position:', err);
+            }
             break;
         }
         case 'device_status_update': {

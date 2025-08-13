@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import os from 'os';
 
 export default async () => {
@@ -15,6 +16,8 @@ export default async () => {
   console.log('🎵 Created dummy song file.');
 
   // 3. Write the temp directory to a .env file for the webServer to use
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   fs.writeFileSync(path.join(__dirname, '..', '.env.test'), `MEDIA_DIR=${tmpDir}`);
   console.log(`✅ Wrote MEDIA_DIR to .env.test file: ${tmpDir}`);
 
