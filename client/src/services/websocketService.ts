@@ -37,6 +37,7 @@ class WebSocketService {
         useAppStore.getState().setSocket(this.ws);
         useAppStore.getState().setConnectionStatus('connected');
         useAppStore.getState().setError(null);
+        try { useAppStore.getState().setPlayerConnectionId?.(this.ws?.url || null); } catch { /* ignore */ }
 
         // Identify the client type
         if (this.clientType === 'player') {
@@ -97,11 +98,18 @@ class WebSocketService {
 
   identifyAsPlayer() {
     const parser = new UAParser(navigator.userAgent);
+    // Persist a stable ID in localStorage to survive reloads (incognito/new profile will generate a new one)
+    let stableId = localStorage.getItem('kj_nomad_player_id');
+    if (!stableId) {
+      stableId = `pl_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+      try { localStorage.setItem('kj_nomad_player_id', stableId); } catch { /* ignore */ }
+    }
     const result = parser.getResult();
     this.send({
       type: 'client_identify',
       payload: {
         type: 'player',
+        stableId,
         userAgent: navigator.userAgent,
         viewport: {
           width: window.innerWidth,
@@ -224,15 +232,23 @@ class WebSocketService {
       case 'clock_sync_ping': {
         if (payload && typeof payload === 'object') {
           const { pingId, serverTime } = payload as { pingId: string; serverTime: number };
+          const clientSendTime = Date.now();
           this.send({
             type: 'clock_sync_response',
             payload: {
               pingId,
               serverTime,
-              clientTime: Date.now(),
+              clientTime: clientSendTime,
               responseTime: Date.now(),
             },
           });
+          // Client-side estimate (mirrors server calc):
+          const rtt = Date.now() - serverTime;
+          const latency = rtt / 2;
+          const offset = clientSendTime - (serverTime + latency);
+          store.setClockSyncStats?.(Math.round(latency), Math.round(offset));
+          // Also surface to sync log for admin
+          this.send({ type: 'client_clock_ping_received', payload: { pingId, serverTime, clientNow: Date.now(), estLatencyMs: Math.round(latency), estOffsetMs: Math.round(offset) } });
         }
         break;
       }
@@ -241,6 +257,9 @@ class WebSocketService {
         if (payload && typeof payload === 'object') {
           const { commandId, videoUrl } = payload as { commandId: string; videoUrl: string };
           store.setSyncPreload({ commandId, videoUrl });
+          // Let server/log know we got preload and are starting to load media
+          this.send({ type: 'client_preload_received', payload: { commandId, videoUrl, clientNow: Date.now() } });
+          this.send({ type: 'client_video_loaded', payload: { clientReceivedAt: Date.now(), phase: 'preloading' } });
         }
         break;
       }
@@ -248,7 +267,9 @@ class WebSocketService {
       case 'sync_play': {
         if (payload && typeof payload === 'object') {
           const { commandId, scheduledTime, videoTime, videoUrl } = payload as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string };
+          // scheduledTime is already adjusted to client local time
           store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl });
+          this.send({ type: 'client_schedule_received', payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
         }
         break;
       }
@@ -256,16 +277,23 @@ class WebSocketService {
       case 'sync_pause': {
         if (payload && typeof payload === 'object') {
           const { commandId, scheduledTime } = payload as { commandId: string; scheduledTime: number };
+          // Use received scheduledTime directly (client-local)
           store.setSyncPause({ commandId, scheduledTime });
+          this.send({ type: 'client_pause_schedule_received', payload: { commandId, scheduledTime, clientNow: Date.now() } });
         }
         break;
       }
 
-      case 'sync_check_position': {
+       case 'sync_check_position': {
         // Respond with current playback time if available
         const video = document.querySelector('video');
         const currentTime = video && !isNaN(video.currentTime) ? video.currentTime : 0;
-        this.send({ type: 'sync_report_position', payload: { currentTime, reportedAt: Date.now() } });
+         this.send({ type: 'sync_report_position', payload: { currentTime, reportedAt: Date.now() } });
+         // Optional: low-rate periodic client position tick when debug overlay visible
+         const dbg = store.playerDebugOverlay;
+         if (dbg) {
+           this.send({ type: 'client_position_tick', payload: { currentTime, clientNow: Date.now() } });
+         }
         break;
       }
 
@@ -295,6 +323,13 @@ class WebSocketService {
         }
         break;
 
+      case 'toggle_debug_overlay': {
+        if (this.clientType === 'player' && payload && typeof payload === 'object' && 'visible' in (payload as { visible: boolean })) {
+          store.setPlayerDebugOverlay(Boolean((payload as { visible: boolean }).visible));
+        }
+        break;
+      }
+
       case 'disconnect_screen':
         if (this.clientType === 'player' && payload && typeof payload === 'object' && 'deviceId' in payload && (payload as { deviceId: string }).deviceId === store.playerDeviceId) {
           store.setPlayerIsDisconnected(true);
@@ -321,6 +356,8 @@ class WebSocketService {
           store.setIsSessionConnected(true);
           store.setOnlineSessionId(sessionId);
           store.setConnectionStatus('connected');
+          // also record the server-issued connection id for overlay
+          store.setPlayerConnectionId?.(clientId);
         }
         break;
         

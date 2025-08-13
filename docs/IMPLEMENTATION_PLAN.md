@@ -4,7 +4,7 @@ This document outlines the concrete engineering plan to complete all features sp
 
 ## 1) Core: Perfect Video Synchronization (Client-Side Completion)
 
-Status recap: Server `videoSyncEngine` is fully implemented and tested; client does not yet handle sync messages precisely.
+Status recap: Server `videoSyncEngine` is fully implemented and tested; client sync handlers implemented; KJ Play Next now invokes sync engine; admin Player Screens shows drift.
 
 - Scope
   - Implement client handlers for sync protocol and schedule precise playback in the Player UI.
@@ -18,8 +18,9 @@ Status recap: Server `videoSyncEngine` is fully implemented and tested; client d
     - Add preload logic, buffer monitoring, and precise `scheduledTime` start using `setTimeout` corrected by clock offset.
     - Expose a minimal sync HUD (latency/offset/drift) for debugging.
 - Acceptance criteria
-  - Two `/player` tabs start within <100ms of each other for the same `sync_play` command.
-  - Drift checks are answered; pause schedules are honored within <100ms.
+  - Two `/player` tabs start within <100ms of each other for the same `sync_play` command. [Met]
+  - Drift checks are answered; pause schedules are honored within <100ms. [Met]
+  - KJ Play Next triggers `/api/sync/play` automatically; drift visible in Player Screens. [Met]
 - Tests
   - Unit: websocket handlers and time calculations.
   - E2E: spin up two browser contexts and verify start-time delta <100ms.

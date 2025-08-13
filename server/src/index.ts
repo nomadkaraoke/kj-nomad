@@ -40,7 +40,6 @@ import {
   playSong,
   restartCurrentSong,
   getSessionHistory,
-  pausePlayback,
   resumePlayback,
   stopPlayback
 } from './songQueue.js';
@@ -76,6 +75,8 @@ const wss = new WebSocketServer({ server });
 
 // Publish the server on the network
 const bonjour = new Bonjour();
+// Map per-connection IDs to persistent device IDs
+const connectionToDeviceId = new Map<string, string>();
 
 
 // Initialize paper workflow with song library
@@ -260,9 +261,23 @@ deviceManager.on('deviceStatusChanged', (device) => {
 });
 
 // Video Sync endpoints
-// Track last sync schedule to estimate drift from client reports
-let lastSyncBaseScheduledTime: number | null = null;
-let lastSyncVideoStartTimeSec: number | null = null;
+// Track intended playback baseline and last positions for drift calculation
+let syncRefScheduledTimeMs: number | null = null; // when videoTime == syncRefVideoStartSec
+let syncRefVideoStartSec: number | null = null;   // base video time at schedule
+const latestPlaybackPositionsSec: Map<string, number> = new Map();
+
+function syncLog(message: string, extra?: Record<string, unknown>) {
+  try {
+    broadcast({ type: 'sync_log', payload: { ts: Date.now(), message, ...(extra || {}) } });
+  } catch {
+    // ignore logging errors
+  }
+}
+
+// Wire the sync engine logger to emit lifecycle events to admin UI
+videoSyncEngine.setLogger((event, extra) => {
+  syncLog(event, extra);
+});
 
 app.get('/api/sync/status', (req, res) => {
     console.log('[API] GET /api/sync/status - Get sync engine status');
@@ -279,18 +294,25 @@ app.post('/api/sync/play', async (req, res) => {
     }
     
     try {
-        // Estimate the scheduled time similarly to engine for drift calculations
-        const stats = videoSyncEngine.getSyncStats();
-        const coordinationBuffer = Math.max(2000, stats.averageLatency * 3 + 500);
-        lastSyncBaseScheduledTime = Date.now() + coordinationBuffer;
-        lastSyncVideoStartTimeSec = startTime;
-
+        // Schedule via engine first, then read back its baseline to ensure consistency
         const success = await videoSyncEngine.syncPlayVideo(videoUrl, startTime);
         if (success) {
+            const baseline = videoSyncEngine.getBaseline();
+            if (baseline) {
+                syncRefScheduledTimeMs = baseline.scheduledTime;
+                syncRefVideoStartSec = baseline.videoStartSec;
+            } else {
+                // Fallback: approximate baseline similar to engine's internal buffer
+                const stats = videoSyncEngine.getSyncStats();
+                const coordinationBuffer = Math.max(2000, stats.averageLatency * 3 + 500);
+                syncRefScheduledTimeMs = Date.now() + coordinationBuffer;
+                syncRefVideoStartSec = startTime;
+            }
+            syncLog('sync_play scheduled', { videoUrl, startTime, scheduledTime: syncRefScheduledTimeMs });
             res.json({ 
                 success: true, 
                 message: 'Sync play command sent',
-                data: { videoUrl, startTime, scheduledTime: lastSyncBaseScheduledTime }
+                data: { videoUrl, startTime, scheduledTime: syncRefScheduledTimeMs }
             });
         } else {
             res.status(500).json({ success: false, error: 'No player clients available' });
@@ -1212,7 +1234,7 @@ wss.on('connection', (ws, req) => {
   ws.send(JSON.stringify({ type: 'queue_updated', payload: getQueue() }));
   ws.send(JSON.stringify({ type: 'history_updated', payload: getSessionHistory() }));
 
-  ws.on('message', (message) => {
+  ws.on('message', async (message) => {
     try {
         const data = JSON.parse(message.toString());
         const { type, payload } = data;
@@ -1223,11 +1245,12 @@ wss.on('connection', (ws, req) => {
             // Handle client identification for sync engine
             clientType = payload.type || 'admin';
             clientName = payload.name || `${clientType} Client`;
+            const stableId: string | undefined = typeof payload.stableId === 'string' ? payload.stableId : undefined;
             
-            // Register with sync engine
+            // Register with sync engine using the connection-specific id
             videoSyncEngine.registerClient(clientId, ws, clientName, clientType);
             
-            // Register player devices with device manager
+            // Register player devices with device manager (use stableId if provided to persist across reloads)
             if (clientType === 'player') {
                 const deviceInfo = {
                     name: clientName,
@@ -1239,14 +1262,46 @@ wss.on('connection', (ws, req) => {
                     isApp: payload.isApp || false,
                     capabilities: payload.capabilities || {}
                 };
-                
-                deviceManager.registerDevice(clientId, ws, deviceInfo);
+                const deviceId = stableId || clientId;
+                connectionToDeviceId.set(clientId, deviceId);
+                deviceManager.upsertDevice(deviceId, ws, deviceInfo);
                 
                 // Send device management status
                 ws.send(JSON.stringify({ 
                     type: 'device_status', 
                     payload: deviceManager.getStats() 
                 }));
+
+                // If a song is currently playing, catch the new player up
+                const s = getSessionState();
+                if (s.playbackState === 'playing' && s.nowPlaying?.song?.fileName && s.currentSongStartTime) {
+                    try {
+                        const elapsedSec = Math.max(0, (Date.now() - s.currentSongStartTime) / 1000);
+                        const videoUrl = `/api/media/${s.nowPlaying.song.fileName}`;
+                        // Allow time for initial clock sync and buffering
+                        const avgLatency = videoSyncEngine.getSyncStats().averageLatency;
+                        const coordinationBuffer = Math.max(2500, avgLatency * 3 + 800);
+                        const scheduledTime = Date.now() + coordinationBuffer;
+
+                        // Preload first
+                        ws.send(JSON.stringify({
+                            type: 'sync_preload',
+                            videoUrl,
+                            commandId: `catchup_${Date.now()}`
+                        }));
+                        // Schedule synchronized start at current timestamp
+                        ws.send(JSON.stringify({
+                            type: 'sync_play',
+                            videoUrl,
+                            scheduledTime,
+                            videoTime: elapsedSec,
+                            commandId: `catchup_${Date.now()}`,
+                            tolerance: 100
+                        }));
+                    } catch (err) {
+                        console.error('[Sync] Failed to schedule catch-up playback for new player:', err);
+                    }
+                }
             }
             
             console.log(`[WebSocket] Client identified: ${clientName} (${clientType})`);
@@ -1257,17 +1312,87 @@ wss.on('connection', (ws, req) => {
                     type: 'sync_status', 
                     payload: videoSyncEngine.getSyncStats() 
                 }));
+
+                // If something is already playing, schedule a catch-up for this client
+                const s = getSessionState();
+                if (s.playbackState === 'playing' && s.nowPlaying?.song?.fileName && s.currentSongStartTime) {
+                    try {
+                        const elapsedSec = Math.max(0, (Date.now() - s.currentSongStartTime) / 1000);
+                        const videoUrl = `/api/media/${s.nowPlaying.song.fileName}`;
+                        // Use connection/clientId for sync engine id
+                        const ok = await videoSyncEngine.catchUpClient(clientId, videoUrl, elapsedSec);
+                        if (ok) {
+                            syncLog('catchup_enqueued', { clientId, elapsedSec, videoUrl, at: Date.now() });
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
             }
             break;
         }
         case 'clock_sync_response': {
             // Handle clock synchronization response
             videoSyncEngine.handleClockSyncResponse(clientId, payload);
+            try {
+              const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {};
+              syncLog('client_clock_sync_response', { clientId, ...info });
+            } catch { void 0; }
             break;
         }
         case 'sync_ready': {
             // Handle client ready status for video sync
             videoSyncEngine.handleClientReady(clientId, payload);
+            try {
+                const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {};
+                syncLog('client_ready', { clientId, ...info });
+            } catch {
+                // ignore logging errors
+            }
+            break;
+        }
+        case 'client_video_loaded': {
+            // Client reports its media element has loaded enough to play
+            try {
+                const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {};
+                syncLog('client_video_loaded', { clientId, ...info });
+            } catch (err) {
+                console.error('[Sync] client_video_loaded log error:', err);
+            }
+            break;
+        }
+        case 'client_preload_received': {
+            try { const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {}; syncLog('client_preload_received', { clientId, ...info }); } catch { void 0; }
+            break;
+        }
+        case 'client_canplay': {
+            try { const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {}; syncLog('client_canplay', { clientId, ...info }); } catch { void 0; }
+            break;
+        }
+        case 'client_schedule_received': {
+            try { const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {}; syncLog('client_schedule_received', { clientId, ...info }); } catch { void 0; }
+            break;
+        }
+        case 'client_schedule_fired': {
+            try { const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {}; syncLog('client_schedule_fired', { clientId, ...info }); } catch { void 0; }
+            break;
+        }
+        case 'client_started_playback': {
+            // Client reports it actually started playback
+            try {
+                const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {};
+                syncLog('client_started_playback', { clientId, ...info });
+            } catch (err) {
+                console.error('[Sync] client_started_playback log error:', err);
+            }
+            break;
+        }
+        case 'client_position_tick': {
+            try { const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {}; syncLog('client_position_tick', { clientId, ...info }); } catch { void 0; }
+            break;
+        }
+        case 'client_paused': {
+            try { const info = typeof payload === 'object' && payload ? payload as Record<string, unknown> : {}; syncLog('client_paused', { clientId, ...info }); } catch { void 0; }
             break;
         }
         case 'sync_report_position': {
@@ -1276,21 +1401,29 @@ wss.on('connection', (ws, req) => {
                 const reportedTimeSec = (payload && typeof payload === 'object' && 'currentTime' in payload)
                     ? Number((payload as { currentTime: number }).currentTime)
                     : NaN;
-                if (!isNaN(reportedTimeSec) && lastSyncBaseScheduledTime !== null && lastSyncVideoStartTimeSec !== null) {
-                    const now = Date.now();
-                    const elapsedMs = now - lastSyncBaseScheduledTime;
-                    const expectedTimeSec = Math.max(0, lastSyncVideoStartTimeSec + (elapsedMs / 1000));
-                    const driftMs = Math.round((reportedTimeSec - expectedTimeSec) * 1000);
-                    // Update device sync stats
-                    deviceManager.updateDeviceStatus(clientId, 'playing', {
-                        syncStats: {
-                            clockOffset: 0,
-                            averageLatency: videoSyncEngine.getSyncStats().averageLatency,
-                            lastSyncError: driftMs
-                        }
-                    });
-                    // Broadcast updated device list so admin UI reflects drift
-                    broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+                if (!isNaN(reportedTimeSec)) {
+                    latestPlaybackPositionsSec.set(clientId, reportedTimeSec);
+
+                    // Compute drift using per-client adjusted baseline if available; otherwise global
+                    const clientBaseline = videoSyncEngine.getClientBaseline(clientId);
+                    const hasGlobal = (syncRefScheduledTimeMs !== null && syncRefVideoStartSec !== null);
+                    if (clientBaseline || hasGlobal) {
+                        const scheduled = clientBaseline?.scheduledTime ?? (syncRefScheduledTimeMs as number);
+                        const startSec = clientBaseline?.videoStartSec ?? (syncRefVideoStartSec as number);
+                        const expectedSec = startSec + Math.max(0, (Date.now() - scheduled) / 1000);
+                        const driftMs = Math.round((reportedTimeSec - expectedSec) * 1000);
+                        const clientStats = videoSyncEngine.getClientStats(clientId);
+                        const mappedId = connectionToDeviceId.get(clientId) || clientId;
+                        deviceManager.updateDeviceStatus(mappedId, 'playing', {
+                            syncStats: {
+                                clockOffset: clientStats?.clockOffset ?? 0,
+                                averageLatency: clientStats?.averageLatency ?? videoSyncEngine.getSyncStats().averageLatency,
+                                lastSyncError: driftMs
+                            }
+                        });
+                        broadcast({ type: 'devices_updated', payload: getMappedDevices() });
+                        syncLog('position_report', { clientId, reportedTimeSec, expectedSec, driftMs, baseline: { scheduled, startSec }, clientStats });
+                    }
                 }
             } catch (err) {
                 console.error('[Sync] Failed to process sync_report_position:', err);
@@ -1307,7 +1440,8 @@ wss.on('connection', (ws, req) => {
         case 'heartbeat_response': {
             // Handle heartbeat responses from devices
             if (clientType === 'player') {
-                deviceManager.handleHeartbeatResponse(clientId, payload);
+                const mappedId = connectionToDeviceId.get(clientId) || clientId;
+                deviceManager.handleHeartbeatResponse(mappedId, payload);
             }
             break;
         }
@@ -1364,6 +1498,9 @@ wss.on('connection', (ws, req) => {
             console.log('[WebSocket] Restart song requested');
             const currentSong = restartCurrentSong();
             if (currentSong) {
+              // Reset baseline for new start via legacy path
+              syncRefScheduledTimeMs = null;
+              syncRefVideoStartSec = null;
               broadcast({ type: 'play', payload: { 
                   songId: currentSong.song.id, 
                   fileName: currentSong.song.fileName,
@@ -1389,11 +1526,13 @@ wss.on('connection', (ws, req) => {
             }
             break;
         }
-        case 'pause_playback':
-            pausePlayback();
-            broadcast({ type: 'pause' });
+        case 'pause_playback': {
+            // Use sync engine pause so clients pause in lockstep at a scheduled time
+            videoSyncEngine.syncPause().catch((err) => console.error('[Sync] pause error:', err));
+            // Do not broadcast legacy 'pause' that resets client state; rely on sync_pause
             broadcast({ type: 'session_state_updated', payload: getSessionState() });
             break;
+        }
         case 'resume_playback':
             resumePlayback();
             broadcast({ type: 'resume' });
@@ -1401,6 +1540,8 @@ wss.on('connection', (ws, req) => {
             break;
         case 'stop_playback':
             stopPlayback();
+            syncRefScheduledTimeMs = null;
+            syncRefVideoStartSec = null;
             broadcast({ type: 'pause' });
             broadcast({ type: 'queue_updated', payload: getQueue() });
             broadcast({ type: 'session_state_updated', payload: getSessionState() });
@@ -1476,10 +1617,7 @@ wss.on('connection', (ws, req) => {
     // Unregister from sync engine
     videoSyncEngine.unregisterClient(clientId);
     
-    // Unregister from device manager if it's a player
-    if (clientType === 'player') {
-        deviceManager.unregisterDevice(clientId);
-    }
+    // Do not remove persistent device entries here; heartbeat logic will mark offline if necessary
   });
 });
 

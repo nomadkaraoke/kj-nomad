@@ -95,10 +95,16 @@ export interface AppState {
   playerDeviceId: string | null;
   playerShowIdentify: boolean;
   playerIsDisconnected: boolean;
+  playerDebugOverlay: boolean;
+  // IDs for debugging
+  playerConnectionId?: string | null;
   // Sync commands (from VideoSyncEngine)
   syncPreload: { commandId: string; videoUrl: string } | null;
   syncPlay: { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string } | null;
   syncPause: { commandId: string; scheduledTime: number } | null;
+  // Last known clock sync stats (client view)
+  lastClockLatencyMs?: number;
+  lastClockOffsetMs?: number;
   
   // Search state
   searchQuery: string;
@@ -134,9 +140,12 @@ export interface AppState {
   setPlayerDeviceId: (id: string | null) => void;
   setPlayerShowIdentify: (show: boolean) => void;
   setPlayerIsDisconnected: (disconnected: boolean) => void;
+  setPlayerDebugOverlay: (visible: boolean) => void;
   setSyncPreload: (cmd: { commandId: string; videoUrl: string } | null) => void;
   setSyncPlay: (cmd: { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string } | null) => void;
   setSyncPause: (cmd: { commandId: string; scheduledTime: number } | null) => void;
+  setPlayerConnectionId: (id: string | null) => void;
+  setClockSyncStats: (latencyMs: number, offsetMs: number) => void;
   
   // Complex actions
   checkServerInfo: () => Promise<void>;
@@ -146,6 +155,7 @@ export interface AppState {
   toggleDeviceTicker: (deviceId: string) => Promise<void>;
   toggleDeviceSidebar: (deviceId: string) => Promise<void>;
   toggleDeviceVideoPlayer: (deviceId: string) => Promise<void>;
+  toggleDeviceDebugOverlay: (deviceId: string, visible: boolean) => Promise<void>;
   identifyDevice: (deviceId: string) => Promise<void>;
   disconnectDevice: (deviceId: string) => Promise<void>;
   connectToOnlineSession: (sessionId: string, adminKey: string) => void;
@@ -188,10 +198,14 @@ export const useAppStore = create<AppState>()(
       playerDeviceId: null,
       playerShowIdentify: false,
       playerIsDisconnected: false,
+      playerDebugOverlay: false,
+      playerConnectionId: null,
       // Sync commands
       syncPreload: null,
       syncPlay: null,
       syncPause: null,
+      lastClockLatencyMs: 0,
+      lastClockOffsetMs: 0,
       serverInfo: { port: 0, localIps: [] },
       devices: [],
       
@@ -238,9 +252,12 @@ export const useAppStore = create<AppState>()(
       setPlayerDeviceId: (id) => set({ playerDeviceId: id }),
       setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
       setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
+      setPlayerDebugOverlay: (visible) => set({ playerDebugOverlay: visible }),
       setSyncPreload: (cmd) => set({ syncPreload: cmd }),
       setSyncPlay: (cmd) => set({ syncPlay: cmd }),
       setSyncPause: (cmd) => set({ syncPause: cmd }),
+      setPlayerConnectionId: (id) => set({ playerConnectionId: id }),
+      setClockSyncStats: (latencyMs, offsetMs) => set({ lastClockLatencyMs: latencyMs, lastClockOffsetMs: offsetMs }),
       
       // Complex actions
       checkServerInfo: async () => {
@@ -320,6 +337,19 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      // Send a command to a specific device to toggle its debug overlay
+      toggleDeviceDebugOverlay: async (deviceId: string, visible: boolean) => {
+        try {
+          await fetch(`/api/devices/${deviceId}/command`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: 'toggle_debug_overlay', data: { visible } })
+          });
+        } catch (error) {
+          console.error(`Failed to toggle debug overlay for device ${deviceId}:`, error);
+        }
+      },
+
       identifyDevice: async (deviceId: string) => {
         try {
           await fetch(`/api/devices/${deviceId}/identify`, { method: 'POST' });
@@ -373,6 +403,16 @@ export const useAppStore = create<AppState>()(
         const { socket, queue } = get();
         if (socket && socket.readyState === WebSocket.OPEN && queue.length > 0) {
           const nextEntry = queue[0];
+          // Trigger synchronized playback across player screens
+          fetch('/api/sync/play', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              videoUrl: `/api/media/${nextEntry.song.fileName}`,
+              startTime: 0,
+            }),
+          }).catch((err) => console.error('Failed to start sync play:', err));
+
           socket.send(JSON.stringify({
             type: 'play',
             payload: { 

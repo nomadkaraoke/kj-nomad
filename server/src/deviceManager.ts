@@ -181,6 +181,47 @@ export class DeviceManager extends EventEmitter {
     return device;
   }
 
+  /** Upsert a device by a stable ID, updating socket and info if it already exists. */
+  upsertDevice(
+    id: string,
+    ws: WSWebSocket,
+    deviceInfo: {
+      name?: string;
+      ipAddress: string;
+      userAgent: string;
+      viewport: { width: number; height: number };
+      os: string;
+      browser: string;
+      isApp: boolean;
+      capabilities: Partial<PlayerDevice['capabilities']>;
+    }
+  ): PlayerDevice {
+    const existing = this.devices.get(id);
+    if (existing) {
+      // Update connection and metadata
+      existing.ws = ws;
+      existing.ipAddress = deviceInfo.ipAddress;
+      existing.userAgent = deviceInfo.userAgent;
+      existing.viewport = deviceInfo.viewport;
+      existing.os = deviceInfo.os;
+      existing.browser = deviceInfo.browser;
+      existing.isApp = deviceInfo.isApp;
+      existing.capabilities = { ...existing.capabilities, ...deviceInfo.capabilities } as PlayerDevice['capabilities'];
+      existing.isOnline = true;
+      existing.status = 'connected';
+      existing.lastActivity = Date.now();
+      this.emit('deviceReconnected', existing);
+      this.emit('deviceConnected', existing);
+      // Confirm registration/update back to device
+      this.sendToDevice(id, {
+        type: 'device_registered',
+        payload: { deviceId: id, assignedName: existing.name, serverTime: Date.now() }
+      });
+      return existing;
+    }
+    return this.registerDevice(id, ws, deviceInfo);
+  }
+
   /**
    * Unregister a device
    */

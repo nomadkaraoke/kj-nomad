@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import type { Device } from '../../store/appStore';
 import { 
@@ -16,6 +16,7 @@ import {
   WifiIcon,
   SignalSlashIcon,
 } from '@heroicons/react/24/outline';
+import { BugAntIcon } from '@heroicons/react/24/outline';
 import { clsx } from 'clsx';
 
 const PlayerScreenManager: React.FC = () => {
@@ -31,6 +32,33 @@ const PlayerScreenManager: React.FC = () => {
     serverInfo,
     checkServerInfo,
   } = useAppStore();
+
+  const [showSyncLog, setShowSyncLog] = useState(false);
+  type SyncLog = { ts: number; message: string } & Record<string, unknown>;
+  const [logs, setLogs] = useState<SyncLog[]>([]);
+  const socket = useAppStore((s) => s.socket);
+  const toggleDeviceDebugOverlay = useAppStore((s) => s.toggleDeviceDebugOverlay);
+  const [debugEnabled, setDebugEnabled] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Attach WebSocket listener for sync logs
+    if (!socket || typeof (socket as unknown as { addEventListener?: unknown }).addEventListener !== 'function') {
+      return;
+    }
+    const onMessage = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg?.type === 'sync_log' && msg.payload) {
+          const payload = msg.payload as SyncLog;
+          setLogs((prev) => [payload, ...prev].slice(0, 200));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    socket.addEventListener('message', onMessage);
+    return () => socket.removeEventListener('message', onMessage);
+  }, [socket]);
 
   useEffect(() => {
     fetchDevices();
@@ -85,6 +113,7 @@ const PlayerScreenManager: React.FC = () => {
                   <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                     {device.viewport.width}x{device.viewport.height} - {device.browser} on {device.os}
                   </p>
+                  <p className="text-[10px] opacity-70">id: {device.id}</p>
                   <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark opacity-70">
                     {device.isApp ? 'KJ-Nomad App' : 'Web Browser'} - {device.ipAddress}
                   </p>
@@ -104,6 +133,19 @@ const PlayerScreenManager: React.FC = () => {
                   title="Identify Screen"
                 >
                   <EyeIcon className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={async () => {
+                    const enabled = new Set(debugEnabled);
+                    const willEnable = !enabled.has(device.id);
+                    if (willEnable) enabled.add(device.id); else enabled.delete(device.id);
+                    setDebugEnabled(enabled);
+                    await toggleDeviceDebugOverlay(device.id, willEnable);
+                  }}
+                  className={clsx('p-2 rounded-full hover:bg-brand-blue/10', { 'bg-brand-blue/20': debugEnabled.has(device.id) })}
+                  title="Toggle Debug Overlay"
+                >
+                  <BugAntIcon className={clsx('h-6 w-6', debugEnabled.has(device.id) && 'text-brand-pink')} />
                 </button>
                 <button
                   onClick={() => toggleDeviceAudio(device.id)}
@@ -151,6 +193,41 @@ const PlayerScreenManager: React.FC = () => {
               </div>
             </div>
           ))}
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              onClick={() => setShowSyncLog(v => !v)}
+              className="btn"
+            >
+              {showSyncLog ? 'Hide Sync Log' : 'Show Sync Log'}
+            </button>
+            <button
+              onClick={() => {
+                const text = logs.map(l => {
+                  const extraEntries = Object.entries(l).filter(([key]) => key !== 'ts' && key !== 'message');
+                  const s = extraEntries.length ? ' ' + JSON.stringify(Object.fromEntries(extraEntries)) : '';
+                  const ts = new Date(l.ts).toLocaleTimeString();
+                  return `[${ts}] ${l.message}${s}`;
+                }).reverse().join('\n');
+                navigator.clipboard.writeText(text).catch(() => {});
+              }}
+              className="btn-secondary"
+            >Copy Log</button>
+          </div>
+          {showSyncLog && (
+            <div className="mt-3 max-h-64 overflow-auto text-xs bg-black/30 rounded p-2">
+              {logs.length === 0 && <div className="opacity-60">No sync events yet…</div>}
+              {logs.map((l, i) => (
+                <div key={i} className="whitespace-pre-wrap">
+                  [{new Date(l.ts).toLocaleTimeString()}] {l.message}
+                  {(() => {
+                    const extraEntries = Object.entries(l).filter(([key]) => key !== 'ts' && key !== 'message');
+                    const s = extraEntries.length ? ' ' + JSON.stringify(Object.fromEntries(extraEntries)) : '';
+                    return s;
+                  })()}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

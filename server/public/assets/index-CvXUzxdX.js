@@ -22013,10 +22013,14 @@ const useAppStore = create()(
       playerDeviceId: null,
       playerShowIdentify: false,
       playerIsDisconnected: false,
+      playerDebugOverlay: false,
+      playerConnectionId: null,
       // Sync commands
       syncPreload: null,
       syncPlay: null,
       syncPause: null,
+      lastClockLatencyMs: 0,
+      lastClockOffsetMs: 0,
       serverInfo: { port: 0, localIps: [] },
       devices: [],
       // Search state
@@ -22060,9 +22064,12 @@ const useAppStore = create()(
       setPlayerDeviceId: (id) => set({ playerDeviceId: id }),
       setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
       setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
+      setPlayerDebugOverlay: (visible) => set({ playerDebugOverlay: visible }),
       setSyncPreload: (cmd) => set({ syncPreload: cmd }),
       setSyncPlay: (cmd) => set({ syncPlay: cmd }),
       setSyncPause: (cmd) => set({ syncPause: cmd }),
+      setPlayerConnectionId: (id) => set({ playerConnectionId: id }),
+      setClockSyncStats: (latencyMs, offsetMs) => set({ lastClockLatencyMs: latencyMs, lastClockOffsetMs: offsetMs }),
       // Complex actions
       checkServerInfo: async () => {
         try {
@@ -22135,6 +22142,18 @@ const useAppStore = create()(
           console.error(`Failed to toggle video player for device ${deviceId}:`, error);
         }
       },
+      // Send a command to a specific device to toggle its debug overlay
+      toggleDeviceDebugOverlay: async (deviceId, visible) => {
+        try {
+          await fetch(`/api/devices/${deviceId}/command`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ command: "toggle_debug_overlay", data: { visible } })
+          });
+        } catch (error) {
+          console.error(`Failed to toggle debug overlay for device ${deviceId}:`, error);
+        }
+      },
       identifyDevice: async (deviceId) => {
         try {
           await fetch(`/api/devices/${deviceId}/identify`, { method: "POST" });
@@ -22181,6 +22200,14 @@ const useAppStore = create()(
         const { socket, queue } = get();
         if (socket && socket.readyState === WebSocket.OPEN && queue.length > 0) {
           const nextEntry = queue[0];
+          fetch("/api/sync/play", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              videoUrl: `/api/media/${nextEntry.song.fileName}`,
+              startTime: 0
+            })
+          }).catch((err) => console.error("Failed to start sync play:", err));
           socket.send(JSON.stringify({
             type: "play",
             payload: {
@@ -23982,6 +24009,10 @@ class WebSocketService {
         useAppStore.getState().setSocket(this.ws);
         useAppStore.getState().setConnectionStatus("connected");
         useAppStore.getState().setError(null);
+        try {
+          useAppStore.getState().setPlayerConnectionId?.(this.ws?.url || null);
+        } catch {
+        }
         if (this.clientType === "player") {
           this.identifyAsPlayer();
         } else {
@@ -24028,11 +24059,20 @@ class WebSocketService {
   }
   identifyAsPlayer() {
     const parser = new UAParser(navigator.userAgent);
+    let stableId = localStorage.getItem("kj_nomad_player_id");
+    if (!stableId) {
+      stableId = `pl_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+      try {
+        localStorage.setItem("kj_nomad_player_id", stableId);
+      } catch {
+      }
+    }
     const result = parser.getResult();
     this.send({
       type: "client_identify",
       payload: {
         type: "player",
+        stableId,
         userAgent: navigator.userAgent,
         viewport: {
           width: window.innerWidth,
@@ -24135,15 +24175,21 @@ class WebSocketService {
       case "clock_sync_ping": {
         if (payload && typeof payload === "object") {
           const { pingId, serverTime } = payload;
+          const clientSendTime = Date.now();
           this.send({
             type: "clock_sync_response",
             payload: {
               pingId,
               serverTime,
-              clientTime: Date.now(),
+              clientTime: clientSendTime,
               responseTime: Date.now()
             }
           });
+          const rtt = Date.now() - serverTime;
+          const latency = rtt / 2;
+          const offset = clientSendTime - (serverTime + latency);
+          store.setClockSyncStats?.(Math.round(latency), Math.round(offset));
+          this.send({ type: "client_clock_ping_received", payload: { pingId, serverTime, clientNow: Date.now(), estLatencyMs: Math.round(latency), estOffsetMs: Math.round(offset) } });
         }
         break;
       }
@@ -24151,6 +24197,8 @@ class WebSocketService {
         if (payload && typeof payload === "object") {
           const { commandId, videoUrl } = payload;
           store.setSyncPreload({ commandId, videoUrl });
+          this.send({ type: "client_preload_received", payload: { commandId, videoUrl, clientNow: Date.now() } });
+          this.send({ type: "client_video_loaded", payload: { clientReceivedAt: Date.now(), phase: "preloading" } });
         }
         break;
       }
@@ -24158,6 +24206,7 @@ class WebSocketService {
         if (payload && typeof payload === "object") {
           const { commandId, scheduledTime, videoTime, videoUrl } = payload;
           store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl });
+          this.send({ type: "client_schedule_received", payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
         }
         break;
       }
@@ -24165,6 +24214,7 @@ class WebSocketService {
         if (payload && typeof payload === "object") {
           const { commandId, scheduledTime } = payload;
           store.setSyncPause({ commandId, scheduledTime });
+          this.send({ type: "client_pause_schedule_received", payload: { commandId, scheduledTime, clientNow: Date.now() } });
         }
         break;
       }
@@ -24172,6 +24222,10 @@ class WebSocketService {
         const video = document.querySelector("video");
         const currentTime = video && !isNaN(video.currentTime) ? video.currentTime : 0;
         this.send({ type: "sync_report_position", payload: { currentTime, reportedAt: Date.now() } });
+        const dbg = store.playerDebugOverlay;
+        if (dbg) {
+          this.send({ type: "client_position_tick", payload: { currentTime, clientNow: Date.now() } });
+        }
         break;
       }
       // Player-specific messages
@@ -24197,6 +24251,12 @@ class WebSocketService {
           setTimeout(() => store.setPlayerShowIdentify(false), 5e3);
         }
         break;
+      case "toggle_debug_overlay": {
+        if (this.clientType === "player" && payload && typeof payload === "object" && "visible" in payload) {
+          store.setPlayerDebugOverlay(Boolean(payload.visible));
+        }
+        break;
+      }
       case "disconnect_screen":
         if (this.clientType === "player" && payload && typeof payload === "object" && "deviceId" in payload && payload.deviceId === store.playerDeviceId) {
           store.setPlayerIsDisconnected(true);
@@ -24221,6 +24281,7 @@ class WebSocketService {
           store.setIsSessionConnected(true);
           store.setOnlineSessionId(sessionId);
           store.setConnectionStatus("connected");
+          store.setPlayerConnectionId?.(clientId);
         }
         break;
     }
@@ -24335,7 +24396,7 @@ function ArrowPathIcon({
     d: "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
   }));
 }
-const ForwardRef$x = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
+const ForwardRef$y = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
 function ArrowTopRightOnSquareIcon({
   title,
   titleId,
@@ -24359,7 +24420,7 @@ function ArrowTopRightOnSquareIcon({
     d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
   }));
 }
-const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+const ForwardRef$x = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
 function Bars3Icon({
   title,
   titleId,
@@ -24383,7 +24444,31 @@ function Bars3Icon({
     d: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
   }));
 }
-const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
+const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
+function BugAntIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082"
+  }));
+}
+const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(BugAntIcon);
 function CheckCircleIcon({
   title,
   titleId,
@@ -29575,6 +29660,28 @@ const PlayerScreenManager = () => {
     serverInfo,
     checkServerInfo
   } = useAppStore();
+  const [showSyncLog, setShowSyncLog] = reactExports.useState(false);
+  const [logs, setLogs] = reactExports.useState([]);
+  const socket = useAppStore((s) => s.socket);
+  const toggleDeviceDebugOverlay = useAppStore((s) => s.toggleDeviceDebugOverlay);
+  const [debugEnabled, setDebugEnabled] = reactExports.useState(/* @__PURE__ */ new Set());
+  reactExports.useEffect(() => {
+    if (!socket || typeof socket.addEventListener !== "function") {
+      return;
+    }
+    const onMessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg?.type === "sync_log" && msg.payload) {
+          const payload = msg.payload;
+          setLogs((prev) => [payload, ...prev].slice(0, 200));
+        }
+      } catch {
+      }
+    };
+    socket.addEventListener("message", onMessage);
+    return () => socket.removeEventListener("message", onMessage);
+  }, [socket]);
   reactExports.useEffect(() => {
     fetchDevices();
     checkServerInfo();
@@ -29591,7 +29698,7 @@ const PlayerScreenManager = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 text-left space-y-4 bg-bg-light dark:bg-bg-dark p-4 rounded-lg border border-border-light dark:border-border-dark", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-semibold flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: "h-5 w-5 mr-2" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$x, { className: "h-5 w-5 mr-2" }),
             "Option 1: Use a Web Browser"
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "On any device with a web browser (like a Smart TV, laptop, or tablet), open the browser and go to:" }),
@@ -29606,94 +29713,157 @@ const PlayerScreenManager = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: 'For the best performance, install and run the KJ-Nomad app on another computer, and select "Set up as Player" on launch. It will automatically find and connect to your server.' })
         ] })
       ] })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: Array.isArray(devices) && devices.map((device, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 bg-bg-light dark:bg-card-dark rounded-lg", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: device.isOnline ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-8 w-8 text-green-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-8 w-8 text-red-500" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-semibold", children: [
-            "Screen ",
-            index + 1
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: [
-            device.viewport.width,
-            "x",
-            device.viewport.height,
-            " - ",
-            device.browser,
-            " on ",
-            device.os
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-text-secondary-light dark:text-text-secondary-dark opacity-70", children: [
-            device.isApp ? "KJ-Nomad App" : "Web Browser",
-            " - ",
-            device.ipAddress
-          ] }),
-          "syncStats" in device && typeof device.syncStats?.lastSyncError === "number" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs mt-1", children: [
-            "Drift: ",
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: clsx((device.syncStats?.lastSyncError ?? 0) > 100 || (device.syncStats?.lastSyncError ?? 0) < -100 ? "text-red-500" : "text-green-600"), children: [
-              Math.round(device.syncStats?.lastSyncError ?? 0),
-              " ms"
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+      Array.isArray(devices) && devices.map((device, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 bg-bg-light dark:bg-card-dark rounded-lg", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: device.isOnline ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-8 w-8 text-green-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-8 w-8 text-red-500" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-semibold", children: [
+              "Screen ",
+              index + 1
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: [
+              device.viewport.width,
+              "x",
+              device.viewport.height,
+              " - ",
+              device.browser,
+              " on ",
+              device.os
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] opacity-70", children: [
+              "id: ",
+              device.id
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-text-secondary-light dark:text-text-secondary-dark opacity-70", children: [
+              device.isApp ? "KJ-Nomad App" : "Web Browser",
+              " - ",
+              device.ipAddress
+            ] }),
+            "syncStats" in device && typeof device.syncStats?.lastSyncError === "number" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs mt-1", children: [
+              "Drift: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: clsx((device.syncStats?.lastSyncError ?? 0) > 100 || (device.syncStats?.lastSyncError ?? 0) < -100 ? "text-red-500" : "text-green-600"), children: [
+                Math.round(device.syncStats?.lastSyncError ?? 0),
+                " ms"
+              ] })
             ] })
           ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => identifyDevice(device.id),
+              className: "p-2 rounded-full hover:bg-brand-blue/10",
+              title: "Identify Screen",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-6 w-6" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: async () => {
+                const enabled = new Set(debugEnabled);
+                const willEnable = !enabled.has(device.id);
+                if (willEnable) enabled.add(device.id);
+                else enabled.delete(device.id);
+                setDebugEnabled(enabled);
+                await toggleDeviceDebugOverlay(device.id, willEnable);
+              },
+              className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": debugEnabled.has(device.id) }),
+              title: "Toggle Debug Overlay",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: clsx("h-6 w-6", debugEnabled.has(device.id) && "text-brand-pink") })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => toggleDeviceAudio(device.id),
+              className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isAudioEnabled }),
+              title: device.isAudioEnabled ? "Mute Audio" : "Unmute Audio",
+              children: device.isAudioEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-6 w-6 text-brand-pink" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-6 w-6" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => toggleDeviceTicker(device.id),
+              className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isTickerVisible }),
+              title: device.isTickerVisible ? "Hide Ticker" : "Show Ticker",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$6, { className: clsx("h-6 w-6", device.isTickerVisible && "text-brand-pink") })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => toggleDeviceSidebar(device.id),
+              className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isSidebarVisible }),
+              title: device.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: clsx("h-6 w-6", device.isSidebarVisible && "text-brand-pink") })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => toggleDeviceVideoPlayer(device.id),
+              className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isVideoPlayerVisible }),
+              title: device.isVideoPlayerVisible ? "Hide Video Player" : "Show Video Player",
+              children: device.isVideoPlayerVisible ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { className: "h-6 w-6 text-brand-pink" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$3, { className: "h-6 w-6" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => disconnectDevice(device.id),
+              className: "p-2 rounded-full hover:bg-red-500/10",
+              title: "Disconnect Screen",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef, { className: "h-6 w-6 text-red-500" })
+            }
+          )
         ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
+      ] }, device.id)),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex items-center gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => identifyDevice(device.id),
-            className: "p-2 rounded-full hover:bg-brand-blue/10",
-            title: "Identify Screen",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-6 w-6" })
+            onClick: () => setShowSyncLog((v) => !v),
+            className: "btn",
+            children: showSyncLog ? "Hide Sync Log" : "Show Sync Log"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => toggleDeviceAudio(device.id),
-            className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isAudioEnabled }),
-            title: device.isAudioEnabled ? "Mute Audio" : "Unmute Audio",
-            children: device.isAudioEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-6 w-6 text-brand-pink" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-6 w-6" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => toggleDeviceTicker(device.id),
-            className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isTickerVisible }),
-            title: device.isTickerVisible ? "Hide Ticker" : "Show Ticker",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$6, { className: clsx("h-6 w-6", device.isTickerVisible && "text-brand-pink") })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => toggleDeviceSidebar(device.id),
-            className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isSidebarVisible }),
-            title: device.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: clsx("h-6 w-6", device.isSidebarVisible && "text-brand-pink") })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => toggleDeviceVideoPlayer(device.id),
-            className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isVideoPlayerVisible }),
-            title: device.isVideoPlayerVisible ? "Hide Video Player" : "Show Video Player",
-            children: device.isVideoPlayerVisible ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$2, { className: "h-6 w-6 text-brand-pink" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$3, { className: "h-6 w-6" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => disconnectDevice(device.id),
-            className: "p-2 rounded-full hover:bg-red-500/10",
-            title: "Disconnect Screen",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef, { className: "h-6 w-6 text-red-500" })
+            onClick: () => {
+              const text = logs.map((l) => {
+                const extraEntries = Object.entries(l).filter(([key]) => key !== "ts" && key !== "message");
+                const s = extraEntries.length ? " " + JSON.stringify(Object.fromEntries(extraEntries)) : "";
+                const ts = new Date(l.ts).toLocaleTimeString();
+                return `[${ts}] ${l.message}${s}`;
+              }).reverse().join("\n");
+              navigator.clipboard.writeText(text).catch(() => {
+              });
+            },
+            className: "btn-secondary",
+            children: "Copy Log"
           }
         )
+      ] }),
+      showSyncLog && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 max-h-64 overflow-auto text-xs bg-black/30 rounded p-2", children: [
+        logs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "opacity-60", children: "No sync events yet…" }),
+        logs.map((l, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "whitespace-pre-wrap", children: [
+          "[",
+          new Date(l.ts).toLocaleTimeString(),
+          "] ",
+          l.message,
+          (() => {
+            const extraEntries = Object.entries(l).filter(([key]) => key !== "ts" && key !== "message");
+            const s = extraEntries.length ? " " + JSON.stringify(Object.fromEntries(extraEntries)) : "";
+            return s;
+          })()
+        ] }, i))
       ] })
-    ] }, device.id)) })
+    ] })
   ] });
 };
 const useTheme = () => {
@@ -29919,7 +30089,7 @@ const HomePage = () => {
                 disabled: !isConnected || !nowPlaying,
                 className: "btn-tertiary flex flex-col items-center space-y-1 h-20",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$x, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$y, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Restart" })
                 ]
               }
@@ -30296,6 +30466,7 @@ const PlayerPage = () => {
     playerDeviceId,
     playerShowIdentify,
     playerIsDisconnected,
+    playerDebugOverlay,
     syncPreload,
     syncPlay,
     syncPause
@@ -30304,12 +30475,17 @@ const PlayerPage = () => {
   const [isVideoLoaded, setIsVideoLoaded] = reactExports.useState(false);
   const [, setIsPlaying] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
+  const [nowMs, setNowMs] = reactExports.useState(Date.now());
+  const [selfDriftMs, setSelfDriftMs] = reactExports.useState(0);
+  const lastClockLatencyMs = useAppStore((s) => s.lastClockLatencyMs);
+  const lastClockOffsetMs = useAppStore((s) => s.lastClockOffsetMs);
   const [deviceSettings, setDeviceSettings] = reactExports.useState({
     isAudioEnabled: true,
     isTickerVisible: true,
     isSidebarVisible: false,
     isVideoPlayerVisible: true
   });
+  const playerConnectionId = useAppStore((s) => s.playerConnectionId);
   reactExports.useEffect(() => {
     websocketService.connect("player");
   }, []);
@@ -30368,11 +30544,13 @@ const PlayerPage = () => {
     video.src = syncPreload.videoUrl;
     const onCanPlay = () => {
       setIsVideoLoaded(true);
+      const bufferedSecs = video.buffered.length > 0 ? video.buffered.end(0) - video.currentTime : 0;
+      websocketService.send({ type: "client_canplay", payload: { readyAt: Date.now(), bufferedSecs, duration: isNaN(video.duration) ? void 0 : video.duration } });
       websocketService.send({
         type: "sync_ready",
         payload: {
           commandId: syncPreload.commandId,
-          bufferLevel: Math.min(1, (video.buffered.length > 0 ? video.buffered.end(0) - video.currentTime : 0) / 2),
+          bufferLevel: Math.min(1, bufferedSecs / 2),
           videoDuration: isNaN(video.duration) ? void 0 : video.duration
         }
       });
@@ -30390,7 +30568,11 @@ const PlayerPage = () => {
         if (!isNaN(videoTime)) {
           video.currentTime = videoTime;
         }
-        video.play().catch(() => {
+        const before = video.currentTime;
+        websocketService.send({ type: "client_schedule_fired", payload: { firedAt: Date.now(), beforeTime: before } });
+        video.play().then(() => {
+          websocketService.send({ type: "client_started_playback", payload: { startedAt: Date.now(), videoTime: video.currentTime } });
+        }).catch(() => {
         });
       } catch {
       }
@@ -30405,11 +30587,26 @@ const PlayerPage = () => {
     const timer = window.setTimeout(() => {
       try {
         video.pause();
+        websocketService.send({ type: "client_paused", payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
       } catch {
       }
     }, delay);
     return () => window.clearTimeout(timer);
   }, [syncPause]);
+  reactExports.useEffect(() => {
+    const id = window.setInterval(() => {
+      setNowMs(Date.now());
+      const video = videoRef.current;
+      if (!video || !syncPlay) {
+        setSelfDriftMs(0);
+        return;
+      }
+      const expected = syncPlay.videoTime + Math.max(0, (Date.now() - syncPlay.scheduledTime) / 1e3);
+      const drift = (video.currentTime || 0) - expected;
+      setSelfDriftMs(Math.round(drift * 1e3));
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [syncPlay]);
   const onEnded = () => {
     if (nowPlaying) {
       console.log("Song ended, should trigger next song");
@@ -30460,6 +30657,46 @@ const PlayerPage = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm opacity-80", children: entry.song.title })
         ] }, entry.song.id)),
         upcomingSingers.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Queue is empty" })
+      ] })
+    ] }),
+    playerDebugOverlay && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-0 left-0 right-0 p-2 text-[12px] font-mono text-green-300 bg-black/40 z-40", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "Local time: ",
+        new Date(nowMs).toLocaleTimeString()
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "clientId: ",
+        playerConnectionId || "n/a"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "currentTime: ",
+        videoRef.current ? videoRef.current.currentTime.toFixed(3) : "0.000",
+        " s"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "expected: ",
+        syncPlay ? (syncPlay.videoTime + Math.max(0, (nowMs - syncPlay.scheduledTime) / 1e3)).toFixed(3) : "n/a",
+        " s"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "self drift: ",
+        selfDriftMs,
+        " ms"
+      ] }),
+      syncPlay && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "schedule: t=",
+        new Date(syncPlay.scheduledTime).toLocaleTimeString(),
+        " (",
+        syncPlay.scheduledTime,
+        ") v=",
+        syncPlay.videoTime.toFixed(3)
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "clock sync: lat=",
+        lastClockLatencyMs ?? 0,
+        "ms offset=",
+        lastClockOffsetMs ?? 0,
+        "ms"
       ] })
     ] }),
     (!nowPlaying || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
@@ -30822,4 +31059,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BVIujU35.js.map
+//# sourceMappingURL=index-CvXUzxdX.js.map

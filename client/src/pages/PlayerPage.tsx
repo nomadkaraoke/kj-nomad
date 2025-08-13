@@ -16,6 +16,7 @@ const PlayerPage: React.FC = () => {
     playerDeviceId,
     playerShowIdentify,
     playerIsDisconnected,
+    playerDebugOverlay,
     syncPreload,
     syncPlay,
     syncPause,
@@ -25,12 +26,17 @@ const PlayerPage: React.FC = () => {
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [selfDriftMs, setSelfDriftMs] = useState<number>(0);
+  const lastClockLatencyMs = useAppStore((s) => s.lastClockLatencyMs);
+  const lastClockOffsetMs = useAppStore((s) => s.lastClockOffsetMs);
   const [deviceSettings, setDeviceSettings] = useState<Partial<Device>>({
     isAudioEnabled: true,
     isTickerVisible: true,
     isSidebarVisible: false,
     isVideoPlayerVisible: true,
   });
+  const playerConnectionId = useAppStore((s) => s.playerConnectionId);
 
   useEffect(() => {
     websocketService.connect('player');
@@ -99,11 +105,13 @@ const PlayerPage: React.FC = () => {
     video.src = syncPreload.videoUrl;
     const onCanPlay = () => {
       setIsVideoLoaded(true);
+      const bufferedSecs = video.buffered.length > 0 ? (video.buffered.end(0) - video.currentTime) : 0;
+      websocketService.send({ type: 'client_canplay', payload: { readyAt: Date.now(), bufferedSecs, duration: isNaN(video.duration) ? undefined : video.duration } });
       websocketService.send({
         type: 'sync_ready',
         payload: {
           commandId: syncPreload.commandId,
-          bufferLevel: Math.min(1, (video.buffered.length > 0 ? (video.buffered.end(0) - video.currentTime) : 0) / 2),
+          bufferLevel: Math.min(1, (bufferedSecs) / 2),
           videoDuration: isNaN(video.duration) ? undefined : video.duration,
         },
       });
@@ -116,14 +124,19 @@ const PlayerPage: React.FC = () => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !syncPlay) return;
-    const { scheduledTime, videoTime } = syncPlay;
+    const { scheduledTime, videoTime } = syncPlay as { scheduledTime: number; videoTime: number };
+    // scheduledTime is in client-local time; schedule directly
     const delay = Math.max(0, scheduledTime - Date.now());
     const timer = window.setTimeout(() => {
       try {
         if (!isNaN(videoTime)) {
           video.currentTime = videoTime;
         }
-        video.play().catch(() => {/* ignore, handled elsewhere */});
+        const before = video.currentTime;
+        websocketService.send({ type: 'client_schedule_fired', payload: { firedAt: Date.now(), beforeTime: before } });
+        video.play().then(() => {
+          websocketService.send({ type: 'client_started_playback', payload: { startedAt: Date.now(), videoTime: video.currentTime } });
+        }).catch(() => {/* ignore, handled elsewhere */});
       } catch {/* ignore */}
     }, delay);
     return () => window.clearTimeout(timer);
@@ -136,10 +149,30 @@ const PlayerPage: React.FC = () => {
     const { scheduledTime } = syncPause;
     const delay = Math.max(0, scheduledTime - Date.now());
     const timer = window.setTimeout(() => {
-      try { video.pause(); } catch {/* ignore */}
+      try {
+        video.pause();
+        websocketService.send({ type: 'client_paused', payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
+      } catch {/* ignore */}
     }, delay);
     return () => window.clearTimeout(timer);
   }, [syncPause]);
+
+  // Debug overlay updater (self drift vs baseline)
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNowMs(Date.now());
+      const video = videoRef.current;
+      if (!video || !syncPlay) {
+        setSelfDriftMs(0);
+        return;
+      }
+      const expected = (syncPlay as { videoTime: number; scheduledTime: number }).videoTime +
+        Math.max(0, (Date.now() - (syncPlay as { videoTime: number; scheduledTime: number }).scheduledTime) / 1000);
+      const drift = (video.currentTime || 0) - expected;
+      setSelfDriftMs(Math.round(drift * 1000));
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [syncPlay]);
 
   const onEnded = () => {
     if (nowPlaying) {
@@ -220,6 +253,23 @@ const PlayerPage: React.FC = () => {
             ))}
             {upcomingSingers.length === 0 && <p>Queue is empty</p>}
           </div>
+        </div>
+      )}
+
+      {/* Debug overlay (toggle from KJ Controller) */}
+      {playerDebugOverlay && (
+        <div className="absolute top-0 left-0 right-0 p-2 text-[12px] font-mono text-green-300 bg-black/40 z-40">
+          <div>Local time: {new Date(nowMs).toLocaleTimeString()}</div>
+          <div>clientId: {playerConnectionId || 'n/a'}</div>
+          <div>currentTime: {videoRef.current ? videoRef.current.currentTime.toFixed(3) : '0.000'} s</div>
+          <div>expected: {syncPlay ? (syncPlay.videoTime + Math.max(0, (nowMs - syncPlay.scheduledTime)/1000)).toFixed(3) : 'n/a'} s</div>
+          <div>self drift: {selfDriftMs} ms</div>
+          {syncPlay && (
+            <div>
+              schedule: t={new Date(syncPlay.scheduledTime).toLocaleTimeString()} ({syncPlay.scheduledTime}) v={syncPlay.videoTime.toFixed(3)}
+            </div>
+          )}
+          <div>clock sync: lat={lastClockLatencyMs ?? 0}ms offset={lastClockOffsetMs ?? 0}ms</div>
         </div>
       )}
 

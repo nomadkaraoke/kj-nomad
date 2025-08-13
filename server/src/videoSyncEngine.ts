@@ -28,6 +28,7 @@ interface SyncCommand {
   videoTime: number; // Position in video to start from
   commandId: string;
   tolerance: number; // Acceptable sync tolerance in ms
+  timeDomain?: 'client' | 'server'; // Whether scheduledTime is in client-local time
 }
 
 interface SyncState {
@@ -51,6 +52,8 @@ export class VideoSyncEngine {
   private readonly CLOCK_SYNC_INTERVAL = 30000; // 30 seconds
   private readonly PRELOAD_BUFFER_TIME = 2000; // 2 seconds preload time
   private readonly MAX_SYNC_RETRIES = 3;
+  private perClientBaselines: Map<string, { scheduledTime: number; videoStartSec: number }>; // adjusted per client
+  private logger: ((event: string, extra?: Record<string, unknown>) => void) | null = null;
 
   constructor() {
     this.syncState = {
@@ -58,9 +61,15 @@ export class VideoSyncEngine {
       isPlaying: false,
       averageLatency: 0
     };
+    this.perClientBaselines = new Map();
     
     this.startClockSync();
     this.startSyncMonitoring();
+  }
+
+  /** Allow host to inject a logger that emits to admin UI. */
+  setLogger(logger: (event: string, extra?: Record<string, unknown>) => void): void {
+    this.logger = logger;
   }
 
   /**
@@ -85,6 +94,7 @@ export class VideoSyncEngine {
 
     this.syncState.clients.set(clientId, client);
     console.log(`[VideoSync] Registered client: ${name} (${type})`);
+    if (this.logger) this.logger('sync_client_registered', { clientId, name, type, at: Date.now() });
 
     // Immediately start clock synchronization for this client
     this.startClockSyncForClient(client);
@@ -97,6 +107,7 @@ export class VideoSyncEngine {
     const client = this.syncState.clients.get(clientId);
     if (client) {
       console.log(`[VideoSync] Unregistered client: ${client.name}`);
+      if (this.logger) this.logger('sync_client_unregistered', { clientId, name: client.name, type: client.type, at: Date.now() });
       this.syncState.clients.delete(clientId);
       this.updateAverageLatency();
     }
@@ -150,6 +161,7 @@ export class VideoSyncEngine {
     client.lastPing = now;
 
     console.log(`[VideoSync] Client ${client.name}: latency=${latency.toFixed(1)}ms, offset=${clockOffset.toFixed(1)}ms`);
+    if (this.logger) this.logger('clock_sync_update', { clientId, name: client.name, latencyMs: Number(latency.toFixed(1)), clockOffsetMs: Number(clockOffset.toFixed(1)), now });
 
     this.updateAverageLatency();
   }
@@ -180,14 +192,10 @@ export class VideoSyncEngine {
     }
 
     console.log(`[VideoSync] Syncing video playback: ${videoUrl} from ${startTime}s across ${playerClients.length} clients`);
+    if (this.logger) this.logger('sync_prepare', { videoUrl, startTime, clients: playerClients.map(c => c.id), at: Date.now() });
 
-    // Calculate when to start playback (server time + buffer for coordination)
-    const coordinationBuffer = Math.max(
-      this.PRELOAD_BUFFER_TIME,
-      this.syncState.averageLatency * 3 + 500 // 3x average latency + 500ms safety
-    );
-    
-    const scheduledTime = Date.now() + coordinationBuffer;
+    // Placeholder scheduledTime; will be recalculated after readiness
+    let scheduledTime = Date.now();
 
     const syncCommand: SyncCommand = {
       type: 'sync_play',
@@ -198,7 +206,12 @@ export class VideoSyncEngine {
       tolerance: this.SYNC_TOLERANCE
     };
 
-    // Step 1: Send preload command to all clients
+    // Step 1: Proactively ping all clients to refresh latency/offset just before preload
+    for (const client of playerClients) {
+      this.startClockSyncForClient(client);
+    }
+
+    // Step 2: Send preload command to all clients
     const preloadCommand = {
       type: 'sync_preload',
       videoUrl,
@@ -210,28 +223,43 @@ export class VideoSyncEngine {
         try {
           client.ws.send(JSON.stringify(preloadCommand));
           client.isReady = false;
+          if (this.logger) this.logger('sync_preload_sent', { clientId: client.id, videoUrl, commandId: syncCommand.commandId, at: Date.now() });
         } catch (error) {
           console.error(`[VideoSync] Failed to send preload command to ${client.name}:`, error);
         }
       }
     }
 
-    // Step 2: Wait for preload confirmations or timeout
-    await this.waitForClientReadiness(playerClients, coordinationBuffer - 500);
+    // Step 3: Wait for preload confirmations or timeout
+    const coordinationBuffer = Math.max(
+      this.PRELOAD_BUFFER_TIME,
+      this.syncState.averageLatency * 3 + 500 // 3x average latency + 500ms safety
+    );
+    const readyWaitMs = Math.max(500, coordinationBuffer - 400);
+    const readyCount = await this.waitForClientReadiness(playerClients, readyWaitMs);
+    if (this.logger) this.logger('sync_ready_all', { readyCount, total: playerClients.length, waitedMs: readyWaitMs, at: Date.now() });
 
-    // Step 3: Send synchronized play command
+    // Step 4: Send synchronized play command
+    // Recalculate scheduled start so it is relative to the moment all clients are (mostly) ready
+    // Add a deterministic delay large enough to satisfy high-latency environments and tests
+    scheduledTime = Date.now() + Math.max(1200, this.syncState.averageLatency * 3 + 600);
+    const finalCommand: SyncCommand = { ...syncCommand, scheduledTime };
     for (const client of playerClients) {
       if (client.ws.readyState === client.ws.OPEN) {
         // Adjust scheduled time for each client's clock offset and latency
         const adjustedTime = scheduledTime + client.clockOffset - client.averageLatency;
         
         const clientSyncCommand = {
-          ...syncCommand,
-          scheduledTime: adjustedTime
+          ...finalCommand,
+          scheduledTime: adjustedTime,
+          timeDomain: 'client'
         };
 
         try {
           client.ws.send(JSON.stringify(clientSyncCommand));
+          // Record adjusted baseline per client so server can compute expected times accurately
+          this.perClientBaselines.set(client.id, { scheduledTime: adjustedTime, videoStartSec: syncCommand.videoTime });
+          if (this.logger) this.logger('sync_play_scheduled', { clientId: client.id, adjustedScheduledTime: adjustedTime, serverScheduledTime: scheduledTime, videoTime: syncCommand.videoTime, at: Date.now() });
         } catch (error) {
           console.error(`[VideoSync] Failed to send sync command to ${client.name}:`, error);
         }
@@ -244,10 +272,11 @@ export class VideoSyncEngine {
       startTime: scheduledTime,
       duration: undefined // Will be updated when clients report duration
     };
-    this.syncState.lastSyncCommand = syncCommand;
+    this.syncState.lastSyncCommand = finalCommand;
     this.syncState.isPlaying = true;
 
     console.log(`[VideoSync] Sync command sent. Scheduled playback at: ${new Date(scheduledTime).toISOString()}`);
+    if (this.logger) this.logger('sync_play_broadcast_complete', { serverScheduledTime: scheduledTime, at: Date.now() });
     return true;
   }
 
@@ -274,6 +303,7 @@ export class VideoSyncEngine {
             ...pauseCommand,
             scheduledTime: adjustedTime
           }));
+          if (this.logger) this.logger('sync_pause_scheduled', { clientId: client.id, adjustedScheduledTime: adjustedTime, serverScheduledTime: scheduledTime, at: Date.now() });
         } catch (error) {
           console.error(`[VideoSync] Failed to send pause command to ${client.name}:`, error);
         }
@@ -405,6 +435,83 @@ export class VideoSyncEngine {
       currentVideo: this.syncState.currentVideo?.url,
       syncTolerance: this.SYNC_TOLERANCE
     };
+  }
+
+  /**
+   * Expose the baseline used for computing expected playback time on the server.
+   * scheduledTime is the server time (ms) when videoTime should equal videoStartSec.
+   */
+  getBaseline(): { scheduledTime: number; videoStartSec: number } | null {
+    if (this.syncState.lastSyncCommand && this.syncState.currentVideo) {
+      return {
+        scheduledTime: this.syncState.currentVideo.startTime,
+        videoStartSec: this.syncState.lastSyncCommand.videoTime,
+      };
+    }
+    if (this.syncState.currentVideo) {
+      return {
+        scheduledTime: this.syncState.currentVideo.startTime,
+        videoStartSec: 0,
+      };
+    }
+    return null;
+  }
+
+  /** Return per-client sync stats useful for debugging/logging. */
+  getClientStats(clientId: string): { averageLatency: number; clockOffset: number } | null {
+    const client = this.syncState.clients.get(clientId);
+    if (!client) return null;
+    return { averageLatency: client.averageLatency, clockOffset: client.clockOffset };
+  }
+
+  /** Return adjusted baseline for a specific client, if known. */
+  getClientBaseline(clientId: string): { scheduledTime: number; videoStartSec: number } | null {
+    return this.perClientBaselines.get(clientId) ?? null;
+  }
+
+  /**
+   * Schedule a catch-up sync for a single newly-joined player client while a video is already playing.
+   * Sends preload and a per-client-adjusted sync_play targeting the provided video time.
+   */
+  async catchUpClient(clientId: string, videoUrl: string, videoTime: number): Promise<boolean> {
+    const client = this.syncState.clients.get(clientId);
+    if (!client || client.type !== 'player' || client.ws.readyState !== client.ws.OPEN) {
+      return false;
+    }
+
+    // Refresh clock sync to have up-to-date latency/offset
+    this.startClockSyncForClient(client);
+
+    const commandId = `catchup_${Date.now()}`;
+    try {
+      client.ws.send(JSON.stringify({ type: 'sync_preload', videoUrl, commandId }));
+      if (this.logger) this.logger('catchup_preload_sent', { clientId, videoUrl, commandId, at: Date.now() });
+    } catch (error) {
+      console.error('[VideoSync] Failed to send catchup preload to', client.name, error);
+    }
+
+    // Provide enough buffer for the client to get ready
+    const scheduledTime = Date.now() + Math.max(1200, (client.averageLatency || this.syncState.averageLatency) * 3 + 600);
+    const adjustedTime = scheduledTime + client.clockOffset - client.averageLatency;
+    const playCmd: SyncCommand = {
+      type: 'sync_play',
+      videoUrl,
+      scheduledTime: adjustedTime,
+      videoTime,
+      commandId,
+      tolerance: this.SYNC_TOLERANCE,
+      timeDomain: 'client'
+    };
+
+    try {
+      client.ws.send(JSON.stringify(playCmd));
+      this.perClientBaselines.set(clientId, { scheduledTime: adjustedTime, videoStartSec: videoTime });
+      if (this.logger) this.logger('catchup_play_scheduled', { clientId, adjustedScheduledTime: adjustedTime, serverScheduledTime: scheduledTime, videoTime, at: Date.now() });
+    } catch (error) {
+      console.error('[VideoSync] Failed to send catchup play to', client.name, error);
+    }
+
+    return true;
   }
 
   /**
