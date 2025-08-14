@@ -125,7 +125,7 @@ describe('API Integration Tests', () => {
     } as any);
     
     // Set up a more robust mock for createReadStream that handles different call patterns
-    mockFs.createReadStream.mockImplementation((path: any, options?: any) => {
+    mockFs.createReadStream.mockImplementation((_path: any, options?: any) => {
       
       const mockStream = new Readable({
         read() {

@@ -14,6 +14,7 @@ Feature: Player Screen Configuration
     Then its audio output should be enabled by default
     And its ticker bar should be enabled by default
     And its full-height sidebar should be disabled by default
+    And its video player should be visible by default
 
   Scenario: KJ mutes and unmutes a player screen's audio
     Given the audio on "Screen 1" is enabled
@@ -42,3 +43,11 @@ Feature: Player Screen Configuration
     When the KJ disables the video player for "Screen 1"
     Then the video player on "Screen 1" should be hidden
     And the screen should only display informational components like the sidebar and ticker
+
+  Scenario: Toggle debug overlay for all players from Player Screens
+    Given at least one player screen is connected
+    And the debug overlay is currently hidden on all screens
+    When the KJ toggles the global debug overlay in the Player Screens section
+    Then the debug overlay should be visible on all connected player screens
+    When the KJ toggles the global debug overlay again
+    Then the debug overlay should be hidden on all connected player screens

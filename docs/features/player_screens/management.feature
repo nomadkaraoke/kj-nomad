@@ -35,6 +35,15 @@ Feature: Player Screen Management
     Then it should reappear in the Admin Interface as "Screen 1"
     And its ticker configuration should still be turned off
 
+  Scenario: Player reloads while a song is playing and catches up
+    Given a karaoke video is currently playing
+    And two player screens are connected and in sync
+    When "Screen 2" reloads the player page
+    Then it should reconnect automatically
+    And it should preload the current video
+    And it should start at the current elapsed timestamp within 500 milliseconds
+    And both screens should be within 100 milliseconds thereafter
+
   Scenario: KJ permanently removes a player screen
     Given a player screen named "Screen 3" is connected
     When the KJ clicks the "Disconnect" button for "Screen 3"
