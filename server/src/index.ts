@@ -283,6 +283,9 @@ videoSyncEngine.setLogger((event, extra) => {
   syncLog(event, extra);
 });
 
+// Allow runtime toggle of drift correction via WebSocket admin command
+let autoDriftCorrectionEnabled = true;
+
 app.get('/api/sync/status', (req, res) => {
     console.log('[API] GET /api/sync/status - Get sync engine status');
     const stats = videoSyncEngine.getSyncStats();
@@ -1425,7 +1428,8 @@ wss.on('connection', (ws, req) => {
                         const baselineDomain = clientBaseline ? clientBaseline.domain : 'server';
                         // Decide reference time for expectedSec based on baseline domain
                         const nowRef = (baselineDomain === 'client' && clientReportedAt) ? clientReportedAt : Date.now();
-                        const expectedSec = startSec + Math.max(0, (nowRef - scheduled) / 1000);
+                        // Apply session-wide baseline bias (used to align anchor/muted screens without audible jumps)
+                        const expectedSec = startSec + Math.max(0, (nowRef - scheduled) / 1000) + videoSyncEngine.getBaselineBiasSec();
                         const driftMs = Math.round((reportedTimeSec - expectedSec) * 1000);
                         const clientStats = videoSyncEngine.getClientStats(clientId);
                         const mappedId = connectionToDeviceId.get(clientId) || clientId;
@@ -1438,6 +1442,27 @@ wss.on('connection', (ws, req) => {
                         });
                         broadcast({ type: 'devices_updated', payload: getMappedDevices() });
                         syncLog('position_report', { clientId, reportedTimeSec, expectedSec, driftMs, baseline: { scheduled, startSec, domain: baselineDomain, usedOffsetMs: clientBaseline?.usedOffsetMs, usedLatencyMs: clientBaseline?.usedLatencyMs, establishedAt: clientBaseline?.establishedAt }, referenceNow: { type: (baselineDomain === 'client' ? 'clientReportedAt' : 'serverNow'), value: nowRef }, clientStats });
+
+                        // Auto-correct if drift exceeds 200ms and we have a valid expected baseline
+                        const CORRECTION_THRESHOLD_MS = 200;
+                        // Only auto-correct if feature enabled (default true). Allow runtime toggle via env for now; could be extended to session state.
+                        const autoCorrect = autoDriftCorrectionEnabled && process.env.AUTO_DRIFT_CORRECTION !== 'off';
+                        if (autoCorrect && Math.abs(driftMs) > CORRECTION_THRESHOLD_MS) {
+                          // Prefer correcting muted (non-anchor) screens; if an anchor is set, bias baseline toward it
+                          const anchorId = videoSyncEngine.getAnchorClient();
+                          if (anchorId && clientId === anchorId) {
+                            // Do not hard-correct the anchor; instead bias baseline so others adjust
+                            const biasDeltaSec = (reportedTimeSec - expectedSec);
+                            // Only apply a small portion to avoid large jumps; leave final small nudges to corrections
+                            const applied = Math.max(-0.5, Math.min(0.5, biasDeltaSec));
+                            videoSyncEngine.adjustBaselineBiasSec(applied);
+                            syncLog('anchor_bias_applied', { clientId, biasAppliedSec: applied, driftMs, at: Date.now() });
+                          } else {
+                            // Realign this client directly
+                            void videoSyncEngine.realignClient(clientId, expectedSec);
+                            syncLog('drift_correction_trigger', { clientId, driftMs, targetVideoTime: expectedSec, at: Date.now() });
+                          }
+                        }
                     }
                 }
             } catch (err) {
@@ -1597,6 +1622,26 @@ wss.on('connection', (ws, req) => {
             console.log('[WebSocket] Ticker update:', payload);
             broadcast({ type: 'ticker_updated', payload });
             break;
+        case 'set_auto_drift_correction': {
+            const enabled = !!(payload && typeof payload === 'object' && 'enabled' in (payload as { enabled: boolean }) && (payload as { enabled: boolean }).enabled);
+            autoDriftCorrectionEnabled = enabled;
+            syncLog('auto_drift_correction_set', { enabled, by: clientId, at: Date.now() });
+            // Broadcast to clients so UIs can reflect toggle
+            broadcast({ type: 'set_auto_drift_correction', payload: { enabled } });
+            break;
+        }
+        case 'set_sync_anchor': {
+            const id = (payload && typeof payload === 'object' && 'clientId' in (payload as { clientId?: string })) ? (payload as { clientId?: string }).clientId ?? null : null;
+            videoSyncEngine.setAnchorClient(id);
+            syncLog('anchor_selected', { anchorId: id, by: clientId, at: Date.now() });
+            break;
+        }
+        case 'clear_sync_anchor': {
+            videoSyncEngine.setAnchorClient(null);
+            videoSyncEngine.resetBaselineBias();
+            syncLog('anchor_cleared', { by: clientId, at: Date.now() });
+            break;
+        }
         case 'connect_online_session': {
             const { sessionId, adminKey } = payload as { sessionId: string; adminKey: string };
             console.log(`[WebSocket] Attempting to connect to online session ${sessionId} with key ${adminKey}`);

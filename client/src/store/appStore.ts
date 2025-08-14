@@ -96,6 +96,8 @@ export interface AppState {
   playerShowIdentify: boolean;
   playerIsDisconnected: boolean;
   playerDebugOverlay: boolean;
+  // Feature flags
+  autoDriftCorrectionEnabled?: boolean;
   // IDs for debugging
   playerConnectionId?: string | null;
   // Sync commands (from VideoSyncEngine)
@@ -199,6 +201,7 @@ export const useAppStore = create<AppState>()(
       playerShowIdentify: false,
       playerIsDisconnected: false,
       playerDebugOverlay: false,
+      autoDriftCorrectionEnabled: true,
       playerConnectionId: null,
       // Sync commands
       syncPreload: null,
@@ -253,6 +256,8 @@ export const useAppStore = create<AppState>()(
       setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
       setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
       setPlayerDebugOverlay: (visible) => set({ playerDebugOverlay: visible }),
+      // toggle for auto drift correction
+      toggleAutoDriftCorrection: () => set((state) => ({ autoDriftCorrectionEnabled: !state.autoDriftCorrectionEnabled })),
       setSyncPreload: (cmd) => set({ syncPreload: cmd }),
       setSyncPlay: (cmd) => set({ syncPlay: cmd }),
       setSyncPause: (cmd) => set({ syncPause: cmd }),

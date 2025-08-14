@@ -55,6 +55,9 @@ export class VideoSyncEngine {
   private readonly MAX_SYNC_RETRIES = 3;
   private perClientBaselines: Map<string, { scheduledTime: number; videoStartSec: number; domain: 'client' | 'server'; usedOffsetMs: number; usedLatencyMs: number; establishedAt: number }>; // adjusted per client with telemetry
   private logger: ((event: string, extra?: Record<string, unknown>) => void) | null = null;
+  private lastCorrectionAt: Map<string, number> = new Map();
+  private baselineBiasSec = 0;
+  private anchorClientId: string | null = null;
 
   constructor() {
     this.syncState = {
@@ -71,6 +74,23 @@ export class VideoSyncEngine {
   /** Allow host to inject a logger that emits to admin UI. */
   setLogger(logger: (event: string, extra?: Record<string, unknown>) => void): void {
     this.logger = logger;
+  }
+
+  /** Anchor and bias controls */
+  setAnchorClient(clientId: string | null): void {
+    this.anchorClientId = clientId;
+    if (this.logger) this.logger('anchor_set', { clientId, at: Date.now() });
+  }
+  getAnchorClient(): string | null { return this.anchorClientId; }
+  getBaselineBiasSec(): number { return this.baselineBiasSec; }
+  adjustBaselineBiasSec(deltaSec: number): void {
+    this.baselineBiasSec += deltaSec;
+    if (this.logger) this.logger('baseline_bias_adjusted', { deltaSec, newBiasSec: this.baselineBiasSec, at: Date.now() });
+  }
+  resetBaselineBias(): void { this.baselineBiasSec = 0; }
+  /** Utility to enumerate player client IDs */
+  getPlayerClientIds(): string[] {
+    return Array.from(this.syncState.clients.values()).filter(c => c.type === 'player').map(c => c.id);
   }
 
   /**
@@ -281,6 +301,9 @@ export class VideoSyncEngine {
     };
     this.syncState.lastSyncCommand = finalCommand;
     this.syncState.isPlaying = true;
+    // Reset anchor/bias at the start of a new sync session
+    this.anchorClientId = null;
+    this.baselineBiasSec = 0;
 
     console.log(`[VideoSync] Sync command sent. Scheduled playback at: ${new Date(scheduledTime).toISOString()}`);
     if (this.logger) this.logger('sync_play_broadcast_complete', { serverScheduledTime: scheduledTime, at: Date.now() });
@@ -486,6 +509,8 @@ export class VideoSyncEngine {
     this.syncState.currentVideo = undefined;
     this.syncState.lastSyncCommand = undefined;
     this.perClientBaselines.clear();
+    this.anchorClientId = null;
+    this.baselineBiasSec = 0;
     if (this.logger) this.logger('sync_end', { at: Date.now() });
     console.log('[VideoSync] Playback ended; cleared baselines and stopped drift monitoring');
   }
@@ -609,6 +634,52 @@ export class VideoSyncEngine {
     
     this.syncState.clients.clear();
     console.log('[VideoSync] Engine destroyed');
+  }
+
+  /**
+   * Schedule a precise per-client re-alignment to the desired video time.
+   * Used for automatic drift correction when a client's drift exceeds tolerance.
+   */
+  async realignClient(clientId: string, desiredVideoTimeSec: number): Promise<boolean> {
+    const client = this.syncState.clients.get(clientId);
+    if (!client || client.type !== 'player' || client.ws.readyState !== client.ws.OPEN) return false;
+    if (!this.syncState.currentVideo || !this.syncState.lastSyncCommand) return false;
+
+    // Cooldown to prevent rapid-fire corrections
+    const now = Date.now();
+    const lastAt = this.lastCorrectionAt.get(clientId) || 0;
+    if (now - lastAt < 1200) return false;
+    this.lastCorrectionAt.set(clientId, now);
+
+    const scheduledTime = now + Math.max(250, client.averageLatency * 3 + 200);
+    const adjustedTime = scheduledTime + client.clockOffset - client.averageLatency;
+
+    const usedOffset = client.clockOffset || 0;
+    const usedLatency = client.averageLatency || 0;
+    const hasClock = Math.abs(usedOffset) > 0.01 || Math.abs(usedLatency) > 0.01;
+    const domain: 'client' | 'server' = hasClock ? 'client' : 'server';
+    const messageScheduledTime = domain === 'client' ? adjustedTime : scheduledTime;
+
+    const cmd: SyncCommand = {
+      type: 'sync_play',
+      videoUrl: this.syncState.currentVideo.url,
+      scheduledTime: messageScheduledTime,
+      videoTime: Math.max(0, desiredVideoTimeSec),
+      commandId: `realign_${now}`,
+      tolerance: this.SYNC_TOLERANCE,
+      timeDomain: domain
+    };
+
+    try {
+      client.ws.send(JSON.stringify(cmd));
+      const baselineScheduled = domain === 'client' ? adjustedTime : scheduledTime;
+      this.perClientBaselines.set(clientId, { scheduledTime: baselineScheduled, videoStartSec: cmd.videoTime, domain, usedOffsetMs: usedOffset, usedLatencyMs: usedLatency, establishedAt: Date.now() });
+      if (this.logger) this.logger('drift_correction_scheduled', { clientId, desiredVideoTimeSec: cmd.videoTime, adjustedScheduledTime: adjustedTime, serverScheduledTime: scheduledTime, baselineScheduled, domain, usedOffsetMs: usedOffset, usedLatencyMs: usedLatency, at: Date.now() });
+      return true;
+    } catch (err) {
+      console.error('[VideoSync] Failed to send realign to', client.name, err);
+      return false;
+    }
   }
 }
 

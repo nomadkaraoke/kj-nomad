@@ -18,6 +18,7 @@ interface CurrentSession {
   playbackState: 'playing' | 'paused' | 'stopped';
   history: PlayedSong[];
   currentSongStartTime?: number;
+  pausedAt?: number; // wall-clock timestamp when paused (if paused)
 }
 
 // Session state - reset only when explicitly requested
@@ -27,7 +28,8 @@ let session: CurrentSession = {
   nowPlaying: null,
   playbackState: 'stopped',
   history: [],
-  currentSongStartTime: undefined
+  currentSongStartTime: undefined,
+  pausedAt: undefined
 };
 
 // Export session for testing purposes
@@ -41,7 +43,8 @@ const initializeSession = (): void => {
     nowPlaying: null,
     playbackState: 'stopped',
     history: [],
-    currentSongStartTime: undefined
+    currentSongStartTime: undefined,
+    pausedAt: undefined
   };
 };
 
@@ -95,6 +98,7 @@ export const setNowPlaying = (entry: QueueEntry | null, startPlaying: boolean = 
 
   session.nowPlaying = entry;
   session.currentSongStartTime = startPlaying ? Date.now() : undefined;
+  session.pausedAt = startPlaying ? undefined : Date.now();
   session.playbackState = entry ? (startPlaying ? 'playing' : 'paused') : 'stopped';
 };
 
@@ -140,11 +144,20 @@ export const restartCurrentSong = (): QueueEntry | null => {
 };
 
 export const pausePlayback = (): void => {
-  session.playbackState = 'paused';
+  if (session.playbackState === 'playing') {
+    session.playbackState = 'paused';
+    session.pausedAt = Date.now();
+  }
 };
 
 export const resumePlayback = (): void => {
   if (session.nowPlaying) {
+    // Shift the baseline start time forward by the paused duration so elapsed excludes pause
+    if (session.pausedAt && session.currentSongStartTime) {
+      const pausedDuration = Date.now() - session.pausedAt;
+      session.currentSongStartTime += pausedDuration;
+    }
+    session.pausedAt = undefined;
     session.playbackState = 'playing';
   }
 };
@@ -163,6 +176,7 @@ export const stopPlayback = (): void => {
   session.nowPlaying = null;
   session.playbackState = 'stopped';
   session.currentSongStartTime = undefined;
+  session.pausedAt = undefined;
 };
 
 // === Session History ===

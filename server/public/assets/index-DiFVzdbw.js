@@ -22014,6 +22014,7 @@ const useAppStore = create()(
       playerShowIdentify: false,
       playerIsDisconnected: false,
       playerDebugOverlay: false,
+      autoDriftCorrectionEnabled: true,
       playerConnectionId: null,
       // Sync commands
       syncPreload: null,
@@ -22065,6 +22066,8 @@ const useAppStore = create()(
       setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
       setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
       setPlayerDebugOverlay: (visible) => set({ playerDebugOverlay: visible }),
+      // toggle for auto drift correction
+      toggleAutoDriftCorrection: () => set((state) => ({ autoDriftCorrectionEnabled: !state.autoDriftCorrectionEnabled })),
       setSyncPreload: (cmd) => set({ syncPreload: cmd }),
       setSyncPlay: (cmd) => set({ syncPlay: cmd }),
       setSyncPause: (cmd) => set({ syncPause: cmd }),
@@ -24196,6 +24199,16 @@ class WebSocketService {
       case "ticker_updated":
         store.setTickerText(payload);
         break;
+      case "set_auto_drift_correction": {
+        if (payload && typeof payload === "object" && "enabled" in payload) {
+          const enabled = Boolean(payload.enabled);
+          try {
+            useAppStore.getState().autoDriftCorrectionEnabled = enabled;
+          } catch {
+          }
+        }
+        break;
+      }
       // Sync engine protocol
       case "clock_sync_ping": {
         if (payload && typeof payload === "object") {
@@ -29725,7 +29738,7 @@ const PlayerScreenManager = () => {
   const [logs, setLogs] = reactExports.useState([]);
   const socket = useAppStore((s) => s.socket);
   const toggleDeviceDebugOverlay = useAppStore((s) => s.toggleDeviceDebugOverlay);
-  const [debugEnabled, setDebugEnabled] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [debugAll, setDebugAll] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (!socket || typeof socket.addEventListener !== "function") {
       return;
@@ -29750,8 +29763,35 @@ const PlayerScreenManager = () => {
     return () => clearInterval(interval);
   }, [fetchDevices, checkServerInfo]);
   const playerUrl = serverInfo.localIps.length > 0 ? `http://${serverInfo.localIps[0]}:${serverInfo.port}/player` : "/player";
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card relative", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Player Screens" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-3 right-3 flex gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: async () => {
+            const next = !debugAll;
+            setDebugAll(next);
+            try {
+              await Promise.all((devices || []).map((d) => toggleDeviceDebugOverlay(d.id, next)));
+            } catch {
+            }
+          },
+          className: "p-2 rounded-full hover:bg-brand-blue/10",
+          title: "Toggle debug overlay on all player screens",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: clsx("h-5 w-5", debugAll && "text-brand-pink") })
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => setShowSyncLog((v) => !v),
+          className: "p-2 rounded-full hover:bg-brand-blue/10",
+          title: showSyncLog ? "Hide Sync Log" : "Show Sync Log",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs opacity-80", children: "log" })
+        }
+      )
+    ] }),
     devices.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 px-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-16 w-16 mx-auto text-text-secondary-light dark:text-text-secondary-dark opacity-50" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-4 text-lg font-medium", children: "No Player Screens Connected" }),
@@ -29807,6 +29847,14 @@ const PlayerScreenManager = () => {
                 Math.round(device.syncStats?.lastSyncError ?? 0),
                 " ms"
               ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs opacity-80 mt-1", children: [
+              "Loading: ",
+              device.isVideoPlayerVisible ? "false" : "true",
+              " | Playing: ",
+              device.isVideoPlayerVisible ? "true" : "false",
+              " | Muted: ",
+              device.isAudioEnabled ? "false" : "true"
             ] })
           ] })
         ] }),
@@ -29818,22 +29866,6 @@ const PlayerScreenManager = () => {
               className: "p-2 rounded-full hover:bg-brand-blue/10",
               title: "Identify Screen",
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-6 w-6" })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: async () => {
-                const enabled = new Set(debugEnabled);
-                const willEnable = !enabled.has(device.id);
-                if (willEnable) enabled.add(device.id);
-                else enabled.delete(device.id);
-                setDebugEnabled(enabled);
-                await toggleDeviceDebugOverlay(device.id, willEnable);
-              },
-              className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": debugEnabled.has(device.id) }),
-              title: "Toggle Debug Overlay",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: clsx("h-6 w-6", debugEnabled.has(device.id) && "text-brand-pink") })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29883,33 +29915,23 @@ const PlayerScreenManager = () => {
           )
         ] })
       ] }, device.id)),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => setShowSyncLog((v) => !v),
-            className: "btn",
-            children: showSyncLog ? "Hide Sync Log" : "Show Sync Log"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => {
-              const text = logs.map((l) => {
-                const extraEntries = Object.entries(l).filter(([key]) => key !== "ts" && key !== "message");
-                const s = extraEntries.length ? " " + JSON.stringify(Object.fromEntries(extraEntries)) : "";
-                const ts = new Date(l.ts).toLocaleTimeString();
-                return `[${ts}] ${l.message}${s}`;
-              }).reverse().join("\n");
-              navigator.clipboard.writeText(text).catch(() => {
-              });
-            },
-            className: "btn-secondary",
-            children: "Copy Log"
-          }
-        )
-      ] }),
+      showSyncLog && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex items-center gap-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => {
+            const text = logs.map((l) => {
+              const extraEntries = Object.entries(l).filter(([key]) => key !== "ts" && key !== "message");
+              const s = extraEntries.length ? " " + JSON.stringify(Object.fromEntries(extraEntries)) : "";
+              const ts = new Date(l.ts).toLocaleTimeString();
+              return `[${ts}] ${l.message}${s}`;
+            }).reverse().join("\n");
+            navigator.clipboard.writeText(text).catch(() => {
+            });
+          },
+          className: "btn-secondary",
+          children: "Copy Log"
+        }
+      ) }),
       showSyncLog && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 max-h-64 overflow-auto text-xs bg-black/30 rounded p-2", children: [
         logs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "opacity-60", children: "No sync events yet…" }),
         logs.map((l, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "whitespace-pre-wrap", children: [
@@ -30195,7 +30217,6 @@ const HomePage = () => {
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerScreenManager, {}),
       nowPlaying && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `card ${currentlyPlaying ? "ring-2 ring-brand-pink bg-brand-pink/10" : "bg-brand-yellow/10"}`, "data-testid": "now-playing", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-lg", children: currentlyPlaying ? "Now Singing" : "Filler Music" }),
@@ -30239,6 +30260,7 @@ const HomePage = () => {
           )
         ] })
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerScreenManager, {}),
       sessionState && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Session Info" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-4 text-center", children: [
@@ -31201,4 +31223,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-B9_I4gwL.js.map
+//# sourceMappingURL=index-DiFVzdbw.js.map

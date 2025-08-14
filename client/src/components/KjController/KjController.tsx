@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import DraggableQueue from '../QueueManager/DraggableQueue';
 import { Input } from '../ui/Input';
+import { useAppStore } from '../../store/appStore';
 
 interface Song {
     id: string;
@@ -33,6 +34,9 @@ interface KjControllerProps {
 
 const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState }) => {
   const [tickerText, setTickerText] = useState('');
+  const autoCorrectionEnabled = useAppStore((s) => s.autoDriftCorrectionEnabled ?? true);
+  const toggleAuto = useAppStore((s) => (s as unknown as { toggleAutoDriftCorrection: () => void }).toggleAutoDriftCorrection);
+  const [anchorId, setAnchorId] = useState<string | null>(null);
 
   const playNextSong = () => {
     const nextSong = queue[0];
@@ -188,6 +192,35 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
           onPlay={handlePlaySong}
           onRemove={handleRemoveSong}
         />
+      </div>
+
+      {/* Sync Options */}
+      <div className="card">
+        <h2 className="text-xl font-semibold mb-4">Synchronization Options</h2>
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={!!autoCorrectionEnabled}
+            onChange={() => {
+              // Toggle locally for immediate UI feedback
+              toggleAuto();
+              // Tell server to toggle correction engine
+              if (socket) {
+                const next = !autoCorrectionEnabled;
+                socket.send(JSON.stringify({ type: 'set_auto_drift_correction', payload: { enabled: next } }));
+              }
+            }}
+          />
+          <span>Enable automatic drift correction</span>
+        </label>
+        <div className="mt-4 space-y-2">
+          <div className="text-sm opacity-80">Anchor device (unmuted audio screen): corrections will bias other screens to match this one.</div>
+          <div className="flex gap-2">
+            <input className="input flex-grow" placeholder="Enter deviceId (stable id)" value={anchorId ?? ''} onChange={(e) => setAnchorId(e.target.value || null)} />
+            <button className="btn-secondary" onClick={() => { if (socket) socket.send(JSON.stringify({ type: 'set_sync_anchor', payload: { clientId: anchorId } })); }}>Set Anchor</button>
+            <button className="btn-tertiary" onClick={() => { if (socket) socket.send(JSON.stringify({ type: 'clear_sync_anchor' })); setAnchorId(null); }}>Clear</button>
+          </div>
+        </div>
       </div>
 
       {/* Ticker Control Section */}

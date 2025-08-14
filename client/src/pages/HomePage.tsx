@@ -172,9 +172,6 @@ const HomePage: React.FC = () => {
             </div>
           </div>
           
-          {/* Player Screen Management */}
-          <PlayerScreenManager />
-
           {/* Now Playing */}
           {nowPlaying && (
             <div className={`card ${currentlyPlaying ? 'ring-2 ring-brand-pink bg-brand-pink/10' : 'bg-brand-yellow/10'}`} data-testid="now-playing">
@@ -237,6 +234,9 @@ const HomePage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Player Screen Management (moved below Queue/Ticker) */}
+          <PlayerScreenManager />
           
           {/* Session Info */}
           {sessionState && (

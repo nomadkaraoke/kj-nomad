@@ -38,7 +38,7 @@ const PlayerScreenManager: React.FC = () => {
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const socket = useAppStore((s) => s.socket);
   const toggleDeviceDebugOverlay = useAppStore((s) => s.toggleDeviceDebugOverlay);
-  const [debugEnabled, setDebugEnabled] = useState<Set<string>>(new Set());
+  const [debugAll, setDebugAll] = useState(false);
 
   useEffect(() => {
     // Attach WebSocket listener for sync logs
@@ -70,8 +70,30 @@ const PlayerScreenManager: React.FC = () => {
   const playerUrl = serverInfo.localIps.length > 0 ? `http://${serverInfo.localIps[0]}:${serverInfo.port}/player` : '/player';
 
   return (
-    <div className="card">
+    <div className="card relative">
       <h2 className="text-xl font-semibold mb-4">Player Screens</h2>
+      <div className="absolute top-3 right-3 flex gap-2">
+        <button
+          onClick={async () => {
+            const next = !debugAll;
+            setDebugAll(next);
+            try {
+              await Promise.all((devices || []).map(d => toggleDeviceDebugOverlay(d.id, next)));
+            } catch { /* ignore */ }
+          }}
+          className="p-2 rounded-full hover:bg-brand-blue/10"
+          title="Toggle debug overlay on all player screens"
+        >
+          <BugAntIcon className={clsx('h-5 w-5', debugAll && 'text-brand-pink')} />
+        </button>
+        <button
+          onClick={() => setShowSyncLog(v => !v)}
+          className="p-2 rounded-full hover:bg-brand-blue/10"
+          title={showSyncLog ? 'Hide Sync Log' : 'Show Sync Log'}
+        >
+          <span className="text-xs opacity-80">log</span>
+        </button>
+      </div>
       {devices.length === 0 ? (
         <div className="text-center py-8 px-4">
           <ComputerDesktopIcon className="h-16 w-16 mx-auto text-text-secondary-light dark:text-text-secondary-dark opacity-50" />
@@ -124,6 +146,9 @@ const PlayerScreenManager: React.FC = () => {
                       </span>
                     </p>
                   )}
+                  <p className="text-xs opacity-80 mt-1">
+                    Loading: {device.isVideoPlayerVisible ? 'false' : 'true'} | Playing: {device.isVideoPlayerVisible ? 'true' : 'false'} | Muted: {device.isAudioEnabled ? 'false' : 'true'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-1">
@@ -134,19 +159,7 @@ const PlayerScreenManager: React.FC = () => {
                 >
                   <EyeIcon className="h-6 w-6" />
                 </button>
-                <button
-                  onClick={async () => {
-                    const enabled = new Set(debugEnabled);
-                    const willEnable = !enabled.has(device.id);
-                    if (willEnable) enabled.add(device.id); else enabled.delete(device.id);
-                    setDebugEnabled(enabled);
-                    await toggleDeviceDebugOverlay(device.id, willEnable);
-                  }}
-                  className={clsx('p-2 rounded-full hover:bg-brand-blue/10', { 'bg-brand-blue/20': debugEnabled.has(device.id) })}
-                  title="Toggle Debug Overlay"
-                >
-                  <BugAntIcon className={clsx('h-6 w-6', debugEnabled.has(device.id) && 'text-brand-pink')} />
-                </button>
+                {/* Removed per-screen debug toggle; use the top-right bug icon to toggle all */}
                 <button
                   onClick={() => toggleDeviceAudio(device.id)}
                   className={clsx('p-2 rounded-full hover:bg-brand-blue/10', { 'bg-brand-blue/20': device.isAudioEnabled })}
@@ -193,13 +206,8 @@ const PlayerScreenManager: React.FC = () => {
               </div>
             </div>
           ))}
-          <div className="mt-4 flex items-center gap-2">
-            <button
-              onClick={() => setShowSyncLog(v => !v)}
-              className="btn"
-            >
-              {showSyncLog ? 'Hide Sync Log' : 'Show Sync Log'}
-            </button>
+          {showSyncLog && (
+            <div className="mt-4 flex items-center gap-2">
             <button
               onClick={() => {
                 const text = logs.map(l => {
@@ -212,7 +220,8 @@ const PlayerScreenManager: React.FC = () => {
               }}
               className="btn-secondary"
             >Copy Log</button>
-          </div>
+            </div>
+          )}
           {showSyncLog && (
             <div className="mt-3 max-h-64 overflow-auto text-xs bg-black/30 rounded p-2">
               {logs.length === 0 && <div className="opacity-60">No sync events yet…</div>}

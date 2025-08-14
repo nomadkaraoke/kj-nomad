@@ -237,6 +237,14 @@ class WebSocketService {
         store.setTickerText(payload as string);
         break;
 
+      case 'set_auto_drift_correction': {
+        if (payload && typeof payload === 'object' && 'enabled' in (payload as { enabled: boolean })) {
+          const enabled = Boolean((payload as { enabled: boolean }).enabled);
+          try { (useAppStore.getState() as unknown as { autoDriftCorrectionEnabled?: boolean }).autoDriftCorrectionEnabled = enabled; } catch { /* ignore */ }
+        }
+        break;
+      }
+
       // Sync engine protocol
       case 'clock_sync_ping': {
         if (payload && typeof payload === 'object') {
