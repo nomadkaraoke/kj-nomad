@@ -1,6 +1,6 @@
 {
   "mediaDirectory": "/Users/andrew/AB Dropbox/Andrew Beveridge/MediaUnsynced/Karaoke/Tracks-PublicShare/MP4",
-  "fillerMusicDirectory": "/Users/andrew/Music/KJ-Nomad",
+  "fillerMusicDirectory": "/Users/andrew/Projects/kj-nomad/filler",
   "fillerMusicVolume": 0.4,
   "kjName": "Local KJ",
   "venue": "",
@@ -8,6 +8,6 @@
   "defaultPort": 8080,
   "enableNetworkAccess": true,
   "setupComplete": true,
-  "lastModified": "2025-08-14T18:53:17.243Z",
+  "lastModified": "2025-08-14T19:01:19.966Z",
   "createdAt": "2025-08-14T18:41:29.999Z"
 }
