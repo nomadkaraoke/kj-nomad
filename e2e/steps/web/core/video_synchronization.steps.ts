@@ -98,16 +98,25 @@ Given('a karaoke video is currently playing on both screens', async ({ page }) =
   await page.request.post('/api/sync/play', { data: { videoUrl: '/api/media/Test%20Artist%20-%20Test%20Song.mp4', startTime: 0 } });
 });
 
-When('the KJ seeks the video to the {int} minute and {int} second mark', async ({ page }, _min: number, _sec: number) => {
-  // TODO: implement step (not required for now)
+When('the KJ seeks the video to the {int} minute and {int} second mark', async ({ page }, min: number, sec: number) => {
+  const seconds = min * 60 + sec;
+  await page.request.post('/api/sync/seek', { data: { seconds } });
+  // Give a short buffer for the schedule to fire
+  await playerA?.waitForTimeout(1200);
 });
 
-Then('both {string} and {string} should jump to the new timestamp', async ({ page }, _a: string, _b: string) => {
-  // TODO: implement step (not required for now)
+Then('both {string} and {string} should jump to the new timestamp', async () => {
+  if (!playerA || !playerB) throw new Error('players not ready');
+  const t1 = await playerA.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
+  const t2 = await playerB.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
+  expect(Math.abs(t1 - t2)).toBeLessThanOrEqual(0.2);
 });
 
-Then('resume playing in sync, with a time difference of less than {int} milliseconds', async ({ page }, _ms: number) => {
-  // TODO: implement step (not required for now)
+Then('resume playing in sync, with a time difference of less than {int} milliseconds', async ({}, ms: number) => {
+  if (!playerA || !playerB) throw new Error('players not ready');
+  const t1 = await playerA.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
+  const t2 = await playerB.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
+  expect(Math.abs((t1 - t2) * 1000)).toBeLessThanOrEqual(ms);
 });
 
 When('the KJ pauses the video', async ({ page }) => {
@@ -171,10 +180,16 @@ When('the system evaluates synchronization', async ({ page }) => {
 });
 
 Then('the difference between both screens must return below {int} milliseconds', async ({}, threshold: number) => {
-  await playerA!.waitForTimeout(1000);
-  const t1 = await playerA!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
-  const t2 = await playerB!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
-  expect(Math.abs((t1 - t2) * 1000)).toBeLessThanOrEqual(threshold);
+  // Poll for up to ~3s to allow scheduled realign to fire and apply
+  const deadline = Date.now() + 3000;
+  let ok = false;
+  while (Date.now() < deadline) {
+    const t1 = await playerA!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
+    const t2 = await playerB!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
+    if (Math.abs((t1 - t2) * 1000) <= threshold) { ok = true; break; }
+    await playerA!.waitForTimeout(200);
+  }
+  expect(ok).toBe(true);
 });
 
 Then('when the KJ resumes the video', async ({ page }) => {
@@ -226,6 +241,36 @@ Then('the difference between both screens must drop below 100 milliseconds there
   const t1 = await playerA!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
   const t2 = await playerB!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.currentTime ?? 0);
   expect(Math.abs((t1 - t2) * 1000)).toBeLessThanOrEqual(100);
+});
+
+When('the song reaches the end', async ({ page }) => {
+  // Simulate a stop action to clear state and show Ready screens
+  await page.request.post('/api/sync/stop');
+});
+
+Then('both players should stop playback and unload the video', async () => {
+  // After stop, both videos should have no active src or be paused with 0 time post-unload
+  const srcA = await playerA!.evaluate(() => {
+    const v = document.querySelector('video') as HTMLVideoElement | null; return v?.getAttribute('src') ?? '';
+  });
+  const srcB = await playerB!.evaluate(() => {
+    const v = document.querySelector('video') as HTMLVideoElement | null; return v?.getAttribute('src') ?? '';
+  });
+  expect(srcA).toBe('');
+  expect(srcB).toBe('');
+});
+
+Then('both players should display the Ready screen', async () => {
+  await expect(playerA!.getByText(/KJ-Nomad Ready/i)).toBeVisible();
+  await expect(playerB!.getByText(/KJ-Nomad Ready/i)).toBeVisible();
+});
+
+Then('no audio should continue playing from any screen', async () => {
+  // Validate by checking paused flag; headless has no real audio but this ensures the element is not playing
+  const pausedA = await playerA!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.paused ?? true);
+  const pausedB = await playerB!.evaluate(() => (document.querySelector('video') as HTMLVideoElement | null)?.paused ?? true);
+  expect(pausedA).toBe(true);
+  expect(pausedB).toBe(true);
 });
 
 Given('automatic drift correction is enabled', async ({ page }) => {

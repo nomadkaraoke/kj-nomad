@@ -358,6 +358,49 @@ app.post('/api/sync/resume', async (req, res) => {
     }
 });
 
+// Seek all players to a specific video time while continuing playback
+app.post('/api/sync/seek', async (req, res) => {
+    try {
+        const { seconds } = req.body as { seconds?: number };
+        if (typeof seconds !== 'number' || Number.isNaN(seconds) || seconds < 0) {
+            return res.status(400).json({ success: false, error: 'seconds must be a non-negative number' });
+        }
+        const s = getSessionState();
+        const fileName = s?.nowPlaying?.song?.fileName;
+        if (!fileName) return res.status(400).json({ success: false, error: 'No active song to seek' });
+        const videoUrl = `/api/media/${fileName}`;
+        const ok = await videoSyncEngine.syncPlayVideo(videoUrl, seconds);
+        if (!ok) return res.status(500).json({ success: false, error: 'No player clients available' });
+        // Update baseline so reconnects are consistent
+        if (s && s.currentSongStartTime) {
+            // Reset baseline to map current wall time to the new video position
+            // currentSongStartTime = now - seconds*1000
+            s.currentSongStartTime = Date.now() - Math.floor(seconds * 1000);
+            broadcast({ type: 'session_state_updated', payload: getSessionState() });
+        }
+        return res.json({ success: true, message: 'Seek scheduled', seconds });
+    } catch (err) {
+        console.error('[API] Sync seek error:', err);
+        return res.status(500).json({ success: false, error: 'Failed to schedule seek' });
+    }
+});
+
+// Stop playback and return to Ready screen
+app.post('/api/sync/stop', async (_req, res) => {
+    try {
+        stopPlayback();
+        videoSyncEngine.endPlayback();
+        // Instruct clients to pause immediately, then update session state
+        broadcast({ type: 'sync_pause', payload: { commandId: `stop_${Date.now()}`, scheduledTime: Date.now() + 50 } });
+        broadcast({ type: 'session_state_updated', payload: getSessionState() });
+        broadcast({ type: 'history_updated', payload: getSessionHistory() });
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('[API] Sync stop error:', err);
+        return res.status(500).json({ success: false, error: 'Failed to stop playback' });
+    }
+});
+
 // Trigger clients to report positions for drift evaluation
 app.post('/api/sync/check-positions', (req, res) => {
     console.log('[API] POST /api/sync/check-positions - Requesting client positions');

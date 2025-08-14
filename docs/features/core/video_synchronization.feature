@@ -15,7 +15,6 @@ Feature: Perfect Video Synchronization
     Then the video should begin playing simultaneously on both "Player 1" and "Player 2"
     And at any point during playback, the difference between both screens must remain below 100 milliseconds
 
-  @skip
   Scenario: Player screens seek in sync
     Given a karaoke video is currently playing on both screens
     When the KJ seeks the video to the 1 minute and 30 second mark
@@ -56,7 +55,6 @@ Feature: Perfect Video Synchronization
     Then no automatic realignment should occur
     And the drift should remain above 200 milliseconds for at least 3 seconds
 
-  @skip
   Scenario: End of song returns players to Ready with no audio
     Given a karaoke video is currently playing on two screens
     When the song reaches the end
