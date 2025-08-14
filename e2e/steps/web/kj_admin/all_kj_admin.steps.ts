@@ -389,7 +389,7 @@ Given('at least one player screen is connected', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /^Player Screens$/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /No Player Screens Connected/i })).toHaveCount(0);
   // Wait for a device card to render (with an id line)
-  await expect(page.getByText(/^id: /i)).toBeVisible();
+  await expect(page.getByText(/^id: /i).first()).toBeVisible();
 });
 
 Given('the ticker text is currently empty', async ({}) => {

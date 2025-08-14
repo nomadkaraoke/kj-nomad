@@ -22,7 +22,6 @@ Feature: Perfect Video Synchronization
     Then both "Player 1" and "Player 2" should jump to the new timestamp
     And resume playing in sync, with a time difference of less than 100 milliseconds
 
-  @skip
   Scenario: Player screens pause and resume from the exact frame
     Given a karaoke video is currently playing on both screens
     When the KJ pauses the video
@@ -31,14 +30,12 @@ Feature: Perfect Video Synchronization
     When the KJ resumes the video
     Then playback must resume from the paused timestamp on both screens within 50 milliseconds
 
-  @skip
   Scenario: A reloaded player catches up to the current timestamp
     Given a karaoke video is currently playing and both screens are in sync
     When "Player 2" reloads and reconnects
     Then "Player 2" should begin playback at the current position within 500 milliseconds
     And the difference between both screens must drop below 100 milliseconds thereafter
 
-  @skip
   Scenario: Automatic drift correction realigns a muted screen without affecting anchor audio
     Given a karaoke video is currently playing on two screens
     And automatic drift correction is enabled

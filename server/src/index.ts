@@ -345,6 +345,61 @@ app.post('/api/sync/pause', async (req, res) => {
     }
 });
 
+app.post('/api/sync/resume', async (req, res) => {
+    console.log('[API] POST /api/sync/resume - Sync resume command');
+    try {
+        await videoSyncEngine.syncResume();
+        resumePlayback();
+        broadcast({ type: 'session_state_updated', payload: getSessionState() });
+        res.json({ success: true, message: 'Sync resume command sent' });
+    } catch (error) {
+        console.error('[API] Sync resume error:', error);
+        res.status(500).json({ success: false, error: 'Failed to sync resume' });
+    }
+});
+
+// Trigger clients to report positions for drift evaluation
+app.post('/api/sync/check-positions', (req, res) => {
+    console.log('[API] POST /api/sync/check-positions - Requesting client positions');
+    try {
+        const n = deviceManager.broadcastToDevices({ type: 'sync_check_position' });
+        res.json({ success: true, message: `Requested positions from ${n} devices` });
+    } catch (error) {
+        console.error('[API] check-positions error:', error);
+        res.status(500).json({ success: false, error: 'Failed to request positions' });
+    }
+});
+
+// Toggle automatic drift correction (on/off)
+app.post('/api/sync/auto-correction', (req, res) => {
+    const enabled = !!(req.body && typeof req.body === 'object' && 'enabled' in req.body && req.body.enabled);
+    autoDriftCorrectionEnabled = enabled;
+    try { syncLog('auto_drift_correction_set', { enabled, by: 'http', at: Date.now() }); } catch { /* ignore */ }
+    broadcast({ type: 'set_auto_drift_correction', payload: { enabled } });
+    res.json({ success: true, enabled });
+});
+
+// Set or clear the sync anchor by deviceId
+app.post('/api/sync/anchor', (req, res) => {
+    const body = (req.body && typeof req.body === 'object') ? req.body as { deviceId?: string | null; clear?: boolean } : {};
+    const clear = !!body.clear || !body.deviceId;
+    if (clear) {
+        videoSyncEngine.setAnchorClient(null);
+        videoSyncEngine.resetBaselineBias();
+        return res.json({ success: true, cleared: true });
+    }
+    const deviceId = body.deviceId as string;
+    let clientId: string | undefined;
+    for (const [connId, devId] of connectionToDeviceId.entries()) {
+        if (devId === deviceId) { clientId = connId; break; }
+    }
+    if (!clientId) {
+        return res.status(404).json({ success: false, error: 'Device not mapped to an active connection' });
+    }
+    videoSyncEngine.setAnchorClient(clientId);
+    res.json({ success: true, clientId });
+});
+
 // Device Management endpoints
 app.get('/api/devices', (req, res) => {
     console.log('[API] GET /api/devices - Get all devices');
