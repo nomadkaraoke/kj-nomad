@@ -167,6 +167,12 @@ class WebSocketService {
           const sessionState = payload as SessionState;
           store.setSessionState(sessionState);
           store.setPlaybackState(sessionState.playbackState);
+          // If not actively playing via sync engine anymore, clear sync state so UI/players don't think a schedule is pending
+          if (sessionState.playbackState !== 'playing') {
+            try { store.setSyncPlay(null); } catch { /* ignore */ }
+            try { store.setSyncPreload(null); } catch { /* ignore */ }
+            try { store.setSyncPause(null); } catch { /* ignore */ }
+          }
 
           if (sessionState.nowPlaying) {
             store.setNowPlaying({
@@ -205,6 +211,10 @@ class WebSocketService {
       case 'play_filler_music':
         if (payload && typeof payload === 'object') {
           const fillerPayload = payload as { fileName: string };
+          // Clear any sync schedules; filler plays locally without sync engine
+          try { store.setSyncPlay(null); } catch { /* ignore */ }
+          try { store.setSyncPreload(null); } catch { /* ignore */ }
+          try { store.setSyncPause(null); } catch { /* ignore */ }
           store.setNowPlaying({
             fileName: fillerPayload.fileName,
             isFiller: true,
@@ -273,6 +283,8 @@ class WebSocketService {
             const { commandId, scheduledTime, videoTime, videoUrl, timeDomain } = data as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' };
             try { console.log('[PlayerSync] WS sync_play', { commandId, scheduledTime, videoTime, videoUrl, timeDomain: timeDomain || 'client', now: Date.now() }); } catch { /* noop */ }
             store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl, timeDomain });
+            // Clear any previous pause baseline on a new play/resume schedule
+            try { useAppStore.getState().setSyncPause(null); } catch { /* noop */ }
             this.send({ type: 'client_schedule_received', payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
             const video = document.querySelector('video') as HTMLVideoElement | null;
             if (video) {
@@ -297,6 +309,7 @@ class WebSocketService {
             try { console.log('[PlayerSync] WS sync_pause', { commandId, scheduledTime, now: Date.now() }); } catch { /* noop */ }
             store.setSyncPause({ commandId, scheduledTime });
             this.send({ type: 'client_pause_schedule_received', payload: { commandId, scheduledTime, clientNow: Date.now() } });
+            // If this is a hard stop (no nowPlaying afterwards), clear src when it fires
           }
         }
         break;

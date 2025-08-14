@@ -24118,6 +24118,20 @@ class WebSocketService {
           const sessionState = payload;
           store.setSessionState(sessionState);
           store.setPlaybackState(sessionState.playbackState);
+          if (sessionState.playbackState !== "playing") {
+            try {
+              store.setSyncPlay(null);
+            } catch {
+            }
+            try {
+              store.setSyncPreload(null);
+            } catch {
+            }
+            try {
+              store.setSyncPause(null);
+            } catch {
+            }
+          }
           if (sessionState.nowPlaying) {
             store.setNowPlaying({
               songId: sessionState.nowPlaying.song.id,
@@ -24152,6 +24166,18 @@ class WebSocketService {
       case "play_filler_music":
         if (payload && typeof payload === "object") {
           const fillerPayload = payload;
+          try {
+            store.setSyncPlay(null);
+          } catch {
+          }
+          try {
+            store.setSyncPreload(null);
+          } catch {
+          }
+          try {
+            store.setSyncPause(null);
+          } catch {
+          }
           store.setNowPlaying({
             fileName: fillerPayload.fileName,
             isFiller: true,
@@ -24218,6 +24244,10 @@ class WebSocketService {
             } catch {
             }
             store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl, timeDomain });
+            try {
+              useAppStore.getState().setSyncPause(null);
+            } catch {
+            }
             this.send({ type: "client_schedule_received", payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
             const video = document.querySelector("video");
             if (video) {
@@ -30504,7 +30534,7 @@ const PlayerPage = () => {
   } = useAppStore();
   const videoRef = reactExports.useRef(null);
   const [isVideoLoaded, setIsVideoLoaded] = reactExports.useState(false);
-  const [, setIsPlaying] = reactExports.useState(false);
+  const [isPlaying, setIsPlaying] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
   const [nowMs, setNowMs] = reactExports.useState(Date.now());
   const [selfDriftMs, setSelfDriftMs] = reactExports.useState(0);
@@ -30543,6 +30573,16 @@ const PlayerPage = () => {
         setIsVideoLoaded(true);
       };
       const handleError = () => {
+        if (nowPlaying?.isFiller) {
+          setError(null);
+          setIsVideoLoaded(false);
+          try {
+            video.removeAttribute("src");
+            video.load();
+          } catch {
+          }
+          return;
+        }
         setError("Failed to load video");
         setIsVideoLoaded(false);
       };
@@ -30553,7 +30593,12 @@ const PlayerPage = () => {
         video.removeEventListener("error", handleError);
       };
     } else if (!nowPlaying && !syncActive) {
-      video.pause();
+      try {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      } catch {
+      }
       setIsPlaying(false);
       setIsVideoLoaded(false);
     }
@@ -30625,29 +30670,39 @@ const PlayerPage = () => {
     const timer = window.setTimeout(() => {
       try {
         console.log("[PlayerSync] pause schedule fired", { now: Date.now(), currentTime: video.currentTime });
+        websocketService.send({ type: "client_pausing", payload: { at: Date.now(), currentTime: video.currentTime } });
         video.pause();
         websocketService.send({ type: "client_paused", payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
+        if (!nowPlaying) {
+          try {
+            video.removeAttribute("src");
+            video.load();
+            setIsVideoLoaded(false);
+          } catch {
+          }
+        }
       } catch {
       }
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [syncPause]);
+  }, [syncPause, nowPlaying]);
   reactExports.useEffect(() => {
     const id = window.setInterval(() => {
       setNowMs(Date.now());
       const video = videoRef.current;
-      if (!video || !syncPlay) {
+      if (!video || !syncPlay || !isVideoLoaded) {
         setSelfDriftMs(0);
         return;
       }
       const s = syncPlay;
       const baselineMs = s.timeDomain === "server" ? s.scheduledTime + (useAppStore.getState().lastClockOffsetMs || 0) - (useAppStore.getState().lastClockLatencyMs || 0) : s.scheduledTime;
-      const expected = s.videoTime + Math.max(0, (Date.now() - baselineMs) / 1e3);
+      const pausedSince = syncPause ? Math.max(0, (Date.now() - syncPause.scheduledTime) / 1e3) : 0;
+      const expected = s.videoTime + Math.max(0, (Date.now() - baselineMs) / 1e3) - pausedSince;
       const drift = (video.currentTime || 0) - expected;
       setSelfDriftMs(Math.round(drift * 1e3));
     }, 250);
     return () => window.clearInterval(id);
-  }, [syncPlay]);
+  }, [syncPlay, syncPause, isVideoLoaded]);
   reactExports.useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -30738,7 +30793,13 @@ const PlayerPage = () => {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         "expected: ",
-        syncPlay ? (syncPlay.videoTime + Math.max(0, (nowMs - syncPlay.scheduledTime) / 1e3)).toFixed(3) : "n/a",
+        syncPlay ? (() => {
+          const s = syncPlay;
+          const baselineMs = s.timeDomain === "server" ? s.scheduledTime + (lastClockOffsetMs || 0) - (lastClockLatencyMs || 0) : s.scheduledTime;
+          const pausedSince = syncPause ? Math.max(0, (nowMs - syncPause.scheduledTime) / 1e3) : 0;
+          const exp = s.videoTime + Math.max(0, (nowMs - baselineMs) / 1e3) - pausedSince;
+          return exp.toFixed(3);
+        })() : "n/a",
         " s"
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -30762,9 +30823,33 @@ const PlayerPage = () => {
         "ms offset=",
         lastClockOffsetMs ?? 0,
         "ms"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "isPlaying: ",
+        String(isPlaying)
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "isVideoLoaded: ",
+        String(isVideoLoaded)
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "hasNowPlaying: ",
+        String(Boolean(nowPlaying))
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "video.readyState: ",
+        videoRef.current ? String(videoRef.current.readyState) : "n/a"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "video.muted: ",
+        videoRef.current ? String(videoRef.current.muted) : "n/a"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "video.paused: ",
+        videoRef.current ? String(videoRef.current.paused) : "n/a"
       ] })
     ] }),
-    (!nowPlaying || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
+    (!nowPlaying || !isVideoLoaded && !nowPlaying?.isFiller || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "w-16 h-16" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl md:text-6xl font-bold mb-4", children: "KJ-Nomad Ready" }),
@@ -30789,16 +30874,16 @@ const PlayerPage = () => {
         )) })
       ] })
     ] }) }),
-    nowPlaying && !isVideoLoaded && !error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/80 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
+    nowPlaying && !nowPlaying.isFiller && !isVideoLoaded && !error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-black/80 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "loading-spinner mb-4" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl", children: "Loading video..." }),
-      nowPlaying.singer && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-lg text-white/80 mt-2", children: [
+      nowPlaying?.singer && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-lg text-white/80 mt-2", children: [
         "Get ready, ",
         nowPlaying.singer,
         "!"
       ] })
     ] }) }),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-900/80 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
+    error && (!nowPlaying || !nowPlaying.isFiller) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-900/80 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-6xl mb-4", children: "⚠️" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold mb-2", children: "Playback Error" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg mb-4", children: error }),
@@ -31124,4 +31209,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-CdGAT9qO.js.map
+//# sourceMappingURL=index-Cr_vIQ5o.js.map

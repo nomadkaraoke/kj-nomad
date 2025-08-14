@@ -24,7 +24,7 @@ const PlayerPage: React.FC = () => {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-  const [, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(Date.now());
   const [selfDriftMs, setSelfDriftMs] = useState<number>(0);
@@ -73,6 +73,13 @@ const PlayerPage: React.FC = () => {
       };
       
       const handleError = () => {
+        // For filler/background, fail silently and return to Ready UI
+        if (nowPlaying?.isFiller) {
+          setError(null);
+          setIsVideoLoaded(false);
+          try { video.removeAttribute('src'); video.load(); } catch { /* ignore */ }
+          return;
+        }
         setError('Failed to load video');
         setIsVideoLoaded(false);
       };
@@ -85,7 +92,12 @@ const PlayerPage: React.FC = () => {
         video.removeEventListener('error', handleError);
       };
     } else if (!nowPlaying && !syncActive) {
-      video.pause();
+      try {
+        video.pause();
+        // Ensure media is fully unloaded so no stray audio remains
+        video.removeAttribute('src');
+        video.load();
+      } catch {/* ignore */}
       setIsPlaying(false);
       setIsVideoLoaded(false);
     }
@@ -163,19 +175,29 @@ const PlayerPage: React.FC = () => {
     const timer = window.setTimeout(() => {
       try {
         console.log('[PlayerSync] pause schedule fired', { now: Date.now(), currentTime: video.currentTime });
+        // Capture exact video time at pause for the server to use on resume
+        websocketService.send({ type: 'client_pausing', payload: { at: Date.now(), currentTime: video.currentTime } });
         video.pause();
         websocketService.send({ type: 'client_paused', payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
+        // If session has transitioned to stopped (no nowPlaying), ensure full unload for safety
+        if (!nowPlaying) {
+          try {
+            video.removeAttribute('src');
+            video.load();
+            setIsVideoLoaded(false);
+          } catch {/* ignore */}
+        }
       } catch {/* ignore */}
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [syncPause]);
+  }, [syncPause, nowPlaying]);
 
   // Debug overlay updater (self drift vs baseline)
   useEffect(() => {
     const id = window.setInterval(() => {
       setNowMs(Date.now());
       const video = videoRef.current;
-      if (!video || !syncPlay) {
+      if (!video || !syncPlay || !isVideoLoaded) {
         setSelfDriftMs(0);
         return;
       }
@@ -183,12 +205,13 @@ const PlayerPage: React.FC = () => {
       const baselineMs = s.timeDomain === 'server'
         ? s.scheduledTime + (useAppStore.getState().lastClockOffsetMs || 0) - (useAppStore.getState().lastClockLatencyMs || 0)
         : s.scheduledTime;
-      const expected = s.videoTime + Math.max(0, (Date.now() - baselineMs) / 1000);
+      const pausedSince = syncPause ? Math.max(0, (Date.now() - syncPause.scheduledTime) / 1000) : 0;
+      const expected = s.videoTime + Math.max(0, (Date.now() - baselineMs) / 1000) - pausedSince;
       const drift = (video.currentTime || 0) - expected;
       setSelfDriftMs(Math.round(drift * 1000));
     }, 250);
     return () => window.clearInterval(id);
-  }, [syncPlay]);
+  }, [syncPlay, syncPause, isVideoLoaded]);
 
   // One-time verbose video event logging to console
   useEffect(() => {
@@ -300,7 +323,21 @@ const PlayerPage: React.FC = () => {
           <div>Local time: {new Date(nowMs).toLocaleTimeString()}</div>
           <div>clientId: {playerConnectionId || 'n/a'}</div>
           <div>currentTime: {videoRef.current ? videoRef.current.currentTime.toFixed(3) : '0.000'} s</div>
-          <div>expected: {syncPlay ? (syncPlay.videoTime + Math.max(0, (nowMs - syncPlay.scheduledTime)/1000)).toFixed(3) : 'n/a'} s</div>
+          <div>
+            expected: {
+              syncPlay
+                ? (() => {
+                    const s = syncPlay as { videoTime: number; scheduledTime: number; timeDomain?: 'client' | 'server' };
+                    const baselineMs = s.timeDomain === 'server'
+                      ? s.scheduledTime + (lastClockOffsetMs || 0) - (lastClockLatencyMs || 0)
+                      : s.scheduledTime;
+                    const pausedSince = syncPause ? Math.max(0, (nowMs - syncPause.scheduledTime) / 1000) : 0;
+                    const exp = s.videoTime + Math.max(0, (nowMs - baselineMs) / 1000) - pausedSince;
+                    return exp.toFixed(3);
+                  })()
+                : 'n/a'
+            } s
+          </div>
           <div>self drift: {selfDriftMs} ms</div>
           {syncPlay && (
             <div>
@@ -308,11 +345,17 @@ const PlayerPage: React.FC = () => {
             </div>
           )}
           <div>clock sync: lat={lastClockLatencyMs ?? 0}ms offset={lastClockOffsetMs ?? 0}ms</div>
+          <div>isPlaying: {String(isPlaying)}</div>
+          <div>isVideoLoaded: {String(isVideoLoaded)}</div>
+          <div>hasNowPlaying: {String(Boolean(nowPlaying))}</div>
+          <div>video.readyState: {videoRef.current ? String(videoRef.current.readyState) : 'n/a'}</div>
+          <div>video.muted: {videoRef.current ? String(videoRef.current.muted) : 'n/a'}</div>
+          <div>video.paused: {videoRef.current ? String(videoRef.current.paused) : 'n/a'}</div>
         </div>
       )}
 
       {/* Overlay for when no video is playing */}
-      {(!nowPlaying || !deviceSettings.isVideoPlayerVisible) && (
+      {((!nowPlaying) || (!isVideoLoaded && !nowPlaying?.isFiller) || !deviceSettings.isVideoPlayerVisible) && (
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="mb-8">
@@ -356,12 +399,12 @@ const PlayerPage: React.FC = () => {
       )}
       
       {/* Loading state */}
-      {nowPlaying && !isVideoLoaded && !error && (
+      {nowPlaying && !nowPlaying.isFiller && !isVideoLoaded && !error && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="loading-spinner mb-4"></div>
             <p className="text-xl">Loading video...</p>
-            {nowPlaying.singer && (
+            {nowPlaying?.singer && (
               <p className="text-lg text-white/80 mt-2">
                 Get ready, {nowPlaying.singer}!
               </p>
@@ -371,7 +414,7 @@ const PlayerPage: React.FC = () => {
       )}
       
       {/* Error state */}
-      {error && (
+      {error && (!nowPlaying || !nowPlaying.isFiller) && (
         <div className="absolute inset-0 bg-red-900/80 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="text-6xl mb-4">⚠️</div>

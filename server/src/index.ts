@@ -1541,6 +1541,7 @@ wss.on('connection', (ws, req) => {
             pausePlayback();
             // Do not broadcast legacy 'pause' that resets client state; rely on sync_pause
             broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            try { syncLog('sync_pause_initiated', { at: Date.now() }); } catch { void 0; }
             break;
         }
         case 'resume_playback': {
@@ -1548,13 +1549,17 @@ wss.on('connection', (ws, req) => {
             videoSyncEngine.syncResume().catch((err) => console.error('[Sync] resume error:', err));
             resumePlayback();
             broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            try { syncLog('sync_resume_initiated', { at: Date.now() }); } catch { void 0; }
             break;
         }
         case 'stop_playback':
             stopPlayback();
+            // End engine playback and clear baselines; clients should unload
+            videoSyncEngine.endPlayback();
             syncRefScheduledTimeMs = null;
             syncRefVideoStartSec = null;
-            broadcast({ type: 'pause' });
+            // Instruct clients to hard-stop/unload and CLEAR sync state by sending a minimal session state update afterwards
+            broadcast({ type: 'sync_pause', payload: { commandId: `stop_${Date.now()}`, scheduledTime: Date.now() + 50 } });
             broadcast({ type: 'queue_updated', payload: getQueue() });
             broadcast({ type: 'session_state_updated', payload: getSessionState() });
             broadcast({ type: 'history_updated', payload: getSessionHistory() });
@@ -1563,6 +1568,8 @@ wss.on('connection', (ws, req) => {
             // Client reports a song finished; end sync engine playback and advance
             try { syncLog('client_song_ended', { clientId, at: Date.now() }); } catch { void 0; }
             videoSyncEngine.endPlayback();
+            // Close out current song in session (history, clear nowPlaying)
+            stopPlayback();
             // Mark current song as completed and move to next
             const nextSong = getNextSong();
             if (nextSong) {
@@ -1579,9 +1586,10 @@ wss.on('connection', (ws, req) => {
               if(nextFillerSong) {
                   broadcast({ type: 'play_filler_music', payload: { fileName: nextFillerSong.fileName } });
               } else {
-                  broadcast({ type: 'pause' });
+                  // Explicitly notify clients state changed to stopped
+                  broadcast({ type: 'session_state_updated', payload: getSessionState() });
               }
-              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+              broadcast({ type: 'history_updated', payload: getSessionHistory() });
             }
             break;
         }

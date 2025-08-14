@@ -36,6 +36,7 @@ interface SyncState {
     url: string;
     startTime: number;
     pausedAt?: number;
+      pausedAtVideoSec?: number;
     duration?: number;
   };
   clients: Map<string, SyncClient>;
@@ -318,6 +319,12 @@ export class VideoSyncEngine {
 
     if (this.syncState.currentVideo) {
       this.syncState.currentVideo.pausedAt = Date.now();
+      // Estimate paused video time based on baseline start and wall-clock
+      const baseline = this.syncState.lastSyncCommand;
+      if (baseline) {
+        const elapsedSec = Math.max(0, (this.syncState.currentVideo.pausedAt - this.syncState.currentVideo.startTime) / 1000);
+        this.syncState.currentVideo.pausedAtVideoSec = baseline.videoTime + elapsedSec;
+      }
     }
     this.syncState.isPlaying = false;
 
@@ -333,13 +340,17 @@ export class VideoSyncEngine {
       .filter(c => c.type === 'player');
 
     if (!this.syncState.lastSyncCommand) return;
-    const baselineStartSec = this.syncState.lastSyncCommand.videoTime;
     const scheduledTime = Date.now() + 400; // small coordination buffer
+    // Resume exactly where we paused: prefer precise pausedAtVideoSec captured on pause
+    const pausedVideoSec = this.syncState.currentVideo?.pausedAtVideoSec;
+    const baselineStartSec = pausedVideoSec != null
+      ? pausedVideoSec
+      : this.syncState.lastSyncCommand.videoTime + Math.max(0, (Date.now() - (this.syncState.currentVideo?.startTime || Date.now())) / 1000);
     const finalCommand: SyncCommand = {
       type: 'sync_play',
       videoUrl: this.syncState.currentVideo?.url || '',
       scheduledTime,
-      videoTime: baselineStartSec + Math.max(0, (Date.now() - (this.syncState.currentVideo?.startTime || scheduledTime)) / 1000),
+      videoTime: baselineStartSec,
       commandId: `resume_${Date.now()}`,
       tolerance: this.SYNC_TOLERANCE
     };
@@ -368,6 +379,8 @@ export class VideoSyncEngine {
     this.syncState.isPlaying = true;
     if (this.syncState.currentVideo) {
       this.syncState.currentVideo.startTime = scheduledTime;
+      this.syncState.currentVideo.pausedAt = undefined;
+      this.syncState.currentVideo.pausedAtVideoSec = undefined;
     }
   }
 
