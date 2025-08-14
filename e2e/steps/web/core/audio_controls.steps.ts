@@ -4,7 +4,8 @@ import { expect } from '@playwright/test';
 const { Given, When, Then } = createBdd();
 
 Given('the KJ is on the Admin Interface', async ({ page }) => {
-  // TODO: implement step
+  await page.goto('http://127.0.0.1:8080/');
+  await expect(page.locator('input[placeholder="Singer Name"]')).toBeVisible();
 });
 
 Given('a song is currently playing', async ({ page }) => {

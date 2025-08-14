@@ -78,6 +78,22 @@ const OnlineSingerView: React.FC = () => {
           setRequestStatus(`Error: ${message.payload?.error || 'Failed to request song'}`);
           setTimeout(() => setRequestStatus(null), 5000);
           break;
+        case 'youtube_download_progress': {
+          const p = message.payload as { videoId: string; status?: string; progress?: number; singerName?: string };
+          if (p && p.singerName && p.singerName.toLowerCase() === singerName.trim().toLowerCase()) {
+            if (p.status === 'downloading') {
+              setRequestStatus(`Downloading from YouTube... ${p.progress != null ? Math.round(p.progress) + '%' : ''}`);
+              setTimeout(() => setRequestStatus(null), 3000);
+            } else if (p.status === 'failed') {
+              setRequestStatus('YouTube download failed. Please try another video.');
+              setTimeout(() => setRequestStatus(null), 5000);
+            } else if (p.status === 'completed') {
+              setRequestStatus('YouTube download complete! You are in the queue.');
+              setTimeout(() => setRequestStatus(null), 4000);
+            }
+          }
+          break;
+        }
         case 'download_progress':
           // Update download progress for YouTube songs
           setSongs(prev => prev.map(song => 
@@ -102,7 +118,7 @@ const OnlineSingerView: React.FC = () => {
     return () => {
       window.removeEventListener('websocket-message', handleWebSocketMessage as EventListener);
     };
-  }, []);
+  }, [singerName]);
 
   const searchSongs = async (query: string, sessionData: SessionData | null) => {
     if (!query.trim()) {
@@ -169,15 +185,20 @@ const OnlineSingerView: React.FC = () => {
     }
 
     // Send song request via WebSocket
-    const message = {
-      type: 'request_song',
-      payload: {
-        songId: song.id,
-        singerName: singerName.trim(),
-        source: song.source,
-        sessionId: sessionData?.sessionId
-      }
-    };
+    const basePayload = {
+      singerName: singerName.trim(),
+      sessionId: sessionData?.sessionId,
+    } as const;
+
+    const message = song.source === 'youtube'
+      ? {
+          type: 'request_youtube_song',
+          payload: { videoId: song.id, title: `${song.artist} - ${song.title}`, ...basePayload }
+        }
+      : {
+          type: 'request_song',
+          payload: { songId: song.id, ...basePayload }
+        };
 
     // Dispatch custom event that will be picked up by OnlineSessionManager
     window.dispatchEvent(new CustomEvent('send-websocket-message', { 

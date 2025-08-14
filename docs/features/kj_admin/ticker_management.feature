@@ -1,4 +1,3 @@
-@skip
 @kj-admin @ticker
 Feature: Scrolling Ticker Management
   As a Karaoke Jockey (KJ)

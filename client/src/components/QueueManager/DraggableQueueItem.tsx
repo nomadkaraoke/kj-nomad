@@ -12,6 +12,15 @@ interface Song {
 interface QueueEntry {
   song: Song;
   singerName: string;
+  // Optional metadata for YouTube source
+  source?: 'local' | 'youtube';
+  download?: {
+    status: 'pending' | 'downloading' | 'completed' | 'failed' | 'cancelled';
+    progress?: number;
+    videoId?: string;
+    downloadId?: string;
+    fileName?: string;
+  };
 }
 
 interface DraggableQueueItemProps {
@@ -19,6 +28,7 @@ interface DraggableQueueItemProps {
   index: number;
   onPlay: (songId: string, singerName: string) => void;
   onRemove: (songId: string) => void;
+  onRetryYouTube?: (entry: QueueEntry) => void;
 }
 
 const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
@@ -26,6 +36,7 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
   index,
   onPlay,
   onRemove,
+  onRetryYouTube,
 }) => {
   const {
     attributes,
@@ -40,7 +51,11 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  };
+  } as React.CSSProperties;
+
+  const isYouTube = entry.source === 'youtube' || (entry.song.id || '').startsWith('yt_');
+  const progress = entry.download?.progress;
+  const status = entry.download?.status;
 
   return (
     <div
@@ -78,16 +93,41 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
 
       {/* Song Info */}
       <div className="flex-grow min-w-0">
-        <div className="font-semibold text-gray-900 dark:text-white truncate">
+        <div className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2">
           {entry.song.artist} - {entry.song.title}
+          {isYouTube && (
+            <span title="YouTube" className="inline-flex items-center text-red-600">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.5 6.2s-.2-1.7-.8-2.5c-.8-.8-1.7-.8-2.1-.9C17.1 2.5 12 2.5 12 2.5h0s-5.1 0-8.6.3c-.5 0-1.4.1-2.1.9-.6.8-.8 2.5-.8 2.5S0 8.2 0 10.2v1.6c0 2 .2 4 0 4s.2 1.7.8 2.5c.8.8 1.9.8 2.4.9 1.8.2 7.7.3 7.7.3s5.1 0 8.6-.3c.5 0 1.4-.1 2.1-.9.6-.8.8-2.5.8-2.5s.2-2 .2-4v-1.6c0-2-.2-4-.2-4zM9.5 13.7V7.9l6.2 2.9-6.2 2.9z" />
+              </svg>
+            </span>
+          )}
         </div>
         <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
           Singer: {entry.singerName}
         </div>
+        {isYouTube && status && (
+          <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+            {status === 'downloading' && (
+              <span>Downloading... {typeof progress === 'number' ? `${Math.round(progress)}%` : ''}</span>
+            )}
+            {status === 'failed' && <span className="text-red-500">Download Failed</span>}
+            {status === 'completed' && <span className="text-green-500">Ready</span>}
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
       <div className="flex items-center space-x-2 ml-4">
+        {isYouTube && status === 'failed' && (
+          <button
+            onClick={() => onRetryYouTube && onRetryYouTube(entry)}
+            className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-md transition-colors duration-200"
+            title="Retry Download"
+          >
+            Retry
+          </button>
+        )}
         <button
           onClick={() => onPlay(entry.song.id, entry.singerName)}
           className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition-colors duration-200 flex items-center space-x-1"
@@ -98,7 +138,6 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
           </svg>
           <span>Play</span>
         </button>
-        
         <button
           onClick={() => onRemove(entry.song.id)}
           className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-md transition-colors duration-200 flex items-center space-x-1"

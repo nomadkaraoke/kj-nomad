@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Input } from '../components/ui/Input';
 import { useAppStore } from '../store/appStore';
 import SessionHistory from '../components/SessionHistory/SessionHistory';
@@ -38,6 +38,12 @@ const HomePage: React.FC = () => {
   } = useAppStore();
   
   const [newTickerText, setNewTickerText] = useState(tickerText);
+  // Filler music UI state
+  const [fillerDir, setFillerDir] = useState('');
+  const [fillerVolume, setFillerVolume] = useState(0.4);
+  const [fillerFiles, setFillerFiles] = useState<string[]>([]);
+  const [selectedFiller, setSelectedFiller] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
   
   const handleUpdateTicker = () => {
     updateTicker(newTickerText);
@@ -70,6 +76,28 @@ const HomePage: React.FC = () => {
       // TODO: Implement a rollback mechanism
     }
   };
+
+  // Load filler settings + list on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/filler/settings');
+        const j = await r.json();
+        if (j?.success && j.data) {
+          setFillerDir(j.data.directory || '');
+          setFillerVolume(typeof j.data.volume === 'number' ? j.data.volume : 0.4);
+        }
+      } catch { /* ignore */ }
+      try {
+        const r2 = await fetch('/api/filler/list');
+        const j2 = await r2.json();
+        if (j2?.success) {
+          setFillerFiles(j2.data || []);
+          if (j2.data?.length) setSelectedFiller(j2.data[0]);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const handlePlaySong = (songId: string, singerName: string) => {
     // Use the existing playNext function or create a custom play function
@@ -232,6 +260,45 @@ const HomePage: React.FC = () => {
               >
                 Update Ticker
               </button>
+            </div>
+          </div>
+
+          {/* Filler Music Panel */}
+          <div className="card">
+            <h2 className="text-xl font-semibold mb-4">Filler Music</h2>
+            <div className="space-y-3">
+              <div className="flex gap-2 items-center">
+                <input className="input flex-1" placeholder="Filler directory" value={fillerDir} onChange={(e) => setFillerDir(e.target.value)} />
+                <button className="btn-secondary" onClick={async () => {
+                  await fetch('/api/filler/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) });
+                  const resp = await fetch('/api/filler/list'); const data = await resp.json(); if (data?.success) { setFillerFiles(data.data || []); if (data.data?.length) setSelectedFiller(data.data[0]); }
+                }}>Save</button>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm opacity-80">Volume</label>
+                <input type="range" min={0} max={1} step={0.01} value={fillerVolume} onChange={(e) => setFillerVolume(parseFloat(e.target.value))} onMouseUp={() => { fetch('/api/filler/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) }); }} />
+                <span className="text-sm w-10 text-right">{Math.round(fillerVolume*100)}%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="file" accept="video/*,audio/*" onChange={async (e) => {
+                  if (!e.target.files || e.target.files.length === 0) return;
+                  const file = e.target.files[0];
+                  const form = new FormData(); form.append('file', file);
+                  setUploading(true);
+                  try { await fetch('/api/filler/upload', { method: 'POST', body: form }); const r = await fetch('/api/filler/list'); const j = await r.json(); if (j?.success) { setFillerFiles(j.data || []); if (j.data?.length) setSelectedFiller(j.data[0]); } } finally { setUploading(false); }
+                }} />
+                {uploading && <span className="text-sm opacity-80">Uploading...</span>}
+              </div>
+              {fillerFiles.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <select className="input" value={selectedFiller} onChange={(e) => setSelectedFiller(e.target.value)}>
+                    {fillerFiles.map(f => (<option key={f} value={f}>{f}</option>))}
+                  </select>
+                  <button className="btn-tertiary" onClick={async () => { const r = await fetch('/api/filler/list'); const j = await r.json(); if (j?.success) setFillerFiles(j.data || []); }}>Refresh</button>
+                  <button className="btn" onClick={async () => { if (selectedFiller) await fetch('/api/filler/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileName: selectedFiller }) }); }}>Play Selected</button>
+                  <button className="btn-tertiary" onClick={() => { const ws = useAppStore.getState().socket; ws?.send(JSON.stringify({ type: 'stop_filler_manual' })); }}>Stop</button>
+                </div>
+              )}
             </div>
           </div>
 

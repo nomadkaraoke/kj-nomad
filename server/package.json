@@ -34,9 +34,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/multer": "^2.0.0",
     "bonjour-service": ">=1.0.0",
     "express": ">=5.0.0",
     "fuse.js": ">=7.0.0",
+    "multer": "^2.0.2",
     "ws": ">=8.0.0"
   },
   "devDependencies": {

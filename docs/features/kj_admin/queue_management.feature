@@ -6,6 +6,11 @@ Feature: KJ Queue Management
 
   Background:
     Given the KJ is logged into the Admin Interface
+  Scenario: KJ queues a YouTube song from Admin UI using pasted link
+    Given the queue is empty
+    When the KJ pastes a YouTube URL for singer "Andrew"
+    Then the queue should contain a YouTube entry for "Andrew" in queue spec
+
 
   Scenario: KJ adds a singer request from a paper slip (Offline Mode)
     Given the KJ is running an offline session
@@ -14,14 +19,12 @@ Feature: KJ Queue Management
     And selects the correct song from the local library
     Then "Test Singer" with the song "Fake Song Title" should be added to the bottom of the queue
 
-  @skip
   Scenario: KJ reorders the queue using drag-and-drop
     Given the singer queue is: 1. "Singer A", 2. "Singer B", 3. "Singer C", 4. "Singer D"
     When the KJ drags "Singer C" from position 3 and drops them at position 1
     Then the singer queue should be updated to: 1. "Singer C", 2. "Singer A", 3. "Singer B", 4. "Singer D"
     And all connected clients should see the updated queue order in real-time
 
-  @skip
   Scenario: KJ removes a singer from the queue
     Given the singer queue includes "Singer B" at position 2
     When the KJ removes "Singer B" from the queue

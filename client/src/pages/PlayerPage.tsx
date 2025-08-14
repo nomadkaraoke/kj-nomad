@@ -36,6 +36,7 @@ const PlayerPage: React.FC = () => {
     isSidebarVisible: false,
     isVideoPlayerVisible: true,
   });
+  const setFillerFadeRequestedAt = useAppStore((s) => s.setFillerFadeRequestedAt);
   const playerConnectionId = useAppStore((s) => s.playerConnectionId);
 
   useEffect(() => {
@@ -184,6 +185,36 @@ const PlayerPage: React.FC = () => {
     }, delay);
     return () => window.clearTimeout(timer);
   }, [syncPause, nowPlaying]);
+
+  // Soft fade-out handler when server requests filler fade
+  useEffect(() => {
+    const unsub = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse((event.data as string) || '{}');
+        if (msg && msg.type === 'filler_fade_out') {
+          setFillerFadeRequestedAt(Date.now());
+          const video = videoRef.current;
+          if (!video) return;
+          const startVol = video.volume;
+          const steps = 10;
+          const step = startVol / steps;
+          let i = 0;
+          const fadeTimer = setInterval(() => {
+            i += 1;
+            try {
+              if (!video) { clearInterval(fadeTimer); return; }
+              video.volume = Math.max(0, startVol - i * step);
+              if (i >= steps) clearInterval(fadeTimer);
+            } catch { clearInterval(fadeTimer); }
+          }, 80);
+        }
+      } catch { /* ignore */ }
+    };
+    // Attach directly to websocket if available via service
+    const ws = (window as unknown as { __kj_ws?: WebSocket }).__kj_ws;
+    if (ws) ws.addEventListener('message', unsub);
+    return () => { if (ws) ws.removeEventListener('message', unsub); };
+  }, [setFillerFadeRequestedAt]);
 
   // Debug overlay updater (self drift vs baseline)
   useEffect(() => {
@@ -452,6 +483,16 @@ const PlayerPage: React.FC = () => {
       {nowPlaying?.isFiller && (
         <div className="absolute top-4 right-4 bg-yellow-500/80 backdrop-blur-sm text-slate-900 px-4 py-2 rounded-lg font-semibold">
           Intermission Music
+        </div>
+      )}
+
+      {/* Up Next Overlay during filler music */}
+      {nowPlaying?.isFiller && queue.length > 0 && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-6 py-3 rounded-lg shadow-lg">
+          <div className="text-sm opacity-80">Up next...</div>
+          <div className="font-semibold">
+            {queue[0].singerName}: {queue[0].song.artist} - {queue[0].song.title}
+          </div>
         </div>
       )}
       

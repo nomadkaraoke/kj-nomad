@@ -26,6 +26,8 @@ class WebSocketService {
       const url = `${protocol}//${host}${port}`;
 
       this.ws = new WebSocket(url);
+      // Expose for pages that need to listen at low-level (e.g., simple fade triggers)
+      try { (window as unknown as { __kj_ws?: WebSocket }).__kj_ws = this.ws as WebSocket; } catch { /* ignore */ }
 
       this.ws.onopen = () => {
         console.log('WebSocket connected');
@@ -152,9 +154,22 @@ class WebSocketService {
     const store = useAppStore.getState();
 
     switch (type) {
-      case 'queue_updated':
-        store.setQueue(payload as QueueEntry[]);
+      case 'queue_updated': {
+        const incoming = (payload as QueueEntry[]) || [];
+        const current = store.queue || [];
+        const merged = incoming.map((entry) => {
+          const existing = current.find(e => e.song.id === entry.song.id);
+          if (!existing) {
+            return entry;
+          }
+          // Preserve YouTube source and download progress/status from existing, unless incoming provides it
+          const source = entry.source || existing.source;
+          const download = entry.download || existing.download;
+          return { ...entry, source, download } as QueueEntry;
+        });
+        store.setQueue(merged);
         break;
+      }
 
       case 'devices_updated':
         if (payload && Array.isArray(payload)) {
@@ -237,6 +252,27 @@ class WebSocketService {
         store.setTickerText(payload as string);
         break;
 
+      case 'youtube_download_progress': {
+        if (payload && typeof payload === 'object') {
+          const { videoId, progress, status, songId, fileName } = payload as { videoId: string; progress?: number; status?: string; songId?: string; fileName?: string };
+          const q = store.queue.slice();
+          const idx = q.findIndex(e => e.song.id === (songId || `yt_${videoId}`));
+          if (idx !== -1) {
+            const entry = { ...q[idx] } as import('../store/appStore').QueueEntry;
+            entry.source = entry.source || 'youtube';
+            const normalizedStatus: 'pending' | 'downloading' | 'completed' | 'failed' | 'cancelled' =
+              status === 'pending' || status === 'downloading' || status === 'completed' || status === 'failed' || status === 'cancelled' ? status as 'pending' | 'downloading' | 'completed' | 'failed' | 'cancelled' : 'pending';
+            entry.download = { ...(entry.download || {}), status: normalizedStatus, progress, videoId, fileName };
+            if (status === 'completed' && fileName) {
+              entry.song = { ...entry.song, fileName };
+            }
+            q[idx] = entry;
+            store.setQueue(q);
+          }
+        }
+        break;
+      }
+
       case 'set_auto_drift_correction': {
         if (payload && typeof payload === 'object' && 'enabled' in (payload as { enabled: boolean })) {
           const enabled = Boolean((payload as { enabled: boolean }).enabled);
@@ -272,7 +308,7 @@ class WebSocketService {
 
       case 'sync_preload': {
         {
-          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; videoUrl: string } : (message as { commandId?: string; videoUrl?: string });
+          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; videoUrl: string } : (message as unknown as { commandId?: string; videoUrl?: string });
           if (data && data.commandId && data.videoUrl) {
             const { commandId, videoUrl } = data as { commandId: string; videoUrl: string };
             try { console.log('[PlayerSync] WS sync_preload', { commandId, videoUrl, now: Date.now() }); } catch { /* noop */ }
@@ -286,7 +322,7 @@ class WebSocketService {
 
       case 'sync_play': {
         {
-          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' } : (message as { commandId?: string; scheduledTime?: number; videoTime?: number; videoUrl?: string; timeDomain?: 'client' | 'server' });
+          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' } : (message as unknown as { commandId?: string; scheduledTime?: number; videoTime?: number; videoUrl?: string; timeDomain?: 'client' | 'server' });
           if (data && data.commandId != null && data.scheduledTime != null && data.videoTime != null && data.videoUrl) {
             const { commandId, scheduledTime, videoTime, videoUrl, timeDomain } = data as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' };
             try { console.log('[PlayerSync] WS sync_play', { commandId, scheduledTime, videoTime, videoUrl, timeDomain: timeDomain || 'client', now: Date.now() }); } catch { /* noop */ }
@@ -311,7 +347,7 @@ class WebSocketService {
 
       case 'sync_pause': {
         {
-          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; scheduledTime: number } : (message as { commandId?: string; scheduledTime?: number });
+          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; scheduledTime: number } : (message as unknown as { commandId?: string; scheduledTime?: number });
           if (data && data.commandId != null && data.scheduledTime != null) {
             const { commandId, scheduledTime } = data as { commandId: string; scheduledTime: number };
             try { console.log('[PlayerSync] WS sync_pause', { commandId, scheduledTime, now: Date.now() }); } catch { /* noop */ }

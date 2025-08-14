@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import DraggableQueue from '../QueueManager/DraggableQueue';
 import { Input } from '../ui/Input';
 import { useAppStore } from '../../store/appStore';
+import { useEffect } from 'react';
 
 interface Song {
     id: string;
@@ -37,6 +38,24 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
   const autoCorrectionEnabled = useAppStore((s) => s.autoDriftCorrectionEnabled ?? true);
   const toggleAuto = useAppStore((s) => (s as unknown as { toggleAutoDriftCorrection: () => void }).toggleAutoDriftCorrection);
   const [anchorId, setAnchorId] = useState<string | null>(null);
+  const [fillerDir, setFillerDir] = useState('');
+  const [fillerVolume, setFillerVolume] = useState(0.4);
+  const [fillerFiles, setFillerFiles] = useState<string[]>([]);
+  const [selectedFiller, setSelectedFiller] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    // Load persisted filler settings
+    fetch('/api/filler/settings').then(r => r.json()).then((resp) => {
+      if (resp?.success && resp.data) {
+        setFillerDir(resp.data.directory || '');
+        setFillerVolume(typeof resp.data.volume === 'number' ? resp.data.volume : 0.4);
+      }
+    }).catch(() => void 0);
+    // Load file list
+    const loadList = () => fetch('/api/filler/list').then(r => r.json()).then((resp) => { if (resp?.success) { setFillerFiles(resp.data || []); setSelectedFiller((resp.data && resp.data[0]) || ''); } });
+    loadList().catch(() => void 0);
+  }, []);
 
   const playNextSong = () => {
     const nextSong = queue[0];
@@ -191,6 +210,13 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
           onReorder={handleReorderQueue}
           onPlay={handlePlaySong}
           onRemove={handleRemoveSong}
+          onRetryYouTube={(entry) => {
+            if (!socket || entry.source !== 'youtube' || !entry.download?.videoId) return;
+            socket.send(JSON.stringify({
+              type: 'request_youtube_song',
+              payload: { videoId: entry.download.videoId, title: `${entry.song.artist} - ${entry.song.title}`, singerName: entry.singerName }
+            }));
+          }}
         />
       </div>
 
@@ -240,6 +266,52 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
           <button onClick={updateTicker} data-testid="update-ticker-button" className="btn-primary">
             Update Ticker
           </button>
+        </div>
+      </div>
+
+      {/* Filler Music Management */}
+      <div className="card">
+        <h2 className="text-xl font-semibold mb-4">Filler Music</h2>
+        <div className="space-y-3">
+          <div className="flex gap-2 items-center">
+            <input className="input flex-1" placeholder="Filler directory" value={fillerDir} onChange={(e) => setFillerDir(e.target.value)} />
+            <button className="btn-secondary" onClick={async () => {
+              await fetch('/api/filler/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) }).then(() => fetch('/api/filler/list').then(r=>r.json()).then(resp => { if (resp?.success) setFillerFiles(resp.data || []); })).catch(()=>void 0);
+            }}>Save</button>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm opacity-80">Volume</label>
+            <input type="range" min={0} max={1} step={0.01} value={fillerVolume} onChange={(e) => setFillerVolume(parseFloat(e.target.value))} onMouseUp={() => { socket?.send?.(JSON.stringify({ type: 'set_filler_volume', payload: { volume: fillerVolume } })); fetch('/api/filler/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) }); }} />
+            <span className="text-sm w-10 text-right">{Math.round(fillerVolume*100)}%</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="file" accept="video/*,audio/*" onChange={async (e) => {
+              if (!e.target.files || e.target.files.length === 0) return;
+              const file = e.target.files[0];
+              const form = new FormData();
+              form.append('file', file);
+              setUploading(true);
+              try {
+                await fetch('/api/filler/upload', { method: 'POST', body: form });
+                const resp = await fetch('/api/filler/list');
+                const data = await resp.json();
+                if (data?.success) { setFillerFiles(data.data || []); if (data.data?.length) setSelectedFiller(data.data[0]); }
+              } finally { setUploading(false); }
+            }} />
+            {uploading && <span className="text-sm opacity-80">Uploading...</span>}
+          </div>
+          {fillerFiles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <select className="input" value={selectedFiller} onChange={(e) => setSelectedFiller(e.target.value)}>
+                {fillerFiles.map(f => (<option key={f} value={f}>{f}</option>))}
+              </select>
+              <button className="btn-tertiary" onClick={async () => { const r = await fetch('/api/filler/list'); const d = await r.json(); if (d?.success) setFillerFiles(d.data || []); }}>Refresh</button>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button className="btn" onClick={async () => { if (selectedFiller) { await fetch('/api/filler/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileName: selectedFiller }) }); } }}>Play Selected</button>
+            <button className="btn-tertiary" onClick={() => socket?.send?.(JSON.stringify({ type: 'stop_filler_manual' }))}>Stop</button>
+          </div>
         </div>
       </div>
     </div>

@@ -48,6 +48,7 @@ import { cloudConnector } from './cloudConnector.js';
 import {
   applySetupRoutes,
   loadSetupConfig,
+  saveSetupConfig,
 } from './setupWizard.js';
 import { videoSyncEngine } from './videoSyncEngine.js';
 import { deviceManager } from './deviceManager.js';
@@ -55,6 +56,9 @@ import { paperWorkflow } from './paperWorkflow.js';
 import { singerProfileManager } from './singerProfiles.js';
 import { advancedQueueManager } from './advancedQueue.js';
 import { applyDebugRoutes } from './debug.js';
+import { resolveTickerTemplate } from './ticker.js';
+import { youtubeIntegration } from './youtubeIntegration.js';
+import multer from 'multer';
 
 import { Bonjour } from 'bonjour-service';
 
@@ -108,9 +112,73 @@ console.log('Using client path:', clientPath);
 // Enable static file serving
 app.use(express.static(clientPath));
 app.use(express.json());
+// Filler upload endpoint
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 500 } });
+app.post('/api/filler/upload', upload.single('file'), (req, res) => {
+    try {
+        const cfg = loadSetupConfig();
+        const dir = cfg.fillerMusicDirectory || cfg.mediaDirectory;
+        if (!dir) return res.status(400).json({ success: false, error: 'No filler directory configured' });
+        if (!req.file) return res.status(400).json({ success: false, error: 'File required' });
+        const safeName = (req.file.originalname || 'upload').replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const targetPath = path.join(dir, safeName);
+        fs.writeFileSync(targetPath, req.file.buffer);
+        res.json({ success: true, fileName: safeName });
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
+    }
+});
 
-// Apply debug routes
-applyDebugRoutes(app);
+// Filler settings endpoints
+app.get('/api/filler/settings', (req, res) => {
+    const cfg = loadSetupConfig();
+    res.json({ success: true, data: { directory: cfg.fillerMusicDirectory || cfg.mediaDirectory, volume: cfg.fillerMusicVolume ?? 0.4 } });
+});
+
+app.post('/api/filler/settings', (req, res) => {
+    try {
+        const { directory, volume } = (req.body && typeof req.body === 'object') ? req.body as { directory?: string; volume?: number } : {};
+        const cfg = loadSetupConfig();
+        if (directory) cfg.fillerMusicDirectory = directory;
+        if (typeof volume === 'number' && !Number.isNaN(volume)) cfg.fillerMusicVolume = Math.max(0, Math.min(1, volume));
+        const ok = saveSetupConfig(cfg);
+        if (ok) {
+            if (directory) {
+                try { scanFillerMusic(directory); } catch { /* ignore */ }
+            }
+            res.json({ success: true });
+        } else {
+            res.status(500).json({ success: false, error: 'Failed to persist settings' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
+    }
+});
+
+app.get('/api/filler/list', (req, res) => {
+    try {
+        const cfg = loadSetupConfig();
+        const dir = cfg.fillerMusicDirectory || cfg.mediaDirectory;
+        const files = fs.readdirSync(dir).filter(f => /\.(mp4|webm|mov|avi|mp3|wav)$/i.test(f));
+        res.json({ success: true, data: files });
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err), data: [] });
+    }
+});
+
+app.post('/api/filler/play', (req, res) => {
+    try {
+        const { fileName } = (req.body && typeof req.body === 'object') ? req.body as { fileName?: string } : {};
+        if (!fileName) return res.status(400).json({ success: false, error: 'fileName required' });
+        broadcast({ type: 'play_filler_music', payload: { fileName } });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
+    }
+});
+
+// Apply debug routes with broadcaster
+applyDebugRoutes(app, (data) => broadcast(data));
 
 // TEMP: Simple test endpoint
 app.get('/api/test', (req, res) => {
@@ -124,6 +192,19 @@ app.get('/api/songs', (req, res) => {
     const query = req.query.q as string || '';
     const results = searchSongs(query);
     res.json(results);
+});
+
+// API endpoint to search YouTube (online mode)
+app.get('/api/youtube/search', async (req, res) => {
+    const q = (req.query.q as string) || '';
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+    try {
+        const results = await youtubeIntegration.searchYouTube(q, limit);
+        res.json({ success: true, data: results });
+    } catch (error) {
+        console.error('[API] YouTube search error:', error);
+        res.json({ success: false, data: [] });
+    }
 });
 
 // API endpoint to get current queue
@@ -301,6 +382,8 @@ app.post('/api/sync/play', async (req, res) => {
     }
     
     try {
+        // Instruct clients to fade out filler music if it's currently playing
+        try { broadcast({ type: 'filler_fade_out' }); } catch { /* ignore */ }
         // Schedule via engine first, then read back its baseline to ensure consistency
         const success = await videoSyncEngine.syncPlayVideo(videoUrl, startTime);
         if (success) {
@@ -1231,7 +1314,16 @@ app.get('/api/media/:fileName', (req, res) => {
     const mediaPath = path.join(config.mediaDirectory, fileName);
 
     try {
-        const stat = fs.statSync(mediaPath);
+        let chosenPath = mediaPath;
+        let stat: fs.Stats;
+        try {
+            stat = fs.statSync(chosenPath);
+        } catch {
+            // Fallback: check YouTube cache for this file
+            const ytPath = path.join(youtubeIntegration.getCacheDirectory(), fileName);
+            stat = fs.statSync(ytPath);
+            chosenPath = ytPath;
+        }
         const fileSize = stat.size;
         const range = req.headers.range;
 
@@ -1243,7 +1335,7 @@ app.get('/api/media/:fileName', (req, res) => {
             // Validate parsed range values
             if (!isNaN(start) && !isNaN(end) && start >= 0 && end >= start && end < fileSize) {
                 const chunksize = (end - start) + 1;
-                const file = fs.createReadStream(mediaPath, { start, end });
+                const file = fs.createReadStream(chosenPath, { start, end });
                 const head = {
                     'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                     'Accept-Ranges': 'bytes',
@@ -1260,7 +1352,7 @@ app.get('/api/media/:fileName', (req, res) => {
                     'Content-Type': getContentType(fileName),
                 };
                 res.writeHead(200, head);
-                fs.createReadStream(mediaPath).pipe(res);
+                fs.createReadStream(chosenPath).pipe(res);
             }
         } else {
             const head = {
@@ -1268,7 +1360,7 @@ app.get('/api/media/:fileName', (req, res) => {
                 'Content-Type': getContentType(fileName),
             };
             res.writeHead(200, head);
-            fs.createReadStream(mediaPath).pipe(res);
+            fs.createReadStream(chosenPath).pipe(res);
         }
     } catch (error) {
         console.error('Error serving media file:', error);
@@ -1441,6 +1533,29 @@ wss.on('connection', (ws, req) => {
             }
             break;
         }
+        case 'set_filler_volume': {
+            const vol = (payload && typeof payload === 'object' && 'volume' in (payload as { volume: number })) ? Number((payload as { volume: number }).volume) : 0.5;
+            // Broadcast to players that are currently playing filler to adjust volume (client-side can smooth fade)
+            broadcast({ type: 'filler_set_volume', payload: { volume: Math.max(0, Math.min(1, vol)) } });
+            break;
+        }
+        case 'play_filler_manual': {
+            const cfg = loadSetupConfig();
+            // pick first file in filler directory
+            try {
+                const dir = cfg.fillerMusicDirectory || cfg.mediaDirectory;
+                const files = fs.readdirSync(dir).filter(f => /\.(mp4|webm|mov|avi|mp3|wav)$/i.test(f));
+                if (files.length > 0) {
+                    broadcast({ type: 'play_filler_music', payload: { fileName: files[0] } });
+                }
+            } catch { /* ignore */ }
+            break;
+        }
+        case 'stop_filler_manual': {
+            // Reuse sync_pause to stop filler on clients by signaling stop
+            broadcast({ type: 'sync_pause', payload: { commandId: `stop_filler_${Date.now()}`, scheduledTime: Date.now() + 50 } });
+            break;
+        }
         case 'clock_sync_response': {
             // Handle clock synchronization response
             videoSyncEngine.handleClockSyncResponse(clientId, payload);
@@ -1586,9 +1701,34 @@ wss.on('connection', (ws, req) => {
         case 'request_song': {
             const song = getSongById(payload.songId);
             if (song) {
-            addSongToQueue(song, payload.singerName);
-            broadcast({ type: 'queue_updated', payload: getQueue() });
-            broadcast({ type: 'session_state_updated', payload: getSessionState() });
+              addSongToQueue(song, payload.singerName);
+              broadcast({ type: 'queue_updated', payload: getQueue() });
+              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            }
+            break;
+        }
+        case 'request_youtube_song': {
+            // payload: { videoId: string, title?: string, singerName: string }
+            try {
+              const { videoId, title, singerName } = payload as { videoId: string; title?: string; singerName: string };
+              const provisionalFile = `youtube_${videoId}_${(title||videoId).replace(/[^a-zA-Z0-9_-]/g,'_')}.mp4`;
+              // Insert provisional queue entry so KJ can see progress
+              const provisionalSong: { id: string; artist: string; title: string; fileName: string } = { id: `yt_${videoId}`, artist: 'YouTube', title: title || videoId, fileName: provisionalFile };
+              // Cast to Song-compatible structure is safe due to matching fields
+              addSongToQueue(provisionalSong as unknown as { id: string; artist: string; title: string; fileName: string }, singerName);
+              broadcast({ type: 'queue_updated', payload: getQueue() });
+              // Start download and stream progress
+              void youtubeIntegration.downloadVideo(videoId, title, (progress: { progress?: number; status: string; fileName?: string }) => {
+                broadcast({ type: 'youtube_download_progress', payload: { videoId, progress: progress.progress, status: progress.status, songId: `yt_${videoId}`, fileName: progress.fileName, singerName } });
+              }).then((finalFile) => {
+                broadcast({ type: 'youtube_download_progress', payload: { videoId, status: 'completed', songId: `yt_${videoId}`, fileName: finalFile, singerName } });
+              }).catch((_err: unknown) => {
+                broadcast({ type: 'youtube_download_progress', payload: { videoId, status: 'failed', songId: `yt_${videoId}`, singerName } });
+                // Notify singer clients as well
+                broadcast({ type: 'song_request_error', payload: { videoId, error: 'YouTube download failed', singerName } });
+              });
+            } catch (e) {
+              console.error('[YouTube] request error', e);
             }
             break;
         }
@@ -1716,10 +1856,13 @@ wss.on('connection', (ws, req) => {
             }
             break;
         }
-        case 'ticker_updated':
+        case 'ticker_updated': {
             console.log('[WebSocket] Ticker update:', payload);
-            broadcast({ type: 'ticker_updated', payload });
+            const text = typeof payload === 'string' ? payload : '';
+            const resolved = resolveTickerTemplate(text);
+            broadcast({ type: 'ticker_updated', payload: resolved });
             break;
+        }
         case 'set_auto_drift_correction': {
             const enabled = !!(payload && typeof payload === 'object' && 'enabled' in (payload as { enabled: boolean }) && (payload as { enabled: boolean }).enabled);
             autoDriftCorrectionEnabled = enabled;
@@ -1829,4 +1972,17 @@ server.listen(PORT, async () => {
     console.log('[Server] Online mode initiated. Waiting for connection from the app...');
     // No auto-launch, as the user flow is different.
   }
+});
+
+// Serve cached YouTube media files if present (fallback path when files are not copied into media directory)
+app.get('/api/youtube-cache/:fileName', (req, res) => {
+    try {
+        const base = youtubeIntegration.getCacheDirectory();
+        const p = path.join(base, req.params.fileName);
+        const stat = fs.statSync(p);
+        res.writeHead(200, { 'Content-Length': stat.size, 'Content-Type': 'video/mp4' });
+        fs.createReadStream(p).pipe(res);
+    } catch {
+        res.status(404).send('Not found');
+    }
 });

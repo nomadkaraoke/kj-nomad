@@ -15,6 +15,7 @@ import { scanMediaLibrary } from './mediaLibrary.js';
 export interface SetupConfig {
   mediaDirectory: string;
   fillerMusicDirectory?: string;
+  fillerMusicVolume?: number;
   kjName: string;
   venue?: string;
   autoLaunchBrowser: boolean;
@@ -48,6 +49,7 @@ const DEFAULT_MEDIA_DIR = getMediaDefaultPath();
 const DEFAULT_CONFIG: SetupConfig = {
   mediaDirectory: DEFAULT_MEDIA_DIR,
   fillerMusicDirectory: DEFAULT_MEDIA_DIR,
+  fillerMusicVolume: 0.4,
   kjName: 'Local KJ',
   venue: '',
   autoLaunchBrowser: true,

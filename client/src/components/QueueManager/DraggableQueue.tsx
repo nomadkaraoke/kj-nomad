@@ -30,6 +30,8 @@ interface Song {
 interface QueueEntry {
   song: Song;
   singerName: string;
+  source?: 'local' | 'youtube';
+  download?: { status?: string; progress?: number; videoId?: string; fileName?: string };
 }
 
 interface DraggableQueueProps {
@@ -37,6 +39,7 @@ interface DraggableQueueProps {
   onReorder: (fromIndex: number, toIndex: number) => void;
   onPlay: (songId: string, singerName: string) => void;
   onRemove: (songId: string) => void;
+  onRetryYouTube?: (entry: QueueEntry) => void;
   className?: string;
 }
 
@@ -45,6 +48,7 @@ const DraggableQueue: React.FC<DraggableQueueProps> = ({
   onReorder,
   onPlay,
   onRemove,
+  onRetryYouTube,
   className = '',
 }) => {
   const sensors = useSensors(
@@ -128,6 +132,7 @@ const DraggableQueue: React.FC<DraggableQueueProps> = ({
                 index={index}
                 onPlay={onPlay}
                 onRemove={onRemove}
+                onRetryYouTube={onRetryYouTube}
               />
             ))}
           </div>

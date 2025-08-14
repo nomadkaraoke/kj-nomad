@@ -12,6 +12,14 @@ export interface QueueEntry {
   song: Song;
   singerName: string;
   queuedAt: number; // Updated to match server
+  source?: 'local' | 'youtube';
+  download?: {
+    status: 'pending' | 'downloading' | 'completed' | 'failed' | 'cancelled';
+    progress?: number;
+    videoId?: string;
+    downloadId?: string;
+    fileName?: string;
+  };
 }
 
 export interface NowPlaying {
@@ -107,6 +115,8 @@ export interface AppState {
   // Last known clock sync stats (client view)
   lastClockLatencyMs?: number;
   lastClockOffsetMs?: number;
+  // Filler fade
+  fillerFadeRequestedAt?: number;
   
   // Search state
   searchQuery: string;
@@ -148,6 +158,7 @@ export interface AppState {
   setSyncPause: (cmd: { commandId: string; scheduledTime: number } | null) => void;
   setPlayerConnectionId: (id: string | null) => void;
   setClockSyncStats: (latencyMs: number, offsetMs: number) => void;
+  setFillerFadeRequestedAt: (at: number | undefined) => void;
   
   // Complex actions
   checkServerInfo: () => Promise<void>;
@@ -209,6 +220,7 @@ export const useAppStore = create<AppState>()(
       syncPause: null,
       lastClockLatencyMs: 0,
       lastClockOffsetMs: 0,
+      fillerFadeRequestedAt: undefined,
       serverInfo: { port: 0, localIps: [] },
       devices: [],
       
@@ -263,6 +275,7 @@ export const useAppStore = create<AppState>()(
       setSyncPause: (cmd) => set({ syncPause: cmd }),
       setPlayerConnectionId: (id) => set({ playerConnectionId: id }),
       setClockSyncStats: (latencyMs, offsetMs) => set({ lastClockLatencyMs: latencyMs, lastClockOffsetMs: offsetMs }),
+      setFillerFadeRequestedAt: (at) => set({ fillerFadeRequestedAt: at }),
       
       // Complex actions
       checkServerInfo: async () => {

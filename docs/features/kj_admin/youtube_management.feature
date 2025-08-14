@@ -1,4 +1,3 @@
-@skip
 @kj-admin @youtube @online
 Feature: KJ YouTube Download Management
   As a Karaoke Jockey (KJ)
@@ -7,6 +6,18 @@ Feature: KJ YouTube Download Management
 
   Background:
     Given the KJ is running an online session with YouTube integration enabled
+
+  Scenario: KJ requests YouTube song from Admin UI using search
+    Given the KJ is logged into the Admin Interface
+    When the KJ searches YouTube for "Bloc Party Hunting for Witches"
+    Then a concise list of results should be displayed as "channel: title"
+    When the KJ adds the first result to the queue for "Andrew"
+    Then the queue should contain a YouTube entry for "Andrew"
+
+  Scenario: KJ requests YouTube song from Admin UI using a pasted link
+    Given the KJ is logged into the Admin Interface
+    When the KJ pastes the YouTube URL "https://www.youtube.com/watch?v=dQw4w9WgXcQ" and adds for "Andrew"
+    Then the queue should contain a YouTube entry for "Andrew"
 
   Scenario: KJ views the download progress of a YouTube song
     Given a singer has requested a song from YouTube

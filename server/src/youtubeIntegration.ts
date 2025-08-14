@@ -380,6 +380,13 @@ class YouTubeIntegration {
     this.maxConcurrentDownloads = maxConcurrentDownloads;
   }
 
+  /**
+   * Expose cache directory for HTTP serving fallback
+   */
+  public getCacheDirectory(): string {
+    return this.cacheDirectory;
+  }
+
   // Private methods
 
   private ensureCacheDirectory(): void {

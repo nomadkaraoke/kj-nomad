@@ -1,1 +1,13 @@
-{"setupComplete":true,"mediaDirectory":"/Users/andrew/Projects/kj-nomad/server/media"}
+{
+  "mediaDirectory": "/var/folders/rl/g00b5hr5191d9xx0zvss2pcr0000gp/T/kj-nomad-e2e-62WN3k",
+  "fillerMusicDirectory": "/var/folders/rl/g00b5hr5191d9xx0zvss2pcr0000gp/T/kj-nomad-e2e-62WN3k",
+  "fillerMusicVolume": 0.4,
+  "kjName": "Local KJ",
+  "venue": "",
+  "autoLaunchBrowser": true,
+  "defaultPort": 8080,
+  "enableNetworkAccess": true,
+  "setupComplete": true,
+  "lastModified": "2025-08-14T16:50:06.238Z",
+  "createdAt": "2025-08-14T16:50:06.238Z"
+}

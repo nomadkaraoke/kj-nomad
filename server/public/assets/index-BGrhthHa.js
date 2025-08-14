@@ -22022,6 +22022,7 @@ const useAppStore = create()(
       syncPause: null,
       lastClockLatencyMs: 0,
       lastClockOffsetMs: 0,
+      fillerFadeRequestedAt: void 0,
       serverInfo: { port: 0, localIps: [] },
       devices: [],
       // Search state
@@ -22073,6 +22074,7 @@ const useAppStore = create()(
       setSyncPause: (cmd) => set({ syncPause: cmd }),
       setPlayerConnectionId: (id) => set({ playerConnectionId: id }),
       setClockSyncStats: (latencyMs, offsetMs) => set({ lastClockLatencyMs: latencyMs, lastClockOffsetMs: offsetMs }),
+      setFillerFadeRequestedAt: (at) => set({ fillerFadeRequestedAt: at }),
       // Complex actions
       checkServerInfo: async () => {
         try {
@@ -24004,6 +24006,10 @@ class WebSocketService {
       const port = window.location.port ? `:${window.location.port}` : "";
       const url = `${protocol}//${host}${port}`;
       this.ws = new WebSocket(url);
+      try {
+        window.__kj_ws = this.ws;
+      } catch {
+      }
       this.ws.onopen = () => {
         console.log("WebSocket connected");
         this.isConnecting = false;
@@ -24108,9 +24114,21 @@ class WebSocketService {
     const { type, payload } = message;
     const store = useAppStore.getState();
     switch (type) {
-      case "queue_updated":
-        store.setQueue(payload);
+      case "queue_updated": {
+        const incoming = payload || [];
+        const current = store.queue || [];
+        const merged = incoming.map((entry) => {
+          const existing = current.find((e) => e.song.id === entry.song.id);
+          if (!existing) {
+            return entry;
+          }
+          const source = entry.source || existing.source;
+          const download = entry.download || existing.download;
+          return { ...entry, source, download };
+        });
+        store.setQueue(merged);
         break;
+      }
       case "devices_updated":
         if (payload && Array.isArray(payload)) {
           store.setDevices(payload);
@@ -24199,6 +24217,25 @@ class WebSocketService {
       case "ticker_updated":
         store.setTickerText(payload);
         break;
+      case "youtube_download_progress": {
+        if (payload && typeof payload === "object") {
+          const { videoId, progress, status, songId, fileName } = payload;
+          const q = store.queue.slice();
+          const idx = q.findIndex((e) => e.song.id === (songId || `yt_${videoId}`));
+          if (idx !== -1) {
+            const entry = { ...q[idx] };
+            entry.source = entry.source || "youtube";
+            const normalizedStatus = status === "pending" || status === "downloading" || status === "completed" || status === "failed" || status === "cancelled" ? status : "pending";
+            entry.download = { ...entry.download || {}, status: normalizedStatus, progress, videoId, fileName };
+            if (status === "completed" && fileName) {
+              entry.song = { ...entry.song, fileName };
+            }
+            q[idx] = entry;
+            store.setQueue(q);
+          }
+        }
+        break;
+      }
       case "set_auto_drift_correction": {
         if (payload && typeof payload === "object" && "enabled" in payload) {
           const enabled = Boolean(payload.enabled);
@@ -29428,7 +29465,8 @@ const DraggableQueueItem = ({
   entry,
   index,
   onPlay,
-  onRemove
+  onRemove,
+  onRetryYouTube
 }) => {
   const {
     attributes,
@@ -29443,6 +29481,9 @@ const DraggableQueueItem = ({
     transition,
     opacity: isDragging ? 0.5 : 1
   };
+  const isYouTube = entry.source === "youtube" || (entry.song.id || "").startsWith("yt_");
+  const progress = entry.download?.progress;
+  const status = entry.download?.status;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -29477,17 +29518,35 @@ const DraggableQueueItem = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full flex items-center justify-center text-sm font-semibold mr-4", children: index + 1 }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-grow min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-gray-900 dark:text-white truncate", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2", children: [
             entry.song.artist,
             " - ",
-            entry.song.title
+            entry.song.title,
+            isYouTube && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { title: "YouTube", className: "inline-flex items-center text-red-600", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M23.5 6.2s-.2-1.7-.8-2.5c-.8-.8-1.7-.8-2.1-.9C17.1 2.5 12 2.5 12 2.5h0s-5.1 0-8.6.3c-.5 0-1.4.1-2.1.9-.6.8-.8 2.5-.8 2.5S0 8.2 0 10.2v1.6c0 2 .2 4 0 4s.2 1.7.8 2.5c.8.8 1.9.8 2.4.9 1.8.2 7.7.3 7.7.3s5.1 0 8.6-.3c.5 0 1.4-.1 2.1-.9.6-.8.8-2.5.8-2.5s.2-2 .2-4v-1.6c0-2-.2-4-.2-4zM9.5 13.7V7.9l6.2 2.9-6.2 2.9z" }) }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-600 dark:text-gray-400 truncate", children: [
             "Singer: ",
             entry.singerName
+          ] }),
+          isYouTube && status && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-600 dark:text-gray-300", children: [
+            status === "downloading" && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Downloading... ",
+              typeof progress === "number" ? `${Math.round(progress)}%` : ""
+            ] }),
+            status === "failed" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-500", children: "Download Failed" }),
+            status === "completed" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-500", children: "Ready" })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 ml-4", children: [
+          isYouTube && status === "failed" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => onRetryYouTube && onRetryYouTube(entry),
+              className: "px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-md transition-colors duration-200",
+              title: "Retry Download",
+              children: "Retry"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -29522,6 +29581,7 @@ const DraggableQueue = ({
   onReorder,
   onPlay,
   onRemove,
+  onRetryYouTube,
   className = ""
 }) => {
   const sensors = useSensors(
@@ -29595,7 +29655,8 @@ const DraggableQueue = ({
                 entry,
                 index,
                 onPlay,
-                onRemove
+                onRemove,
+                onRetryYouTube
               },
               entry.song.id
             )) })
@@ -29621,6 +29682,9 @@ const ManualRequestForm = () => {
   const [searchQuery, setSearchQuery] = reactExports.useState("");
   const [searchResults, setSearchResults] = reactExports.useState([]);
   const [selectedSong, setSelectedSong] = reactExports.useState(null);
+  const [ytQuery, setYtQuery] = reactExports.useState("");
+  const [ytResults, setYtResults] = reactExports.useState([]);
+  const [ytUrl, setYtUrl] = reactExports.useState("");
   const { requestSong } = useAppStore();
   const debouncedSearch = reactExports.useMemo(
     () => debounce(async (query) => {
@@ -29663,6 +29727,44 @@ const ManualRequestForm = () => {
       setSearchQuery("");
       setSelectedSong(null);
     }
+  };
+  const searchYouTube = reactExports.useMemo(
+    () => debounce(async (q) => {
+      if (!q.trim()) {
+        setYtResults([]);
+        return;
+      }
+      try {
+        const resp = await fetch(`/api/youtube/search?q=${encodeURIComponent(q)}&limit=5`);
+        const data = await resp.json();
+        if (data?.success && Array.isArray(data.data)) {
+          setYtResults(data.data.map((r2) => ({ id: r2.id, title: r2.title, channel: r2.channel })));
+        } else {
+          setYtResults([]);
+        }
+      } catch {
+        setYtResults([]);
+      }
+    }, 300),
+    []
+  );
+  const requestYouTubeById = (videoId) => {
+    const ws = useAppStore.getState().socket;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !singerName.trim()) return;
+    ws.send(JSON.stringify({ type: "request_youtube_song", payload: { videoId, singerName } }));
+    setYtResults([]);
+    setYtQuery("");
+    setYtUrl("");
+    setSingerName("");
+  };
+  const extractYouTubeId = (url) => {
+    try {
+      const u = new URL(url);
+      if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
+      if (u.hostname === "youtu.be") return u.pathname.replace("/", "") || null;
+    } catch {
+    }
+    return null;
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold mb-4", children: "Add Manual Request" }),
@@ -29717,7 +29819,54 @@ const ManualRequestForm = () => {
           className: "btn-primary w-full",
           children: "Add to Queue"
         }
-      )
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("hr", { className: "my-4 opacity-20" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold", children: "YouTube" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            value: ytQuery,
+            onChange: (e) => {
+              setYtQuery(e.target.value);
+              searchYouTube(e.target.value);
+            },
+            placeholder: "Search YouTube (channel: title)",
+            className: "input-primary w-full"
+          }
+        ),
+        ytResults.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "bg-card-light dark:bg-card-dark rounded border max-h-56 overflow-auto", children: ytResults.map((r2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "px-3 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer", onClick: () => requestYouTubeById(r2.id), children: [
+          r2.channel,
+          ": ",
+          r2.title
+        ] }, r2.id)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: ytUrl,
+              onChange: (e) => setYtUrl(e.target.value),
+              placeholder: "Or paste a YouTube link",
+              className: "input-primary flex-1"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              className: "btn-secondary",
+              disabled: !singerName.trim() || !extractYouTubeId(ytUrl),
+              onClick: () => {
+                const id = extractYouTubeId(ytUrl);
+                if (id) requestYouTubeById(id);
+              },
+              children: "Add from Link"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs opacity-70", children: "Assign to singer above, then search or paste a link." })
+      ] })
     ] })
   ] });
 };
@@ -30091,6 +30240,11 @@ const HomePage = () => {
     setShowHistory
   } = useAppStore();
   const [newTickerText, setNewTickerText] = reactExports.useState(tickerText);
+  const [fillerDir, setFillerDir] = reactExports.useState("");
+  const [fillerVolume, setFillerVolume] = reactExports.useState(0.4);
+  const [fillerFiles, setFillerFiles] = reactExports.useState([]);
+  const [selectedFiller, setSelectedFiller] = reactExports.useState("");
+  const [uploading, setUploading] = reactExports.useState(false);
   const handleUpdateTicker = () => {
     updateTicker(newTickerText);
   };
@@ -30114,6 +30268,28 @@ const HomePage = () => {
       console.error("Error reordering queue:", error);
     }
   };
+  reactExports.useEffect(() => {
+    (async () => {
+      try {
+        const r2 = await fetch("/api/filler/settings");
+        const j = await r2.json();
+        if (j?.success && j.data) {
+          setFillerDir(j.data.directory || "");
+          setFillerVolume(typeof j.data.volume === "number" ? j.data.volume : 0.4);
+        }
+      } catch {
+      }
+      try {
+        const r2 = await fetch("/api/filler/list");
+        const j2 = await r2.json();
+        if (j2?.success) {
+          setFillerFiles(j2.data || []);
+          if (j2.data?.length) setSelectedFiller(j2.data[0]);
+        }
+      } catch {
+      }
+    })();
+  }, []);
   const handlePlaySong = (songId, singerName) => {
     const { socket } = useAppStore.getState();
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -30258,6 +30434,69 @@ const HomePage = () => {
               children: "Update Ticker"
             }
           )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Filler Music" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1", placeholder: "Filler directory", value: fillerDir, onChange: (e) => setFillerDir(e.target.value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-secondary", onClick: async () => {
+              await fetch("/api/filler/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) });
+              const resp = await fetch("/api/filler/list");
+              const data = await resp.json();
+              if (data?.success) {
+                setFillerFiles(data.data || []);
+                if (data.data?.length) setSelectedFiller(data.data[0]);
+              }
+            }, children: "Save" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm opacity-80", children: "Volume" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", min: 0, max: 1, step: 0.01, value: fillerVolume, onChange: (e) => setFillerVolume(parseFloat(e.target.value)), onMouseUp: () => {
+              fetch("/api/filler/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) });
+            } }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm w-10 text-right", children: [
+              Math.round(fillerVolume * 100),
+              "%"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "file", accept: "video/*,audio/*", onChange: async (e) => {
+              if (!e.target.files || e.target.files.length === 0) return;
+              const file = e.target.files[0];
+              const form = new FormData();
+              form.append("file", file);
+              setUploading(true);
+              try {
+                await fetch("/api/filler/upload", { method: "POST", body: form });
+                const r2 = await fetch("/api/filler/list");
+                const j = await r2.json();
+                if (j?.success) {
+                  setFillerFiles(j.data || []);
+                  if (j.data?.length) setSelectedFiller(j.data[0]);
+                }
+              } finally {
+                setUploading(false);
+              }
+            } }),
+            uploading && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm opacity-80", children: "Uploading..." })
+          ] }),
+          fillerFiles.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "input", value: selectedFiller, onChange: (e) => setSelectedFiller(e.target.value), children: fillerFiles.map((f) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: f, children: f }, f)) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: async () => {
+              const r2 = await fetch("/api/filler/list");
+              const j = await r2.json();
+              if (j?.success) setFillerFiles(j.data || []);
+            }, children: "Refresh" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn", onClick: async () => {
+              if (selectedFiller) await fetch("/api/filler/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileName: selectedFiller }) });
+            }, children: "Play Selected" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: () => {
+              const ws = useAppStore.getState().socket;
+              ws?.send(JSON.stringify({ type: "stop_filler_manual" }));
+            }, children: "Stop" })
+          ] })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerScreenManager, {}),
@@ -30568,6 +30807,7 @@ const PlayerPage = () => {
     isSidebarVisible: false,
     isVideoPlayerVisible: true
   });
+  const setFillerFadeRequestedAt = useAppStore((s) => s.setFillerFadeRequestedAt);
   const playerConnectionId = useAppStore((s) => s.playerConnectionId);
   reactExports.useEffect(() => {
     websocketService.connect("player");
@@ -30700,6 +30940,41 @@ const PlayerPage = () => {
     }, delay);
     return () => window.clearTimeout(timer);
   }, [syncPause, nowPlaying]);
+  reactExports.useEffect(() => {
+    const unsub = (event) => {
+      try {
+        const msg = JSON.parse(event.data || "{}");
+        if (msg && msg.type === "filler_fade_out") {
+          setFillerFadeRequestedAt(Date.now());
+          const video = videoRef.current;
+          if (!video) return;
+          const startVol = video.volume;
+          const steps = 10;
+          const step = startVol / steps;
+          let i = 0;
+          const fadeTimer = setInterval(() => {
+            i += 1;
+            try {
+              if (!video) {
+                clearInterval(fadeTimer);
+                return;
+              }
+              video.volume = Math.max(0, startVol - i * step);
+              if (i >= steps) clearInterval(fadeTimer);
+            } catch {
+              clearInterval(fadeTimer);
+            }
+          }, 80);
+        }
+      } catch {
+      }
+    };
+    const ws = window.__kj_ws;
+    if (ws) ws.addEventListener("message", unsub);
+    return () => {
+      if (ws) ws.removeEventListener("message", unsub);
+    };
+  }, [setFillerFadeRequestedAt]);
   reactExports.useEffect(() => {
     const id = window.setInterval(() => {
       setNowMs(Date.now());
@@ -30930,6 +31205,16 @@ const PlayerPage = () => {
       ] })
     ] }),
     nowPlaying?.isFiller && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-4 right-4 bg-yellow-500/80 backdrop-blur-sm text-slate-900 px-4 py-2 rounded-lg font-semibold", children: "Intermission Music" }),
+    nowPlaying?.isFiller && queue.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-6 py-3 rounded-lg shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm opacity-80", children: "Up next..." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold", children: [
+        queue[0].singerName,
+        ": ",
+        queue[0].song.artist,
+        " - ",
+        queue[0].song.title
+      ] })
+    ] }),
     deviceSettings.isTickerVisible && /* @__PURE__ */ jsxRuntimeExports.jsx(Ticker, { text: tickerText })
   ] });
 };
@@ -31223,4 +31508,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DiFVzdbw.js.map
+//# sourceMappingURL=index-BGrhthHa.js.map

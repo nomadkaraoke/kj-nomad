@@ -8,6 +8,9 @@
 @layer properties {
   @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {
     *, :before, :after, ::backdrop {
+      --tw-translate-x: 0;
+      --tw-translate-y: 0;
+      --tw-translate-z: 0;
       --tw-rotate-x: initial;
       --tw-rotate-y: initial;
       --tw-rotate-z: initial;
@@ -418,8 +421,16 @@
     bottom: calc(var(--spacing, .25rem) * 0);
   }
 
+  .bottom-20 {
+    bottom: calc(var(--spacing, .25rem) * 20);
+  }
+
   .left-0 {
     left: calc(var(--spacing, .25rem) * 0);
+  }
+
+  .left-1\/2 {
+    left: 50%;
   }
 
   .left-4 {
@@ -726,6 +737,10 @@
     height: 100vh;
   }
 
+  .max-h-56 {
+    max-height: calc(var(--spacing, .25rem) * 56);
+  }
+
   .max-h-60 {
     max-height: calc(var(--spacing, .25rem) * 60);
   }
@@ -772,6 +787,10 @@
 
   .w-8 {
     width: calc(var(--spacing, .25rem) * 8);
+  }
+
+  .w-10 {
+    width: calc(var(--spacing, .25rem) * 10);
   }
 
   .w-12 {
@@ -828,6 +847,11 @@
 
   .flex-grow {
     flex-grow: 1;
+  }
+
+  .-translate-x-1\/2 {
+    --tw-translate-x: calc(calc(1 / 2 * 100%) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
   }
 
   .transform {
@@ -1179,6 +1203,16 @@
   @supports (color: color-mix(in lab, red, red)) {
     .bg-black\/60 {
       background-color: color-mix(in oklab, var(--color-black, #000) 60%, transparent);
+    }
+  }
+
+  .bg-black\/70 {
+    background-color: #000000b3;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-black\/70 {
+      background-color: color-mix(in oklab, var(--color-black, #000) 70%, transparent);
     }
   }
 
@@ -1777,6 +1811,10 @@
     color: var(--color-text-secondary-light);
   }
 
+  .opacity-20 {
+    opacity: .2;
+  }
+
   .opacity-50 {
     opacity: .5;
   }
@@ -1913,6 +1951,10 @@
 
     .hover\:bg-red-700:hover {
       background-color: var(--color-red-700, oklch(50.5% .213 27.518));
+    }
+
+    .hover\:bg-yellow-600:hover {
+      background-color: var(--color-yellow-600, oklch(68.1% .162 75.834));
     }
 
     .hover\:text-brand-pink:hover {
@@ -2131,6 +2173,10 @@
     color: var(--color-gray-100, oklch(96.7% .003 264.542));
   }
 
+  .dark\:text-gray-300:where(.dark, .dark *) {
+    color: var(--color-gray-300, oklch(87.2% .01 258.338));
+  }
+
   .dark\:text-gray-400:where(.dark, .dark *) {
     color: var(--color-gray-400, oklch(70.7% .022 261.325));
   }
@@ -2220,6 +2266,24 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@property --tw-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-translate-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
 }
 
 @property --tw-rotate-x {
