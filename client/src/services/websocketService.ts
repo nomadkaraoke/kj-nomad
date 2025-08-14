@@ -167,8 +167,8 @@ class WebSocketService {
           const sessionState = payload as SessionState;
           store.setSessionState(sessionState);
           store.setPlaybackState(sessionState.playbackState);
-          // If not actively playing via sync engine anymore, clear sync state so UI/players don't think a schedule is pending
-          if (sessionState.playbackState !== 'playing') {
+          // Clear sync state only when fully stopped; keep baseline during pause so clients don't reload src
+          if (sessionState.playbackState === 'stopped') {
             try { store.setSyncPlay(null); } catch { /* ignore */ }
             try { store.setSyncPreload(null); } catch { /* ignore */ }
             try { store.setSyncPause(null); } catch { /* ignore */ }

@@ -175,18 +175,11 @@ const PlayerPage: React.FC = () => {
     const timer = window.setTimeout(() => {
       try {
         console.log('[PlayerSync] pause schedule fired', { now: Date.now(), currentTime: video.currentTime });
-        // Capture exact video time at pause for the server to use on resume
+        // Do not change src on pause; just pause at current frame
         websocketService.send({ type: 'client_pausing', payload: { at: Date.now(), currentTime: video.currentTime } });
         video.pause();
         websocketService.send({ type: 'client_paused', payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
-        // If session has transitioned to stopped (no nowPlaying), ensure full unload for safety
-        if (!nowPlaying) {
-          try {
-            video.removeAttribute('src');
-            video.load();
-            setIsVideoLoaded(false);
-          } catch {/* ignore */}
-        }
+        // Do not unload on pause; unloading resets currentTime to 0 and reloads metadata
       } catch {/* ignore */}
     }, delay);
     return () => window.clearTimeout(timer);
@@ -355,7 +348,7 @@ const PlayerPage: React.FC = () => {
       )}
 
       {/* Overlay for when no video is playing */}
-      {((!nowPlaying) || (!isVideoLoaded && !nowPlaying?.isFiller) || !deviceSettings.isVideoPlayerVisible) && (
+      {((!nowPlaying) || !isVideoLoaded || !deviceSettings.isVideoPlayerVisible) && (
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="mb-8">

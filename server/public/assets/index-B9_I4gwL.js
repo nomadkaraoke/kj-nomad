@@ -24118,7 +24118,7 @@ class WebSocketService {
           const sessionState = payload;
           store.setSessionState(sessionState);
           store.setPlaybackState(sessionState.playbackState);
-          if (sessionState.playbackState !== "playing") {
+          if (sessionState.playbackState === "stopped") {
             try {
               store.setSyncPlay(null);
             } catch {
@@ -30673,14 +30673,6 @@ const PlayerPage = () => {
         websocketService.send({ type: "client_pausing", payload: { at: Date.now(), currentTime: video.currentTime } });
         video.pause();
         websocketService.send({ type: "client_paused", payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
-        if (!nowPlaying) {
-          try {
-            video.removeAttribute("src");
-            video.load();
-            setIsVideoLoaded(false);
-          } catch {
-          }
-        }
       } catch {
       }
     }, delay);
@@ -30849,7 +30841,7 @@ const PlayerPage = () => {
         videoRef.current ? String(videoRef.current.paused) : "n/a"
       ] })
     ] }),
-    (!nowPlaying || !isVideoLoaded && !nowPlaying?.isFiller || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
+    (!nowPlaying || !isVideoLoaded || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "w-16 h-16" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl md:text-6xl font-bold mb-4", children: "KJ-Nomad Ready" }),
@@ -31209,4 +31201,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-Cr_vIQ5o.js.map
+//# sourceMappingURL=index-B9_I4gwL.js.map

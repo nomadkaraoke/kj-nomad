@@ -318,11 +318,10 @@ export class VideoSyncEngine {
     }
 
     if (this.syncState.currentVideo) {
-      this.syncState.currentVideo.pausedAt = Date.now();
-      // Estimate paused video time based on baseline start and wall-clock
+      this.syncState.currentVideo.pausedAt = scheduledTime; // use the scheduled pause time for consistency
       const baseline = this.syncState.lastSyncCommand;
       if (baseline) {
-        const elapsedSec = Math.max(0, (this.syncState.currentVideo.pausedAt - this.syncState.currentVideo.startTime) / 1000);
+        const elapsedSec = Math.max(0, (scheduledTime - this.syncState.currentVideo.startTime) / 1000);
         this.syncState.currentVideo.pausedAtVideoSec = baseline.videoTime + elapsedSec;
       }
     }
