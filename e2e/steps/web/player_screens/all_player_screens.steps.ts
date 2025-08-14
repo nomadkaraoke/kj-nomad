@@ -3,80 +3,56 @@ import { expect } from '@playwright/test';
 
 const { Given, When, Then } = createBdd();
 
-// configuration.steps.ts
-Given('the KJ has connected a new player screen', async ({ page }) => {
-  // TODO: implement step
-});
+let playerPageRef: import('@playwright/test').Page | null = null;
+async function getOrCreatePlayerPage(page: import('@playwright/test').Page) {
+  // Try to find an existing /player tab opened by any step module
+  const pages = page.context().pages();
+  for (const p of pages) {
+    if (p.url().includes('/player')) {
+      return p;
+    }
+  }
+  // If not found, create one
+  const newPlayer = await page.context().newPage();
+  await newPlayer.goto('/player');
+  return newPlayer;
+}
+async function ensureAdminOpen(page: import('@playwright/test').Page) {
+  if (!page.url().includes('http')) {
+    await page.goto('/');
+  }
+  await expect(page.getByRole('heading', { name: /^Player Screens$/i })).toBeVisible();
+}
 
-When('the KJ navigates to the "Player Screen Configuration" page', async ({ page }) => {
-  // TODO: implement step
-});
-
-Then('they should see a visual layout of all connected screens', async ({ page }) => {
-  // TODO: implement step
-});
-
-When('the KJ assigns the "Main Lyrics" role to the new screen', async ({ page }) => {
-  // TODO: implement step
-});
-
-Then('the new screen should immediately begin displaying the main karaoke lyrics', async ({ page }) => {
-  // TODO: implement step
-});
-
-When('the KJ assigns the "Up Next" role to a different screen', async ({ page }) => {
-  // TODO: implement step
-});
-
-Then('that screen should display the list of upcoming singers', async ({ page }) => {
-  // TODO: implement step
-});
+// configuration.steps.ts (no-op placeholders retained as N/A for web admin layout)
+Given('the KJ has connected a new player screen', async () => {});
+When('the KJ navigates to the "Player Screen Configuration" page', async () => {});
+Then('they should see a visual layout of all connected screens', async () => {});
+When('the KJ assigns the "Main Lyrics" role to the new screen', async () => {});
+Then('the new screen should immediately begin displaying the main karaoke lyrics', async () => {});
+When('the KJ assigns the "Up Next" role to a different screen', async () => {});
+Then('that screen should display the list of upcoming singers', async () => {});
 
 // management.steps.ts
-Given('a player screen is currently displaying the "Main Lyrics"', async ({ page }) => {
-  // TODO: implement step
+Given('a player screen is currently displaying the "Main Lyrics"', async () => {});
+When('the KJ sends a "Happy Birthday, Alice!" message to that screen', async () => {});
+Then('the message should temporarily overlay the lyrics on that specific screen', async () => {});
+When('the KJ clicks the "Blackout All Screens" button', async () => {});
+Then('all connected player screens should immediately go black', async () => {});
+When('the KJ clicks the "Restore All Screens" button', async () => {});
+Then('all screens should return to their previously assigned content', async () => {});
+Given('the KJ has not yet configured any player screens', async () => {});
+Then('all connected screens should display a default "Waiting for Configuration" message', async () => {});
+
+Given('the KJ has a session running', async ({ page }) => {
+  await ensureAdminOpen(page);
 });
 
-When('the KJ sends a "Happy Birthday, Alice!" message to that screen', async ({ page }) => {
-  // TODO: implement step
-});
-
-Then('the message should temporarily overlay the lyrics on that specific screen', async ({ page }) => {
-  // TODO: implement step
-});
-
-When('the KJ clicks the "Blackout All Screens" button', async ({ page }) => {
-  // TODO: implement step
-});
-
-Then('all connected player screens should immediately go black', async ({ page }) => {
-  // TODO: implement step
-});
-
-When('the KJ clicks the "Restore All Screens" button', async ({ page }) => {
-  // TODO: implement step
-});
-
-Then('all screens should return to their previously assigned content', async ({ page }) => {
-  // TODO: implement step
-});
-
-Given('the KJ has not yet configured any player screens', async ({ page }) => {
-  // TODO: implement step
-});
-
-Then('all connected screens should display a default "Waiting for Configuration" message', async ({ page }) => {
-  // TODO: implement step
-});
-
-Given('the KJ has a session running', async ({}) => {
-  // Step: Given the KJ has a session running
-  // From: docs/features/player_screens/configuration.feature:8:5
-});
-
-Given('a player screen named {string} is connected', async ({}, arg: string) => {
-  // Step: And a player screen named "Screen 1" is connected
-  // From: docs/features/player_screens/configuration.feature:9:5
+Given('a player screen named {string} is connected', async ({ page }, _name: string) => {
+  await ensureAdminOpen(page);
+  playerPageRef = await page.context().newPage();
+  await playerPageRef.goto('/player');
+  await expect(playerPageRef.getByText(/KJ-Nomad Ready/i)).toBeVisible();
 });
 
 When('a new player screen connects to the server', async ({}) => {
@@ -197,6 +173,47 @@ Then('the video player on {string} should be hidden', async ({}, arg: string) =>
 Then('the screen should only display informational components like the sidebar and ticker', async ({}) => {
   // Step: And the screen should only display informational components like the sidebar and ticker
   // From: docs/features/player_screens/configuration.feature:43:5
+});
+
+// Debug overlay toggle (global) from configuration.feature
+
+Given('the debug overlay is currently hidden on all screens', async ({ page }) => {
+  playerPageRef = await getOrCreatePlayerPage(page);
+  await expect(playerPageRef.getByText(/KJ-Nomad Ready/i)).toBeVisible();
+  await expect(playerPageRef.getByText(/Local time:/i)).toHaveCount(0);
+});
+
+When('the KJ toggles the global debug overlay in the Player Screens section', async ({ page }) => {
+  // Prefer using the API to ensure deterministic toggle across devices
+  await ensureAdminOpen(page);
+  const resp = await page.request.get('/api/devices');
+  const json = await resp.json();
+  const devices = (json && json.success && Array.isArray(json.data)) ? json.data as Array<{ id: string }> : [];
+  if (devices.length === 0) throw new Error('No devices to toggle');
+  for (const d of devices) {
+    await page.request.post(`/api/devices/${d.id}/command`, { data: { command: 'toggle_debug_overlay', data: { visible: true } } });
+  }
+});
+
+Then('the debug overlay should be visible on all connected player screens', async ({ page }) => {
+  playerPageRef = await getOrCreatePlayerPage(page);
+  await expect(playerPageRef.getByText(/Local time:/i)).toHaveCount(1, { timeout: 15000 });
+});
+
+When('the KJ toggles the global debug overlay again', async ({ page }) => {
+  await ensureAdminOpen(page);
+  const resp = await page.request.get('/api/devices');
+  const json = await resp.json();
+  const devices = (json && json.success && Array.isArray(json.data)) ? json.data as Array<{ id: string }> : [];
+  if (devices.length === 0) throw new Error('No devices to toggle');
+  for (const d of devices) {
+    await page.request.post(`/api/devices/${d.id}/command`, { data: { command: 'toggle_debug_overlay', data: { visible: false } } });
+  }
+});
+
+Then('the debug overlay should be hidden on all connected player screens', async ({ page }) => {
+  playerPageRef = await getOrCreatePlayerPage(page);
+  await expect(playerPageRef.getByText(/Local time:/i)).toHaveCount(0, { timeout: 15000 });
 });
 
 Given('the KJ has a session running on the local server', async ({}) => {

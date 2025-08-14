@@ -375,9 +375,21 @@ Then('the entry for {string} should have a YouTube icon next to it', async ({}, 
   // From: docs/features/kj_admin/queue_management.feature:33:5
 });
 
-Given('at least one player screen is connected', async ({}) => {
-  // Step: And at least one player screen is connected
-  // From: docs/features/kj_admin/ticker_management.feature:9:5
+Given('at least one player screen is connected', async ({ page }) => {
+  // Ensure admin is open
+  await page.goto('/');
+  // Reuse existing player page if present; avoid replacing the same stableId's socket
+  const existing = page.context().pages().find(p => p.url().includes('/player'));
+  const player = existing ?? await page.context().newPage();
+  if (!existing) {
+    await player.goto('/player');
+    await expect(player.getByText(/KJ-Nomad Ready/i)).toBeVisible();
+  }
+  // Wait until admin no longer shows the empty state
+  await expect(page.getByRole('heading', { name: /^Player Screens$/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /No Player Screens Connected/i })).toHaveCount(0);
+  // Wait for a device card to render (with an id line)
+  await expect(page.getByText(/^id: /i)).toBeVisible();
 });
 
 Given('the ticker text is currently empty', async ({}) => {

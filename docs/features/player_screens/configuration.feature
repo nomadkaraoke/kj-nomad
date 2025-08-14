@@ -1,4 +1,3 @@
-@skip
 @player-screen @configuration
 Feature: Player Screen Configuration
   As a Karaoke Jockey (KJ)
@@ -9,6 +8,7 @@ Feature: Player Screen Configuration
     Given the KJ has a session running
     And a player screen named "Screen 1" is connected
 
+  @skip
   Scenario: New player screen has default settings
     When a new player screen connects to the server
     Then its audio output should be enabled by default
@@ -16,6 +16,7 @@ Feature: Player Screen Configuration
     And its full-height sidebar should be disabled by default
     And its video player should be visible by default
 
+  @skip
   Scenario: KJ mutes and unmutes a player screen's audio
     Given the audio on "Screen 1" is enabled
     When the KJ toggles the audio setting for "Screen 1"
@@ -23,6 +24,7 @@ Feature: Player Screen Configuration
     And when the KJ toggles the audio setting for "Screen 1" again
     Then the audio output on "Screen 1" should be unmuted
 
+  @skip
   Scenario: KJ toggles the ticker bar
     Given the ticker bar on "Screen 1" is enabled
     When the KJ toggles the ticker setting for "Screen 1"
@@ -30,6 +32,7 @@ Feature: Player Screen Configuration
     And when the KJ toggles the ticker setting for "Screen 1" again
     Then the ticker bar should be visible on "Screen 1"
 
+  @skip
   Scenario: KJ toggles the full-height sidebar
     Given the sidebar on "Screen 1" is disabled
     When the KJ toggles the sidebar setting for "Screen 1"
@@ -38,6 +41,7 @@ Feature: Player Screen Configuration
     And when the KJ toggles the sidebar setting for "Screen 1" again
     Then the sidebar should be hidden on "Screen 1"
 
+  @skip
   Scenario: KJ sets a screen to be an information-only display
     Given "Screen 1" is displaying the karaoke video
     When the KJ disables the video player for "Screen 1"
