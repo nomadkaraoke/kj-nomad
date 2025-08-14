@@ -239,6 +239,46 @@ class WebSocketService {
         }
         break;
 
+      case 'stop_filler_music': {
+        // Explicit signal from server to stop/unload filler immediately
+        store.setNowPlaying(null);
+        store.setPlaybackState('stopped');
+        // Also try to pause/unload the media element
+        const video = document.querySelector('video') as HTMLVideoElement | null;
+        if (video) {
+          try { video.pause(); video.removeAttribute('src'); video.load(); } catch { /* ignore */ }
+        }
+        break;
+      }
+
+      case 'filler_set_volume': {
+        // Adjust current video element volume while filler is playing
+        const vol = (payload && typeof payload === 'object' && 'volume' in (payload as { volume: number }))
+          ? Math.max(0, Math.min(1, Number((payload as { volume: number }).volume)))
+          : undefined;
+        if (typeof vol === 'number') {
+          const video = document.querySelector('video') as HTMLVideoElement | null;
+          if (video) {
+            try { video.volume = vol; } catch { /* ignore */ }
+          }
+        }
+        break;
+      }
+
+      case 'set_volume': {
+        // Per-device volume adjustment
+        const vol = (payload && typeof payload === 'object' && 'volume' in (payload as { volume: number }))
+          ? Math.max(0, Math.min(1, Number((payload as { volume: number }).volume)))
+          : undefined;
+        if (typeof vol === 'number') {
+          const video = document.querySelector('video') as HTMLVideoElement | null;
+          if (video) {
+            try { video.volume = vol; } catch { /* ignore */ }
+          }
+        }
+        break;
+      }
+
       case 'pause':
         store.setNowPlaying(null);
         store.setPlaybackState('stopped');

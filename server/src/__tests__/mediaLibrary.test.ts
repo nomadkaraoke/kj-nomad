@@ -63,14 +63,14 @@ describe('mediaLibrary', () => {
   });
 
   describe('scanMediaLibrary', () => {
-    it('should scan and parse media files correctly', () => {
+    it('should scan and list media files correctly (raw filenames)', () => {
       const mockFiles = [
         'Artist 1 - Song 1.mp4',
         'Artist 2 - Song 2.webm',
-        'filler-music.mp3', // Should be filtered out
+        'filler-music.mp3',
         'Artist 3 - Song 3.mp4',
         'not-a-video.txt', // Should be filtered out
-        '.hidden-file.mp4' // Should be filtered out
+        '.hidden-file.mp4'
       ];
 
       mockFs.readdirSync.mockReturnValue(mockFiles as any);
@@ -87,18 +87,13 @@ describe('mediaLibrary', () => {
       
       // Test that songs can be searched after scanning
       const allSongs = searchSongs('');
-      expect(allSongs).toHaveLength(4);
+      expect(allSongs).toHaveLength(5);
       
       const firstSong = allSongs[0];
-      expect(firstSong).toEqual({
-        id: '0',
-        artist: 'Artist 1',
-        title: 'Song 1',
-        fileName: 'Artist 1 - Song 1.mp4'
-      });
+      expect(firstSong.fileName).toBe('Artist 1 - Song 1.mp4');
     });
 
-    it('should handle files without proper artist-title format', () => {
+    it('should handle files without any naming convention', () => {
       const mockFiles = [
         'Song Without Artist.mp4',
         'Invalid Format File.mp4'
@@ -114,13 +109,7 @@ describe('mediaLibrary', () => {
       const allSongs = searchSongs('');
       expect(allSongs).toHaveLength(2);
       
-      // Should default to "Unknown" artist for improperly formatted files
-      expect(allSongs[0]).toEqual({
-        id: '0',
-        artist: 'Unknown',
-        title: 'Song Without Artist.mp4',
-        fileName: 'Song Without Artist.mp4'
-      });
+      expect(allSongs[0].fileName).toBeDefined();
     });
 
     it('should handle empty media directory', () => {
@@ -156,7 +145,7 @@ describe('mediaLibrary', () => {
       expect(allSongs).toHaveLength(0);
     });
 
-    it('should filter out filler music files', () => {
+    it('should include filler files too (no special naming required)', () => {
       const mockFiles = [
         'filler-background.mp4',
         'filler-music.mp3', 
@@ -170,16 +159,16 @@ describe('mediaLibrary', () => {
       scanMediaLibrary();
 
       const allSongs = searchSongs('');
-      expect(allSongs).toHaveLength(1); // Only the non-filler file
+      expect(allSongs).toHaveLength(4); // All supported media files included
     });
 
-    it('should only include video files (mp4, webm)', () => {
+    it('should include common audio and video formats', () => {
       const mockFiles = [
         'Artist - Song.mp4',   // Include
         'Artist - Song.webm',  // Include
-        'Artist - Song.mp3',   // Exclude
-        'Artist - Song.wav',   // Exclude
-        'Artist - Song.avi',   // Exclude
+        'Artist - Song.mp3',   // Include
+        'Artist - Song.wav',   // Include
+        'Artist - Song.avi',   // Include
       ];
 
       mockFs.readdirSync.mockReturnValue(mockFiles as any);
@@ -190,7 +179,7 @@ describe('mediaLibrary', () => {
       scanMediaLibrary();
 
       const allSongs = searchSongs('');
-      expect(allSongs).toHaveLength(2);
+      expect(allSongs).toHaveLength(5);
     });
   });
 
@@ -224,16 +213,16 @@ describe('mediaLibrary', () => {
       expect(results).toHaveLength(4);
     });
 
-    it('should find songs by artist name', () => {
+    it('should find songs by substring of filename', () => {
       const results = searchSongs('Taylor Swift');
       expect(results).toHaveLength(1);
-      expect(results[0].artist).toBe('Taylor Swift');
+      expect(results[0].fileName).toMatch(/Taylor Swift/i);
     });
 
-    it('should find songs by song title', () => {
+    it('should find by partial title in filename', () => {
       const results = searchSongs('Perfect');
       expect(results).toHaveLength(1);
-      expect(results[0].title).toBe('Perfect');
+      expect(results[0].fileName).toMatch(/Perfect/i);
     });
 
     it('should perform fuzzy search', () => {
@@ -244,7 +233,7 @@ describe('mediaLibrary', () => {
     it('should find partial matches', () => {
       const results = searchSongs('Beat'); // Should find "The Beatles"
       expect(results.length).toBeGreaterThan(0);
-      expect(results.some(song => song.artist.includes('Beatles'))).toBe(true);
+      expect(results.some(song => /Beat/i.test(song.fileName))).toBe(true);
     });
 
     it('should return empty array for no matches', () => {
@@ -276,8 +265,8 @@ describe('mediaLibrary', () => {
       const song = getSongById('0');
       expect(song).toBeDefined();
       expect(song?.id).toBe('0');
-      expect(song?.artist).toBe('Artist');
-      expect(song?.title).toBe('Song');
+      expect(song?.artist).toBe('');
+      expect(song?.title).toBe('Artist - Song.mp4');
     });
 
     it('should return undefined when ID does not exist', () => {

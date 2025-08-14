@@ -94,7 +94,7 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
       {/* Song Info */}
       <div className="flex-grow min-w-0">
         <div className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2">
-          {entry.song.artist} - {entry.song.title}
+          {entry.song.fileName}
           {isYouTube && (
             <span title="YouTube" className="inline-flex items-center text-red-600">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

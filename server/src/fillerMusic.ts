@@ -29,13 +29,9 @@ export const scanFillerMusic = (customDirectory?: string) => {
     }
 
     const files = fs.readdirSync(scanDir);
+    const supported = new Set(['.mp4', '.webm', '.avi', '.mov', '.mp3', '.m4a', '.wav', '.flac', '.ogg']);
     fillerPlaylist = files
-      .filter(file => {
-        // Filter for filler music files (start with 'filler-') and supported video extensions
-        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm');
-        const isFillerFile = file.toLowerCase().startsWith('filler-');
-        return isVideoFile && isFillerFile;
-      })
+      .filter(file => supported.has(path.extname(file).toLowerCase()))
       .map((file, index) => ({
         id: `${index}`,
         fileName: file,

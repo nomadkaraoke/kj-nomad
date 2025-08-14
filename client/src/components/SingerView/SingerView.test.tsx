@@ -39,8 +39,8 @@ describe('SingerView', () => {
     expect(screen.getByText('Search for a song')).toBeInTheDocument();
     
     await waitFor(() => {
-        expect(screen.getByText('a-ha - Take On Me')).toBeInTheDocument();
-        expect(screen.getByText('Queen - Bohemian Rhapsody')).toBeInTheDocument();
+        expect(screen.getByText('a-ha - Take On Me.mp4')).toBeInTheDocument();
+        expect(screen.getByText('Queen - Bohemian Rhapsody.mp4')).toBeInTheDocument();
     });
   });
 });

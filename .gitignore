@@ -21,6 +21,7 @@ coverage/
 #Playwright
 test-results
 server/youtube-cache
+filler/
 
 # Environment variables
 .env

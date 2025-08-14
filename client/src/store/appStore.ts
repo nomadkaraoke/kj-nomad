@@ -3,8 +3,8 @@ import { devtools } from 'zustand/middleware';
 
 export interface Song {
   id: string;
-  artist: string;
-  title: string;
+  artist: string; // unused; kept for compatibility
+  title: string;  // will mirror fileName for display
   fileName: string;
 }
 

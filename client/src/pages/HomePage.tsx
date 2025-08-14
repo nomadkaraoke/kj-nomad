@@ -77,6 +77,10 @@ const HomePage: React.FC = () => {
     }
   };
 
+  // Admin: media library management helpers
+  const [newLibraryPath, setNewLibraryPath] = useState('');
+  const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
+
   // Load filler settings + list on mount
   useEffect(() => {
     (async () => {
@@ -260,6 +264,37 @@ const HomePage: React.FC = () => {
               >
                 Update Ticker
               </button>
+            </div>
+          </div>
+
+          {/* Media Library Management */}
+          <div className="card">
+            <h2 className="text-xl font-semibold mb-4">Media Library</h2>
+            <div className="space-y-3">
+              <div className="flex gap-2 items-center">
+                <input className="input flex-1 font-mono" placeholder="/absolute/path/to/your/karaoke/library" value={newLibraryPath} onChange={(e) => setNewLibraryPath(e.target.value)} />
+                <button className="btn-tertiary" onClick={async () => {
+                  setLibraryMessage(null);
+                  if (!newLibraryPath.trim()) { setLibraryMessage('Enter a folder path'); return; }
+                  try {
+                    const v = await fetch('/api/setup/validate-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: newLibraryPath.trim() }) });
+                    const j = await v.json();
+                    if (!j?.success || !j.data?.valid) { setLibraryMessage(j?.data?.error || 'Folder invalid'); return; }
+                    await fetch('/api/setup/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mediaDirectory: newLibraryPath.trim() }) });
+                    const scan = await fetch('/api/setup/scan', { method: 'POST' });
+                    const sj = await scan.json();
+                    if (sj?.success) setLibraryMessage(`Scan complete. Songs found: ${sj.data?.songCount ?? 0}`);
+                    else setLibraryMessage(sj?.error || 'Scan failed');
+                  } catch {
+                    setLibraryMessage('Failed to update library');
+                  }
+                }}>Set & Rescan</button>
+              </div>
+              <div className="flex gap-2">
+                <button className="btn" onClick={async () => { try { const r = await fetch('/api/setup/scan', { method: 'POST' }); const j = await r.json(); setLibraryMessage(j?.success ? `Rescanned. Songs: ${j.data?.songCount ?? 0}` : (j?.error || 'Scan failed')); } catch { setLibraryMessage('Scan failed'); } }}>Rescan Library</button>
+                <button className="btn-tertiary" onClick={async () => { try { await fetch('/api/setup/reset', { method: 'POST' }); location.reload(); } catch { /* ignore */ } }}>Reset Setup</button>
+              </div>
+              {libraryMessage && <div className="text-sm opacity-80">{libraryMessage}</div>}
             </div>
           </div>
 

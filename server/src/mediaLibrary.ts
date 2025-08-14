@@ -9,8 +9,8 @@ const __dirname = path.dirname(__filename);
 
 export interface Song {
   id: string;
-  artist: string;
-  title: string;
+  artist: string; // kept for backward-compat; will be empty string
+  title: string;  // kept for backward-compat; will mirror fileName
   fileName: string;
 }
 
@@ -19,15 +19,7 @@ let fuse: Fuse<Song>;
 
 const mediaDir = path.join(__dirname, '../media');
 
-const parseFileName = (fileName: string): { artist: string, title: string } => {
-  // A simple parser assuming "Artist - Title.mp4" format
-  const [artist, titleWithExt] = fileName.split(' - ');
-  if (!artist || !titleWithExt) {
-    return { artist: 'Unknown', title: fileName };
-  }
-  const title = path.parse(titleWithExt).name;
-  return { artist: artist.trim(), title: title.trim() };
-};
+// Legacy parser removed: we do not infer artist/title from filenames anymore.
 
 export const scanMediaLibrary = (customDirectory?: string): Song[] => {
   const scanDir = customDirectory || mediaDir;
@@ -41,26 +33,23 @@ export const scanMediaLibrary = (customDirectory?: string): Song[] => {
     }
 
     const files = fs.readdirSync(scanDir);
+    const supported = new Set(['.mp4', '.webm', '.avi', '.mov', '.mp3', '.m4a', '.wav', '.flac', '.ogg']);
     songLibrary = files
-      .filter(file => {
-        // Filter out filler music and only include supported video files
-        const isVideoFile = file.endsWith('.mp4') || file.endsWith('.webm');
-        const isNotFiller = !file.toLowerCase().startsWith('filler-');
-        return isVideoFile && isNotFiller;
-      })
-      .map((file, index) => {
-        const { artist, title } = parseFileName(file);
-        return {
-          id: `${index}`,
-          artist,
-          title,
-          fileName: file,
-        };
-      });
+      .filter(file => supported.has(path.extname(file).toLowerCase()))
+      .map((file, index) => ({
+        id: `${index}`,
+        artist: '',
+        title: file, // show raw filename in UI
+        fileName: file,
+      }));
 
+    // Build a simple Fuse index on fileName only for potential fuzzy matching, but we will also support substring matching
     fuse = new Fuse(songLibrary, {
-      keys: ['artist', 'title'],
-      threshold: 0.4,
+      keys: ['fileName'],
+      threshold: 0.3,
+      ignoreLocation: true,
+      distance: 200,
+      minMatchCharLength: 1,
     });
     console.log(`Scan complete. Found ${songLibrary.length} songs.`);
     return songLibrary;
@@ -68,8 +57,8 @@ export const scanMediaLibrary = (customDirectory?: string): Song[] => {
     console.error('Error scanning media library:', error);
     songLibrary = [];
     fuse = new Fuse(songLibrary, {
-      keys: ['artist', 'title'],
-      threshold: 0.4,
+      keys: ['fileName'],
+      threshold: 0.3,
     });
     // Re-throw the error to be handled by the caller
     throw error;
@@ -80,6 +69,10 @@ export const searchSongs = (query: string): Song[] => {
   if (!query || !query.trim()) {
     return songLibrary;
   }
+  const q = query.toLowerCase();
+  // Prefer fast substring match on filename; fall back to Fuse for fuzzy matches if needed
+  const direct = songLibrary.filter(s => s.fileName.toLowerCase().includes(q));
+  if (direct.length > 0) return direct;
   return fuse.search(query).map(result => result.item);
 };
 

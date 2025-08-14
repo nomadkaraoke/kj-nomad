@@ -66,7 +66,8 @@ export const ManualRequestForm: React.FC = () => {
 
   const handleSelectSong = (song: Song) => {
     setSelectedSong(song);
-    setSearchQuery(`${song.artist} - ${song.title}`);
+    // Show raw filename to avoid implying any naming convention
+    setSearchQuery(song.fileName);
     setSearchResults([]);
   };
 
@@ -146,7 +147,7 @@ export const ManualRequestForm: React.FC = () => {
                   onClick={() => handleSelectSong(song)}
                   className="px-4 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer"
                 >
-                  {song.artist} - {song.title}
+                  {song.fileName}
                 </li>
               ))}
             </ul>

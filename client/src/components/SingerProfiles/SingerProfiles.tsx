@@ -316,7 +316,7 @@ export const SingerProfiles: React.FC = () => {
                         {stats.topSongs.slice(0, 5).map((song, index) => (
                           <div key={index} className="flex justify-between items-center">
                             <span className="text-sm">
-                              {song.title} by {song.artist}
+                              {song.fileName}
                             </span>
                             <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                               {song.count}x

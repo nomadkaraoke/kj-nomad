@@ -192,7 +192,7 @@ const SingerPage: React.FC = () => {
               {myQueuePosition === 0 ? "You're up next!" : `${myQueuePosition} singers ahead of you`}
             </p>
             <div className="mt-3 text-sm text-text-secondary-light dark:text-text-secondary-dark">
-              Song: {queue[myQueuePosition]?.song.artist} - {queue[myQueuePosition]?.song.title}
+              Song: {queue[myQueuePosition]?.song.fileName}
             </div>
           </div>
         </div>
@@ -261,10 +261,10 @@ const SingerPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold truncate">
-                          {song.title}
+                          {song.fileName}
                         </h4>
                         <p className="text-text-secondary-light dark:text-text-secondary-dark truncate">
-                          by {song.artist}
+                          
                         </p>
                       </div>
                       <button
@@ -310,7 +310,7 @@ const SingerPage: React.FC = () => {
                     {entry.singerName}
                   </p>
                   <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark truncate">
-                    {entry.song.artist} - {entry.song.title}
+                   {entry.song.fileName}
                   </p>
                 </div>
                 {index === 0 && (

@@ -1,4 +1,3 @@
-@skip
 @session @offline
 Feature: Offline Session Management
   As a Karaoke Jockey (KJ)

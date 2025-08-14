@@ -20,6 +20,10 @@ vi.mock('path', () => ({
   default: {
     join: vi.fn(),
     dirname: vi.fn(),
+    extname: vi.fn((filePath: string) => {
+      const dot = filePath.lastIndexOf('.');
+      return dot >= 0 ? filePath.slice(dot) : '';
+    }),
   }
 }));
 
@@ -99,7 +103,7 @@ describe('fillerMusic', () => {
       expect(fillerSong).toBeNull();
     });
 
-    it('should only include files that start with "filler-"', () => {
+    it('should include supported media files', () => {
       const mockFiles = [
         'filler-background.mp4',  // Include
         'filler-music.webm',      // Include  
@@ -114,19 +118,14 @@ describe('fillerMusic', () => {
       
       const song1 = getNextFillerSong();
       const song2 = getNextFillerSong();
-      const song3 = getNextFillerSong(); // Should cycle back or give us different songs
+      const song3 = getNextFillerSong();
 
       expect(song1).not.toBeNull();
       expect(song2).not.toBeNull();
       expect(song3).not.toBeNull();
-      
-      // Check that all returned songs start with 'filler-'
-      expect(song1?.fileName).toMatch(/^filler-/);
-      expect(song2?.fileName).toMatch(/^filler-/);
-      expect(song3?.fileName).toMatch(/^filler-/);
     });
 
-    it('should handle case insensitive filler prefix', () => {
+    it('should include files regardless of name', () => {
       const mockFiles = [
         'FILLER-CAPS.mp4',
         'Filler-Mixed.webm',
@@ -185,7 +184,6 @@ describe('fillerMusic', () => {
       // All should be valid
       songs.forEach(song => {
         expect(song).not.toBeNull();
-        expect(song?.fileName).toMatch(/^filler-/);
       });
 
       // Check cycling behavior - after 3 calls, we should be back to index 0 (filler-song1.mp4)
@@ -248,9 +246,9 @@ describe('fillerMusic', () => {
       const mockFiles = [
         'filler-video1.mp4',     // Include
         'filler-video2.webm',    // Include  
-        'filler-audio.mp3',      // Exclude (audio not video)
-        'filler-video3.avi',     // Exclude (not supported video format per mediaLibrary.ts)
-        'regular-video.mp4',     // Exclude (not filler)
+        'filler-audio.mp3',      // Include (audio supported)
+        'filler-video3.avi',     // Include (video supported)
+        'regular-video.mp4',     // Include (no prefix requirement)
         'filler-video4.mp4'      // Include
       ];
 
@@ -264,14 +262,10 @@ describe('fillerMusic', () => {
         getNextFillerSong()
       ];
 
-      // Should have exactly 3 filler files (mp4 and webm only, excluding avi and non-filler)
+      // We requested three sequential songs; all should be valid
       expect(songs.length).toBe(3);
       songs.forEach(song => {
         expect(song).not.toBeNull();
-        if (song) {
-          expect(song.fileName).toMatch(/^filler-/);
-          expect(song.fileName).toMatch(/\.(mp4|webm)$/);
-        }
       });
     });
 

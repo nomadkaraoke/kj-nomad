@@ -54,7 +54,7 @@ const SingerView: React.FC<SingerViewProps> = ({ socket }) => {
       <ul>
         {songs.map((song) => (
           <li key={song.id} data-testid="song-result">
-            {song.artist} - {song.title}
+            {song.fileName}
             <button onClick={() => requestSong(song.id)}>Request</button>
           </li>
         ))}

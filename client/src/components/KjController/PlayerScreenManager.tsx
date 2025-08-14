@@ -15,6 +15,7 @@ import {
   XCircleIcon,
   WifiIcon,
   SignalSlashIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import { BugAntIcon } from '@heroicons/react/24/outline';
 import { clsx } from 'clsx';
@@ -39,6 +40,7 @@ const PlayerScreenManager: React.FC = () => {
   const socket = useAppStore((s) => s.socket);
   const toggleDeviceDebugOverlay = useAppStore((s) => s.toggleDeviceDebugOverlay);
   const [debugAll, setDebugAll] = useState(false);
+  const [showAddHelp, setShowAddHelp] = useState(false);
 
   useEffect(() => {
     // Attach WebSocket listener for sync logs
@@ -73,6 +75,13 @@ const PlayerScreenManager: React.FC = () => {
     <div className="card relative">
       <h2 className="text-xl font-semibold mb-4">Player Screens</h2>
       <div className="absolute top-3 right-3 flex gap-2">
+        <button
+          onClick={() => setShowAddHelp(true)}
+          className="p-2 rounded-full hover:bg-brand-blue/10"
+          title="Add a Player Screen"
+        >
+          <PlusIcon className="h-5 w-5" />
+        </button>
         <button
           onClick={async () => {
             const next = !debugAll;
@@ -152,6 +161,25 @@ const PlayerScreenManager: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  defaultValue={1}
+                  onChange={async (e) => {
+                    const vol = parseFloat(e.target.value);
+                    try {
+                      await fetch(`/api/devices/${device.id}/command`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: 'set_volume', data: { volume: vol } })
+                      });
+                    } catch { /* ignore */ }
+                  }}
+                  className="w-24 mr-2"
+                  title="Volume"
+                />
                 <button
                   onClick={() => identifyDevice(device.id)}
                   className="p-2 rounded-full hover:bg-brand-blue/10"
@@ -237,6 +265,36 @@ const PlayerScreenManager: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+      {showAddHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-lg w-full mx-4 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Add a Player Screen</h3>
+              <button className="p-2 rounded hover:bg-black/10 dark:hover:bg-white/10" onClick={() => setShowAddHelp(false)} aria-label="Close">✕</button>
+            </div>
+            <ol className="list-decimal list-inside space-y-2 text-sm">
+              <li>
+                Run the KJ‑Nomad desktop app on another computer and choose <span className="font-semibold">Set up as Player</span> during onboarding.
+              </li>
+              <li>
+                On another device, open a browser and navigate to:
+                <div className="mt-1">
+                  <a href={playerUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-brand-blue dark:text-brand-pink underline break-all">{playerUrl}</a>
+                </div>
+              </li>
+              <li>
+                Open a new Player Screen window on this computer:
+                <div className="mt-1">
+                  <a href={playerUrl} target="_blank" rel="noopener noreferrer" className="btn">Open Player Here</a>
+                </div>
+              </li>
+            </ol>
+            <div className="mt-4 text-right">
+              <button className="btn-tertiary" onClick={() => setShowAddHelp(false)}>Close</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

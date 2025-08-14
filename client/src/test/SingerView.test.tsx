@@ -17,7 +17,7 @@ describe('SingerView', () => {
     beforeEach(() => {
         global.fetch = vi.fn((url) => {
             const query = new URLSearchParams(url.toString().split('?')[1]).get('q');
-            const songs = query ? mockSongs.filter(s => s.artist.toLowerCase().includes(query.toLowerCase()) || s.title.toLowerCase().includes(query.toLowerCase())) : mockSongs;
+            const songs = query ? mockSongs.filter(s => s.fileName.toLowerCase().includes(query.toLowerCase())) : mockSongs;
             return Promise.resolve({
                 ok: true,
                 status: 200,
@@ -42,8 +42,8 @@ describe('SingerView', () => {
     render(<SingerView socket={mockSocket} />);
     expect(screen.getByText('Search for a song')).toBeInTheDocument();
     await waitFor(() => {
-        expect(screen.getByText('a-ha - Take On Me')).toBeInTheDocument();
-        expect(screen.getByText('Queen - Bohemian Rhapsody')).toBeInTheDocument();
+        expect(screen.getByText('a-ha - Take On Me.mp4')).toBeInTheDocument();
+        expect(screen.getByText('Queen - Bohemian Rhapsody.mp4')).toBeInTheDocument();
     });
   });
 
@@ -52,8 +52,8 @@ describe('SingerView', () => {
     const searchInput = screen.getByPlaceholderText('Search for a song...');
     await userEvent.type(searchInput, 'Queen');
     await waitFor(() => {
-        expect(screen.queryByText('a-ha - Take On Me')).not.toBeInTheDocument();
-        expect(screen.getByText('Queen - Bohemian Rhapsody')).toBeInTheDocument();
+        expect(screen.queryByText('a-ha - Take On Me.mp4')).not.toBeInTheDocument();
+        expect(screen.getByText('Queen - Bohemian Rhapsody.mp4')).toBeInTheDocument();
     });
   });
 

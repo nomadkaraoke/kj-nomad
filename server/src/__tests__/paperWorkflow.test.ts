@@ -80,12 +80,11 @@ describe('PaperWorkflowManager', () => {
       expect(getMockFuseConstructor()).toHaveBeenCalledWith(
         mockSongLibrary,
         expect.objectContaining({
-          keys: expect.arrayContaining([
-            expect.objectContaining({ name: 'artist', weight: 0.4 }),
-            expect.objectContaining({ name: 'title', weight: 0.6 })
-          ]),
+          keys: ['fileName'],
           threshold: 0.3,
-          includeScore: true
+          includeScore: true,
+          ignoreLocation: true,
+          minMatchCharLength: 1,
         })
       );
     });
@@ -196,50 +195,46 @@ describe('PaperWorkflowManager', () => {
       getMockSearch().mockClear();
     });
 
-    it('should parse "Artist - Title" format', () => {
+    it('should match using filename regardless of request format', () => {
       getMockSearch().mockReturnValue([
         { item: mockSongLibrary[0], score: 0.1 }
       ]);
       
       const slip = workflowManager.addSlip('John', 'Queen - Bohemian Rhapsody');
       
-      expect(slip.parsedSong?.artist).toBe('queen');
-      expect(slip.parsedSong?.title).toBe('bohemian rhapsody');
+      expect(slip.parsedSong?.title).toBe('queen-bohemian.mp4');
       expect(slip.matchedSong).toEqual(mockSongLibrary[0]);
     });
 
-    it('should parse "Title by Artist" format', () => {
+    it('should match with free-text by filename', () => {
       getMockSearch().mockReturnValue([
         { item: mockSongLibrary[1], score: 0.1 }
       ]);
       
       const slip = workflowManager.addSlip('Jane', 'Hey Jude by The Beatles');
       
-      expect(slip.parsedSong?.artist).toBe('the beatles');
-      expect(slip.parsedSong?.title).toBe('hey jude');
+      expect(slip.parsedSong?.title).toBe('beatles-hey-jude.mp4');
       expect(slip.matchedSong).toEqual(mockSongLibrary[1]);
     });
 
-    it('should parse "Artist / Title" format', () => {
+    it('should match regardless of separators', () => {
       getMockSearch().mockReturnValue([
         { item: mockSongLibrary[2], score: 0.1 }
       ]);
       
       const slip = workflowManager.addSlip('Bob', 'Michael Jackson / Billie Jean');
       
-      expect(slip.parsedSong?.artist).toBe('michael jackson');
-      expect(slip.parsedSong?.title).toBe('billie jean');
+      expect(slip.parsedSong?.title).toBe('mj-billie-jean.mp4');
     });
 
-    it('should parse "Artist | Title" format', () => {
+    it('should match with pipe-separated text', () => {
       getMockSearch().mockReturnValue([
         { item: mockSongLibrary[3], score: 0.1 }
       ]);
       
       const slip = workflowManager.addSlip('Alice', 'Elvis Presley | Hound Dog');
       
-      expect(slip.parsedSong?.artist).toBe('elvis presley');
-      expect(slip.parsedSong?.title).toBe('hound dog');
+      expect(slip.parsedSong?.title).toBe('elvis-hound-dog.mp4');
     });
 
     it('should fallback to full string search when no pattern matches', () => {
@@ -257,8 +252,8 @@ describe('PaperWorkflowManager', () => {
       
       const slip = workflowManager.addSlip('John', 'Unknown Song');
       
-      // When no match found, parsedSong gets default values, not undefined
-      expect(slip.parsedSong?.artist).toBe('Unknown');
+      // When no match found, parsedSong still present but blank artist and original text title
+      expect(slip.parsedSong?.artist).toBe('');
       expect(slip.parsedSong?.title).toBe('Unknown Song');
       expect(slip.parsedSong?.confidence).toBe(0);
       expect(slip.matchedSong).toBeUndefined();

@@ -19674,15 +19674,15 @@ function warning(cond, message) {
 function createKey() {
   return Math.random().toString(36).substring(2, 10);
 }
-function getHistoryState(location, index) {
+function getHistoryState(location2, index) {
   return {
-    usr: location.state,
-    key: location.key,
+    usr: location2.state,
+    key: location2.key,
     idx: index
   };
 }
 function createLocation(current, to, state = null, key) {
-  let location = {
+  let location2 = {
     pathname: typeof current === "string" ? current : current.pathname,
     search: "",
     hash: "",
@@ -19694,7 +19694,7 @@ function createLocation(current, to, state = null, key) {
     // keep as is for the time being and just let any incoming keys take precedence
     key: to && to.key || key || createKey()
   };
-  return location;
+  return location2;
 }
 function createPath({
   pathname = "/",
@@ -19751,10 +19751,10 @@ function getUrlBasedHistory(getLocation, createHref2, validateLocation, options 
   }
   function push(to, state) {
     action = "PUSH";
-    let location = createLocation(history.location, to, state);
+    let location2 = createLocation(history.location, to, state);
     index = getIndex() + 1;
-    let historyState = getHistoryState(location, index);
-    let url = history.createHref(location);
+    let historyState = getHistoryState(location2, index);
+    let url = history.createHref(location2);
     try {
       globalHistory.pushState(historyState, "", url);
     } catch (error) {
@@ -19769,10 +19769,10 @@ function getUrlBasedHistory(getLocation, createHref2, validateLocation, options 
   }
   function replace2(to, state) {
     action = "REPLACE";
-    let location = createLocation(history.location, to, state);
+    let location2 = createLocation(history.location, to, state);
     index = getIndex();
-    let historyState = getHistoryState(location, index);
-    let url = history.createHref(location);
+    let historyState = getHistoryState(location2, index);
+    let url = history.createHref(location2);
     globalHistory.replaceState(historyState, "", url);
     if (v5Compat && listener) {
       listener({ action, location: history.location, delta: 0 });
@@ -19836,8 +19836,8 @@ function matchRoutes(routes, locationArg, basename = "/") {
   return matchRoutesImpl(routes, locationArg, basename, false);
 }
 function matchRoutesImpl(routes, locationArg, basename, allowPartial) {
-  let location = typeof locationArg === "string" ? parsePath(locationArg) : locationArg;
-  let pathname = stripBasename(location.pathname || "/", basename);
+  let location2 = typeof locationArg === "string" ? parsePath(locationArg) : locationArg;
+  let pathname = stripBasename(location2.pathname || "/", basename);
   if (pathname == null) {
     return null;
   }
@@ -20360,18 +20360,18 @@ Please change the parent <Route path="${parentPath}"> to <Route path="${parentPa
     );
   }
   let locationFromContext = useLocation();
-  let location;
+  let location2;
   if (locationArg) {
     let parsedLocationArg = typeof locationArg === "string" ? parsePath(locationArg) : locationArg;
     invariant(
       parentPathnameBase === "/" || parsedLocationArg.pathname?.startsWith(parentPathnameBase),
       `When overriding the location using \`<Routes location>\` or \`useRoutes(routes, location)\`, the location pathname must begin with the portion of the URL pathname that was matched by all parent routes. The current pathname base is "${parentPathnameBase}" but pathname "${parsedLocationArg.pathname}" was given in the \`location\` prop.`
     );
-    location = parsedLocationArg;
+    location2 = parsedLocationArg;
   } else {
-    location = locationFromContext;
+    location2 = locationFromContext;
   }
-  let pathname = location.pathname || "/";
+  let pathname = location2.pathname || "/";
   let remainingPathname = pathname;
   if (parentPathnameBase !== "/") {
     let parentSegments = parentPathnameBase.replace(/^\//, "").split("/");
@@ -20382,11 +20382,11 @@ Please change the parent <Route path="${parentPath}"> to <Route path="${parentPa
   {
     warning(
       parentRoute || matches != null,
-      `No routes matched location "${location.pathname}${location.search}${location.hash}" `
+      `No routes matched location "${location2.pathname}${location2.search}${location2.hash}" `
     );
     warning(
       matches == null || matches[matches.length - 1].route.element !== void 0 || matches[matches.length - 1].route.Component !== void 0 || matches[matches.length - 1].route.lazy !== void 0,
-      `Matched leaf route at location "${location.pathname}${location.search}${location.hash}" does not have an element or Component. This means it will render an <Outlet /> with a null value by default resulting in an "empty" page.`
+      `Matched leaf route at location "${location2.pathname}${location2.search}${location2.hash}" does not have an element or Component. This means it will render an <Outlet /> with a null value by default resulting in an "empty" page.`
     );
   }
   let renderedMatches = _renderMatches(
@@ -20420,7 +20420,7 @@ Please change the parent <Route path="${parentPath}"> to <Route path="${parentPa
             hash: "",
             state: null,
             key: "default",
-            ...location
+            ...location2
           },
           navigationType: "POP"
           /* Pop */
@@ -20773,9 +20773,9 @@ function Router({
 }
 function Routes({
   children,
-  location
+  location: location2
 }) {
-  return useRoutes(createRoutesFromChildren(children), location);
+  return useRoutes(createRoutesFromChildren(children), location2);
 }
 function createRoutesFromChildren(children, parentPath = []) {
   let routes = [];
@@ -21002,7 +21002,7 @@ async function getKeyedPrefetchLinks(matches, manifest, routeModules) {
     )
   );
 }
-function getNewMatchesForLinks(page, nextMatches, currentMatches, manifest, location, mode) {
+function getNewMatchesForLinks(page, nextMatches, currentMatches, manifest, location2, mode) {
   let isNew = (match, index) => {
     if (!currentMatches[index]) return true;
     return match.route.id !== currentMatches[index].route.id;
@@ -21032,7 +21032,7 @@ function getNewMatchesForLinks(page, nextMatches, currentMatches, manifest, loca
       if (match.route.shouldRevalidate) {
         let routeChoice = match.route.shouldRevalidate({
           currentUrl: new URL(
-            location.pathname + location.search + location.hash,
+            location2.pathname + location2.search + location2.hash,
             window.origin
           ),
           currentParams: currentMatches[0]?.params || {},
@@ -21220,7 +21220,7 @@ function PrefetchPageLinksImpl({
   matches: nextMatches,
   ...linkProps
 }) {
-  let location = useLocation();
+  let location2 = useLocation();
   let { manifest, routeModules } = useFrameworkContext();
   let { basename } = useDataRouterContext2();
   let { loaderData, matches } = useDataRouterStateContext();
@@ -21230,10 +21230,10 @@ function PrefetchPageLinksImpl({
       nextMatches,
       matches,
       manifest,
-      location,
+      location2,
       "data"
     ),
-    [page, nextMatches, matches, manifest, location]
+    [page, nextMatches, matches, manifest, location2]
   );
   let newMatchesForAssets = reactExports.useMemo(
     () => getNewMatchesForLinks(
@@ -21241,13 +21241,13 @@ function PrefetchPageLinksImpl({
       nextMatches,
       matches,
       manifest,
-      location,
+      location2,
       "assets"
     ),
-    [page, nextMatches, matches, manifest, location]
+    [page, nextMatches, matches, manifest, location2]
   );
   let dataHrefs = reactExports.useMemo(() => {
-    if (page === location.pathname + location.search + location.hash) {
+    if (page === location2.pathname + location2.search + location2.hash) {
       return [];
     }
     let routesParams = /* @__PURE__ */ new Set();
@@ -21279,7 +21279,7 @@ function PrefetchPageLinksImpl({
   }, [
     basename,
     loaderData,
-    location,
+    location2,
     manifest,
     newMatchesForData,
     nextMatches,
@@ -21439,14 +21439,14 @@ var NavLink = reactExports.forwardRef(
     ...rest
   }, ref) {
     let path = useResolvedPath(to, { relative: rest.relative });
-    let location = useLocation();
+    let location2 = useLocation();
     let routerState = reactExports.useContext(DataRouterStateContext);
     let { navigator: navigator2, basename } = reactExports.useContext(NavigationContext);
     let isTransitioning = routerState != null && // Conditional usage is OK here because the usage of a data router is static
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useViewTransitionState(path) && viewTransition === true;
     let toPathname = navigator2.encodeLocation ? navigator2.encodeLocation(path).pathname : path.pathname;
-    let locationPathname = location.pathname;
+    let locationPathname = location2.pathname;
     let nextLocationPathname = routerState && routerState.navigation && routerState.navigation.location ? routerState.navigation.location.pathname : null;
     if (!caseSensitive) {
       locationPathname = locationPathname.toLowerCase();
@@ -21561,13 +21561,13 @@ function useLinkClickHandler(to, {
   viewTransition
 } = {}) {
   let navigate = useNavigate();
-  let location = useLocation();
+  let location2 = useLocation();
   let path = useResolvedPath(to, { relative });
   return reactExports.useCallback(
     (event) => {
       if (shouldProcessLinkClick(event, target)) {
         event.preventDefault();
-        let replace2 = replaceProp !== void 0 ? replaceProp : createPath(location) === createPath(path);
+        let replace2 = replaceProp !== void 0 ? replaceProp : createPath(location2) === createPath(path);
         navigate(to, {
           replace: replace2,
           state,
@@ -21578,7 +21578,7 @@ function useLinkClickHandler(to, {
       }
     },
     [
-      location,
+      location2,
       navigate,
       path,
       replaceProp,
@@ -21640,9 +21640,9 @@ function useFormAction(action, { relative } = {}) {
   invariant(routeContext, "useFormAction must be used inside a RouteContext");
   let [match] = routeContext.matches.slice(-1);
   let path = { ...useResolvedPath(action ? action : ".", { relative }) };
-  let location = useLocation();
+  let location2 = useLocation();
   if (action == null) {
-    path.search = location.search;
+    path.search = location2.search;
     let params = new URLSearchParams(path.search);
     let indexValues = params.getAll("index");
     let hasNakedIndexParam = indexValues.some((v) => v === "");
@@ -24207,6 +24207,46 @@ class WebSocketService {
           store.setPlaybackState("playing");
         }
         break;
+      case "stop_filler_music": {
+        store.setNowPlaying(null);
+        store.setPlaybackState("stopped");
+        const video = document.querySelector("video");
+        if (video) {
+          try {
+            video.pause();
+            video.removeAttribute("src");
+            video.load();
+          } catch {
+          }
+        }
+        break;
+      }
+      case "filler_set_volume": {
+        const vol = payload && typeof payload === "object" && "volume" in payload ? Math.max(0, Math.min(1, Number(payload.volume))) : void 0;
+        if (typeof vol === "number") {
+          const video = document.querySelector("video");
+          if (video) {
+            try {
+              video.volume = vol;
+            } catch {
+            }
+          }
+        }
+        break;
+      }
+      case "set_volume": {
+        const vol = payload && typeof payload === "object" && "volume" in payload ? Math.max(0, Math.min(1, Number(payload.volume))) : void 0;
+        if (typeof vol === "number") {
+          const video = document.querySelector("video");
+          if (video) {
+            try {
+              video.volume = vol;
+            } catch {
+            }
+          }
+        }
+        break;
+      }
       case "pause":
         store.setNowPlaying(null);
         store.setPlaybackState("stopped");
@@ -24507,7 +24547,7 @@ function ArrowPathIcon({
     d: "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
   }));
 }
-const ForwardRef$y = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
+const ForwardRef$z = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
 function ArrowTopRightOnSquareIcon({
   title,
   titleId,
@@ -24531,7 +24571,7 @@ function ArrowTopRightOnSquareIcon({
     d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
   }));
 }
-const ForwardRef$x = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+const ForwardRef$y = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
 function Bars3Icon({
   title,
   titleId,
@@ -24555,7 +24595,7 @@ function Bars3Icon({
     d: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
   }));
 }
-const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
+const ForwardRef$x = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
 function BugAntIcon({
   title,
   titleId,
@@ -24579,7 +24619,7 @@ function BugAntIcon({
     d: "M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082"
   }));
 }
-const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(BugAntIcon);
+const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(BugAntIcon);
 function CheckCircleIcon({
   title,
   titleId,
@@ -24603,7 +24643,7 @@ function CheckCircleIcon({
     d: "M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
   }));
 }
-const ForwardRef$u = /* @__PURE__ */ reactExports.forwardRef(CheckCircleIcon);
+const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(CheckCircleIcon);
 function ClockIcon({
   title,
   titleId,
@@ -24627,7 +24667,7 @@ function ClockIcon({
     d: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
   }));
 }
-const ForwardRef$t = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
+const ForwardRef$u = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
 function Cog6ToothIcon({
   title,
   titleId,
@@ -24655,7 +24695,7 @@ function Cog6ToothIcon({
     d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
   }));
 }
-const ForwardRef$s = /* @__PURE__ */ reactExports.forwardRef(Cog6ToothIcon);
+const ForwardRef$t = /* @__PURE__ */ reactExports.forwardRef(Cog6ToothIcon);
 function ComputerDesktopIcon({
   title,
   titleId,
@@ -24679,7 +24719,7 @@ function ComputerDesktopIcon({
     d: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"
   }));
 }
-const ForwardRef$r = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
+const ForwardRef$s = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
 function ExclamationCircleIcon({
   title,
   titleId,
@@ -24703,7 +24743,7 @@ function ExclamationCircleIcon({
     d: "M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
   }));
 }
-const ForwardRef$q = /* @__PURE__ */ reactExports.forwardRef(ExclamationCircleIcon);
+const ForwardRef$r = /* @__PURE__ */ reactExports.forwardRef(ExclamationCircleIcon);
 function ExclamationTriangleIcon({
   title,
   titleId,
@@ -24727,7 +24767,7 @@ function ExclamationTriangleIcon({
     d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
   }));
 }
-const ForwardRef$p = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
+const ForwardRef$q = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
 function EyeIcon({
   title,
   titleId,
@@ -24755,7 +24795,7 @@ function EyeIcon({
     d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
   }));
 }
-const ForwardRef$o = /* @__PURE__ */ reactExports.forwardRef(EyeIcon);
+const ForwardRef$p = /* @__PURE__ */ reactExports.forwardRef(EyeIcon);
 function FolderOpenIcon({
   title,
   titleId,
@@ -24779,7 +24819,7 @@ function FolderOpenIcon({
     d: "M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"
   }));
 }
-const ForwardRef$n = /* @__PURE__ */ reactExports.forwardRef(FolderOpenIcon);
+const ForwardRef$o = /* @__PURE__ */ reactExports.forwardRef(FolderOpenIcon);
 function ForwardIcon({
   title,
   titleId,
@@ -24803,7 +24843,7 @@ function ForwardIcon({
     d: "M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"
   }));
 }
-const ForwardRef$m = /* @__PURE__ */ reactExports.forwardRef(ForwardIcon);
+const ForwardRef$n = /* @__PURE__ */ reactExports.forwardRef(ForwardIcon);
 function GlobeAltIcon({
   title,
   titleId,
@@ -24827,7 +24867,7 @@ function GlobeAltIcon({
     d: "M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"
   }));
 }
-const ForwardRef$l = /* @__PURE__ */ reactExports.forwardRef(GlobeAltIcon);
+const ForwardRef$m = /* @__PURE__ */ reactExports.forwardRef(GlobeAltIcon);
 function MagnifyingGlassIcon({
   title,
   titleId,
@@ -24851,7 +24891,7 @@ function MagnifyingGlassIcon({
     d: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
   }));
 }
-const ForwardRef$k = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
+const ForwardRef$l = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
 function MicrophoneIcon({
   title,
   titleId,
@@ -24875,7 +24915,7 @@ function MicrophoneIcon({
     d: "M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
   }));
 }
-const ForwardRef$j = /* @__PURE__ */ reactExports.forwardRef(MicrophoneIcon);
+const ForwardRef$k = /* @__PURE__ */ reactExports.forwardRef(MicrophoneIcon);
 function MoonIcon({
   title,
   titleId,
@@ -24899,7 +24939,7 @@ function MoonIcon({
     d: "M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
   }));
 }
-const ForwardRef$i = /* @__PURE__ */ reactExports.forwardRef(MoonIcon);
+const ForwardRef$j = /* @__PURE__ */ reactExports.forwardRef(MoonIcon);
 function MusicalNoteIcon({
   title,
   titleId,
@@ -24923,7 +24963,7 @@ function MusicalNoteIcon({
     d: "m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
   }));
 }
-const ForwardRef$h = /* @__PURE__ */ reactExports.forwardRef(MusicalNoteIcon);
+const ForwardRef$i = /* @__PURE__ */ reactExports.forwardRef(MusicalNoteIcon);
 function PauseIcon({
   title,
   titleId,
@@ -24947,7 +24987,7 @@ function PauseIcon({
     d: "M15.75 5.25v13.5m-7.5-13.5v13.5"
   }));
 }
-const ForwardRef$g = /* @__PURE__ */ reactExports.forwardRef(PauseIcon);
+const ForwardRef$h = /* @__PURE__ */ reactExports.forwardRef(PauseIcon);
 function PlayIcon({
   title,
   titleId,
@@ -24971,7 +25011,31 @@ function PlayIcon({
     d: "M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
   }));
 }
-const ForwardRef$f = /* @__PURE__ */ reactExports.forwardRef(PlayIcon);
+const ForwardRef$g = /* @__PURE__ */ reactExports.forwardRef(PlayIcon);
+function PlusIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 4.5v15m7.5-7.5h-15"
+  }));
+}
+const ForwardRef$f = /* @__PURE__ */ reactExports.forwardRef(PlusIcon);
 function QrCodeIcon({
   title,
   titleId,
@@ -25369,14 +25433,14 @@ const SessionHistory = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold mb-2", children: "Session History" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4 text-blue-100", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "w-4 h-4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "w-4 h-4" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               "Started: ",
               sessionState ? formatTime(sessionState.startedAt) : "Unknown"
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "w-4 h-4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "w-4 h-4" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               sessionHistory.length,
               " songs played"
@@ -25394,7 +25458,7 @@ const SessionHistory = () => {
       )
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 overflow-y-auto max-h-[calc(80vh-200px)]", children: sessionHistory.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-12 text-gray-500 dark:text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "w-16 h-16 mx-auto mb-4 opacity-50" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "w-16 h-16 mx-auto mb-4 opacity-50" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-medium mb-2", children: "No Songs Played Yet" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Songs will appear here as they are performed during this session." })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: sessionHistory.slice().reverse().map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -25419,7 +25483,7 @@ const SessionHistory = () => {
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: entry.singerName })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "w-4 h-4" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "w-4 h-4" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatTime(entry.playedAt) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -25436,7 +25500,7 @@ const SessionHistory = () => {
               className: "flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors",
               title: "Replay this song",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "w-4 h-4" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "w-4 h-4" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden sm:inline", children: "Replay" })
               ]
             }
@@ -29519,9 +29583,7 @@ const DraggableQueueItem = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full flex items-center justify-center text-sm font-semibold mr-4", children: index + 1 }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-grow min-w-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2", children: [
-            entry.song.artist,
-            " - ",
-            entry.song.title,
+            entry.song.fileName,
             isYouTube && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { title: "YouTube", className: "inline-flex items-center text-red-600", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M23.5 6.2s-.2-1.7-.8-2.5c-.8-.8-1.7-.8-2.1-.9C17.1 2.5 12 2.5 12 2.5h0s-5.1 0-8.6.3c-.5 0-1.4.1-2.1.9-.6.8-.8 2.5-.8 2.5S0 8.2 0 10.2v1.6c0 2 .2 4 0 4s.2 1.7.8 2.5c.8.8 1.9.8 2.4.9 1.8.2 7.7.3 7.7.3s5.1 0 8.6-.3c.5 0 1.4-.1 2.1-.9.6-.8.8-2.5.8-2.5s.2-2 .2-4v-1.6c0-2-.2-4-.2-4zM9.5 13.7V7.9l6.2 2.9-6.2 2.9z" }) }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-600 dark:text-gray-400 truncate", children: [
@@ -29717,7 +29779,7 @@ const ManualRequestForm = () => {
   };
   const handleSelectSong = (song) => {
     setSelectedSong(song);
-    setSearchQuery(`${song.artist} - ${song.title}`);
+    setSearchQuery(song.fileName);
     setSearchResults([]);
   };
   const handleAddToQueue = () => {
@@ -29795,16 +29857,12 @@ const ManualRequestForm = () => {
           {
             role: "listbox",
             className: "absolute z-10 w-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg mt-1 max-h-60 overflow-y-auto",
-            children: searchResults.map((song) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            children: searchResults.map((song) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "li",
               {
                 onClick: () => handleSelectSong(song),
                 className: "px-4 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer",
-                children: [
-                  song.artist,
-                  " - ",
-                  song.title
-                ]
+                children: song.fileName
               },
               song.id
             ))
@@ -29888,6 +29946,7 @@ const PlayerScreenManager = () => {
   const socket = useAppStore((s) => s.socket);
   const toggleDeviceDebugOverlay = useAppStore((s) => s.toggleDeviceDebugOverlay);
   const [debugAll, setDebugAll] = reactExports.useState(false);
+  const [showAddHelp, setShowAddHelp] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (!socket || typeof socket.addEventListener !== "function") {
       return;
@@ -29918,6 +29977,15 @@ const PlayerScreenManager = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
+          onClick: () => setShowAddHelp(true),
+          className: "p-2 rounded-full hover:bg-brand-blue/10",
+          title: "Add a Player Screen",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "h-5 w-5" })
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
           onClick: async () => {
             const next = !debugAll;
             setDebugAll(next);
@@ -29928,7 +29996,7 @@ const PlayerScreenManager = () => {
           },
           className: "p-2 rounded-full hover:bg-brand-blue/10",
           title: "Toggle debug overlay on all player screens",
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: clsx("h-5 w-5", debugAll && "text-brand-pink") })
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: clsx("h-5 w-5", debugAll && "text-brand-pink") })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29942,13 +30010,13 @@ const PlayerScreenManager = () => {
       )
     ] }),
     devices.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 px-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-16 w-16 mx-auto text-text-secondary-light dark:text-text-secondary-dark opacity-50" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-16 w-16 mx-auto text-text-secondary-light dark:text-text-secondary-dark opacity-50" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-4 text-lg font-medium", children: "No Player Screens Connected" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "To show karaoke lyrics and videos, connect a display (like a TV or projector)." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 text-left space-y-4 bg-bg-light dark:bg-bg-dark p-4 rounded-lg border border-border-light dark:border-border-dark", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-semibold flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$x, { className: "h-5 w-5 mr-2" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$y, { className: "h-5 w-5 mr-2" }),
             "Option 1: Use a Web Browser"
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "On any device with a web browser (like a Smart TV, laptop, or tablet), open the browser and go to:" }),
@@ -30009,12 +30077,35 @@ const PlayerScreenManager = () => {
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "range",
+              min: 0,
+              max: 1,
+              step: 0.01,
+              defaultValue: 1,
+              onChange: async (e) => {
+                const vol = parseFloat(e.target.value);
+                try {
+                  await fetch(`/api/devices/${device.id}/command`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ command: "set_volume", data: { volume: vol } })
+                  });
+                } catch {
+                }
+              },
+              className: "w-24 mr-2",
+              title: "Volume"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => identifyDevice(device.id),
               className: "p-2 rounded-full hover:bg-brand-blue/10",
               title: "Identify Screen",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-6 w-6" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$p, { className: "h-6 w-6" })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30041,7 +30132,7 @@ const PlayerScreenManager = () => {
               onClick: () => toggleDeviceSidebar(device.id),
               className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isSidebarVisible }),
               title: device.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: clsx("h-6 w-6", device.isSidebarVisible && "text-brand-pink") })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$x, { className: clsx("h-6 w-6", device.isSidebarVisible && "text-brand-pink") })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30095,7 +30186,29 @@ const PlayerScreenManager = () => {
           })()
         ] }, i))
       ] })
-    ] })
+    ] }),
+    showAddHelp && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-lg w-full mx-4 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold", children: "Add a Player Screen" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "p-2 rounded hover:bg-black/10 dark:hover:bg-white/10", onClick: () => setShowAddHelp(false), "aria-label": "Close", children: "✕" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("ol", { className: "list-decimal list-inside space-y-2 text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+          "Run the KJ‑Nomad desktop app on another computer and choose ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Set up as Player" }),
+          " during onboarding."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+          "On another device, open a browser and navigate to:",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: playerUrl, target: "_blank", rel: "noopener noreferrer", className: "font-mono text-brand-blue dark:text-brand-pink underline break-all", children: playerUrl }) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+          "Open a new Player Screen window on this computer:",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: playerUrl, target: "_blank", rel: "noopener noreferrer", className: "btn", children: "Open Player Here" }) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: () => setShowAddHelp(false), children: "Close" }) })
+    ] }) })
   ] });
 };
 const useTheme = () => {
@@ -30118,9 +30231,9 @@ const ThemeToggle = () => {
       case "light":
         return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$7, { className: "h-4 w-4" });
       case "dark":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "h-4 w-4" });
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-4 w-4" });
       case "system":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-4 w-4" });
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-4 w-4" });
     }
   };
   const getLabel = () => {
@@ -30148,7 +30261,7 @@ const ThemeToggle = () => {
   );
 };
 const Navigation = () => {
-  const location = useLocation();
+  const location2 = useLocation();
   const { connectionStatus, error, serverInfo, checkServerInfo } = useAppStore();
   reactExports.useEffect(() => {
     if (connectionStatus === "connected") {
@@ -30159,7 +30272,7 @@ const Navigation = () => {
     {
       path: "/",
       label: "KJ Control",
-      icon: ForwardRef$s,
+      icon: ForwardRef$t,
       description: "Host Interface"
     },
     {
@@ -30183,13 +30296,13 @@ const Navigation = () => {
           ] })
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 text-red-500", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$p, { className: "h-4 w-4" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-4 w-4" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium hidden sm:inline", children: error || "Disconnected" })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "hidden md:flex items-center space-x-1", children: navItems.map((item) => {
       const Icon = item.icon;
-      const isActive = location.pathname === item.path;
+      const isActive = location2.pathname === item.path;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         Link,
         {
@@ -30210,7 +30323,7 @@ const Navigation = () => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
-        value: location.pathname,
+        value: location2.pathname,
         onChange: (e) => window.location.hash = `#${e.target.value}`,
         className: "input-primary py-1",
         children: navItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item.path, children: item.label }, item.path))
@@ -30268,6 +30381,8 @@ const HomePage = () => {
       console.error("Error reordering queue:", error);
     }
   };
+  const [newLibraryPath, setNewLibraryPath] = reactExports.useState("");
+  const [libraryMessage, setLibraryMessage] = reactExports.useState(null);
   reactExports.useEffect(() => {
     (async () => {
       try {
@@ -30312,7 +30427,7 @@ const HomePage = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx(ManualRequestForm, {}),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold flex items-center space-x-2 mb-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-5 w-5" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-5 w-5" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Playback Controls" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3", children: [
@@ -30324,7 +30439,7 @@ const HomePage = () => {
                 className: "btn-primary flex flex-col items-center space-y-1 h-20",
                 "data-testid": "play-next-button",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Play Next" })
                 ]
               }
@@ -30336,7 +30451,7 @@ const HomePage = () => {
                 disabled: !isConnected || !nowPlaying,
                 className: "btn-secondary flex flex-col items-center space-y-1 h-20",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: playbackState === "paused" ? "Resume" : "Pause" })
                 ]
               }
@@ -30348,7 +30463,7 @@ const HomePage = () => {
                 disabled: !isConnected || !nowPlaying,
                 className: "btn-tertiary flex flex-col items-center space-y-1 h-20",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$y, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$z, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Restart" })
                 ]
               }
@@ -30360,7 +30475,7 @@ const HomePage = () => {
                 disabled: !isConnected || !nowPlaying,
                 className: "btn flex flex-col items-center space-y-1 h-20 bg-card-light dark:bg-card-dark hover:bg-gray-100 dark:hover:bg-border-dark",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$m, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Skip" })
                 ]
               }
@@ -30384,7 +30499,7 @@ const HomePage = () => {
                 disabled: !isConnected,
                 className: "btn flex flex-col items-center space-y-1 h-20 bg-card-light dark:bg-card-dark hover:bg-gray-100 dark:hover:bg-border-dark",
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-6 w-6" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "History" }),
                   sessionHistory.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-brand-blue text-white rounded-full w-5 h-5 flex items-center justify-center", children: sessionHistory.length })
                 ]
@@ -30434,6 +30549,55 @@ const HomePage = () => {
               children: "Update Ticker"
             }
           )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Media Library" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1 font-mono", placeholder: "/absolute/path/to/your/karaoke/library", value: newLibraryPath, onChange: (e) => setNewLibraryPath(e.target.value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: async () => {
+              setLibraryMessage(null);
+              if (!newLibraryPath.trim()) {
+                setLibraryMessage("Enter a folder path");
+                return;
+              }
+              try {
+                const v = await fetch("/api/setup/validate-media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: newLibraryPath.trim() }) });
+                const j = await v.json();
+                if (!j?.success || !j.data?.valid) {
+                  setLibraryMessage(j?.data?.error || "Folder invalid");
+                  return;
+                }
+                await fetch("/api/setup/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mediaDirectory: newLibraryPath.trim() }) });
+                const scan = await fetch("/api/setup/scan", { method: "POST" });
+                const sj = await scan.json();
+                if (sj?.success) setLibraryMessage(`Scan complete. Songs found: ${sj.data?.songCount ?? 0}`);
+                else setLibraryMessage(sj?.error || "Scan failed");
+              } catch {
+                setLibraryMessage("Failed to update library");
+              }
+            }, children: "Set & Rescan" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn", onClick: async () => {
+              try {
+                const r2 = await fetch("/api/setup/scan", { method: "POST" });
+                const j = await r2.json();
+                setLibraryMessage(j?.success ? `Rescanned. Songs: ${j.data?.songCount ?? 0}` : j?.error || "Scan failed");
+              } catch {
+                setLibraryMessage("Scan failed");
+              }
+            }, children: "Rescan Library" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: async () => {
+              try {
+                await fetch("/api/setup/reset", { method: "POST" });
+                location.reload();
+              } catch {
+              }
+            }, children: "Reset Setup" })
+          ] }),
+          libraryMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm opacity-80", children: libraryMessage })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
@@ -30529,6 +30693,9 @@ const SetupWizardPage = () => {
   const [step, setStep] = reactExports.useState("welcome");
   const setIsSetupComplete = useAppStore((state) => state.setIsSetupComplete);
   const [mediaDirectory, setMediaDirectory] = reactExports.useState(null);
+  const [isValidPath, setIsValidPath] = reactExports.useState(false);
+  const [validationMsg, setValidationMsg] = reactExports.useState(null);
+  const [suggestions, setSuggestions] = reactExports.useState([]);
   const [error, setError] = reactExports.useState(null);
   const [scanStatus, setScanStatus] = reactExports.useState({ scanning: false, progress: 0, total: 0, complete: false, songCount: 0 });
   const startScan = reactExports.useCallback(async () => {
@@ -30568,15 +30735,39 @@ const SetupWizardPage = () => {
       startScan();
     }
   }, [step, mediaDirectory, startScan]);
+  reactExports.useEffect(() => {
+    (async () => {
+      try {
+        const r2 = await fetch("/api/setup/directory-suggestions");
+        const j = await r2.json();
+        if (j?.success && Array.isArray(j.data)) setSuggestions(j.data);
+      } catch {
+      }
+    })();
+  }, []);
   const handleSelectDirectory = async () => {
     setError(null);
     if (window.electronAPI) {
       const path = await window.electronAPI.selectDirectory();
       if (path) {
         setMediaDirectory(path);
+        try {
+          const resp = await fetch("/api/setup/validate-media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
+          const json = await resp.json();
+          if (json?.success && json.data?.valid) {
+            setIsValidPath(true);
+            setValidationMsg(null);
+          } else {
+            setIsValidPath(false);
+            setValidationMsg(json?.data?.error || "Directory is not valid");
+          }
+        } catch {
+          setIsValidPath(false);
+          setValidationMsg("Failed to validate folder");
+        }
       }
     } else {
-      setError("Directory selection is not available in this environment.");
+      setError(null);
     }
   };
   const handleSkip = () => {
@@ -30601,23 +30792,76 @@ const SetupWizardPage = () => {
         ] });
       case "select_media":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Select Media Library" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-6", children: "Choose the folder on your computer that contains your karaoke video files." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 space-y-3 text-left", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 className: "btn-secondary w-full",
                 onClick: handleSelectDirectory,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-5 w-5 mr-2" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-5 w-5 mr-2" }),
                   "Choose Folder"
                 ]
               }
             ),
-            mediaDirectory && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 p-3 bg-bg-light dark:bg-bg-dark rounded-lg text-sm text-left border border-border-light dark:border-border-dark", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-mono truncate text-text-secondary-light dark:text-text-secondary-dark", children: mediaDirectory }) }),
-            error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-500 text-sm mt-2", children: error })
+            !window.electronAPI && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs opacity-80", children: "Tip: Running in browser mode. Paste an absolute folder path below and click Validate." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                className: "input w-full font-mono",
+                placeholder: "/absolute/path/to/your/karaoke/library",
+                value: mediaDirectory || "",
+                onChange: (e) => {
+                  setMediaDirectory(e.target.value.trim());
+                  setIsValidPath(false);
+                  setValidationMsg(null);
+                }
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  className: "btn-tertiary",
+                  onClick: async () => {
+                    if (!mediaDirectory) {
+                      setValidationMsg("Enter a folder path");
+                      setIsValidPath(false);
+                      return;
+                    }
+                    try {
+                      const resp = await fetch("/api/setup/validate-media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: mediaDirectory }) });
+                      const json = await resp.json();
+                      if (json?.success && json.data?.valid) {
+                        setIsValidPath(true);
+                        setValidationMsg(`Looks good. Videos: ${json.data.stats?.videoCount ?? 0}`);
+                      } else {
+                        setIsValidPath(false);
+                        setValidationMsg(json?.data?.error || "Folder is not valid");
+                      }
+                    } catch {
+                      setIsValidPath(false);
+                      setValidationMsg("Failed to validate folder");
+                    }
+                  },
+                  children: "Validate"
+                }
+              ),
+              validationMsg && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm " + (isValidPath ? "text-green-600" : "text-red-500"), children: validationMsg })
+            ] }),
+            suggestions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs opacity-80", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1", children: "Suggestions:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: suggestions.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: () => {
+                setMediaDirectory(s);
+                setIsValidPath(false);
+                setValidationMsg(null);
+              }, children: s }, s)) })
+            ] }),
+            mediaDirectory && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-bg-light dark:bg-bg-dark rounded-lg text-sm text-left border border-border-light dark:border-border-dark", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-mono truncate text-text-secondary-light dark:text-text-secondary-dark", children: mediaDirectory }) }),
+            error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-500 text-sm", children: error })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: () => setStep("welcome"), children: "Back" }),
@@ -30628,7 +30872,7 @@ const SetupWizardPage = () => {
                 {
                   className: "btn-primary",
                   onClick: () => setStep("scan_media"),
-                  disabled: !mediaDirectory,
+                  disabled: !mediaDirectory || !isValidPath,
                   children: "Next: Scan Library"
                 }
               )
@@ -30637,7 +30881,7 @@ const SetupWizardPage = () => {
         ] });
       case "scan_media":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink animate-pulse" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink animate-pulse" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Scanning Library" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-6", children: "Please wait while we scan your media files..." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-card-dark rounded-full h-2.5 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30659,7 +30903,7 @@ const SetupWizardPage = () => {
         ] });
       case "complete":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-12 w-12 text-green-500" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: "h-12 w-12 text-green-500" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Setup Complete!" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-8", children: mediaDirectory ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             "We found ",
@@ -30676,7 +30920,14 @@ const SetupWizardPage = () => {
             "button",
             {
               className: "btn-primary",
-              onClick: () => setIsSetupComplete(true),
+              onClick: async () => {
+                try {
+                  await fetch("/api/setup/complete", { method: "POST" });
+                } catch (e) {
+                  console.warn("setup complete POST failed", e);
+                }
+                setIsSetupComplete(true);
+              },
               children: "Finish Setup"
             }
           )
@@ -30756,11 +31007,11 @@ const OnlineSessionConnectPage = () => {
 };
 const OnlineSessionConnectedPage = () => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-screen w-screen bg-bg-light dark:bg-bg-dark flex items-center justify-center font-sans text-text-primary-light dark:text-text-primary-dark", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card w-full max-w-lg text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-8", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-12 w-12 text-green-500" }) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: "h-12 w-12 text-green-500" }) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Successfully Connected" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-8", children: "This app is now connected to your online session. You can now manage your show from the web admin interface." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-bg-light dark:bg-bg-dark rounded-lg border border-border-light dark:border-border-dark", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center space-x-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-5 w-5 text-brand-blue dark:text-brand-pink" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$m, { className: "h-5 w-5 text-brand-blue dark:text-brand-pink" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-brand-blue dark:text-brand-pink", children: "kj.nomadkaraoke.com/admin" })
     ] }) })
   ] }) }) });
@@ -30833,6 +31084,10 @@ const PlayerPage = () => {
       video.src = `/api/media/${nowPlaying.fileName}`;
       const handleCanPlay = () => {
         setIsVideoLoaded(true);
+        if (nowPlaying?.isFiller) {
+          video.play().catch(() => {
+          });
+        }
       };
       const handleError = () => {
         if (nowPlaying?.isFiller) {
@@ -31061,7 +31316,7 @@ const PlayerPage = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
         upcomingSingers.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white/10 p-3 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-lg", children: entry.singerName }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm opacity-80", children: entry.song.title })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm opacity-80", children: entry.song.fileName })
         ] }, entry.song.id)),
         upcomingSingers.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Queue is empty" })
       ] })
@@ -31140,7 +31395,7 @@ const PlayerPage = () => {
     ] }),
     (!nowPlaying || !isVideoLoaded || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "w-16 h-16" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "w-16 h-16" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl md:text-6xl font-bold mb-4", children: "KJ-Nomad Ready" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl md:text-2xl text-white/80", children: "Waiting for the next performance..." })
       ] }),
@@ -31152,11 +31407,7 @@ const PlayerPage = () => {
             className: "bg-white/10 backdrop-blur-sm rounded-lg p-4 text-left",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-between", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-lg", children: entry.singerName }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-white/80", children: [
-                entry.song.artist,
-                " - ",
-                entry.song.title
-              ] })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-white/80", children: entry.song.fileName })
             ] }) })
           },
           entry.song.id
@@ -31210,9 +31461,7 @@ const PlayerPage = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold", children: [
         queue[0].singerName,
         ": ",
-        queue[0].song.artist,
-        " - ",
-        queue[0].song.title
+        queue[0].song.fileName
       ] })
     ] }),
     deviceSettings.isTickerVisible && /* @__PURE__ */ jsxRuntimeExports.jsx(Ticker, { text: tickerText })
@@ -31303,19 +31552,19 @@ const SingerPage = () => {
   const hasActiveRequest = myQueuePosition !== -1;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "container mx-auto max-w-2xl px-4 py-6 space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl md:text-5xl mb-2", children: "Search for a song" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: "Search for your favorite karaoke songs and add yourself to the queue" })
     ] }),
     !isConnected && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card border-red-500/50 bg-red-500/10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 text-red-700 dark:text-red-300", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-6 w-6" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-6 w-6" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold", children: "Connection Issue" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Unable to connect to the karaoke system. Please try again later." })
       ] })
     ] }) }),
     requestStatus.type && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `card ${requestStatus.type === "success" ? "border-green-500/50 bg-green-500/10" : "border-red-500/50 bg-red-500/10"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-center space-x-3 ${requestStatus.type === "success" ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"}`, children: [
-      requestStatus.type === "success" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-6 w-6" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-6 w-6" }),
+      requestStatus.type === "success" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: "h-6 w-6" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-6 w-6" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium", children: requestStatus.message })
     ] }) }),
     hasActiveRequest && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card border-2 border-brand-yellow bg-brand-yellow/10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
@@ -31327,9 +31576,7 @@ const SingerPage = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: myQueuePosition === 0 ? "You're up next!" : `${myQueuePosition} singers ahead of you` }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 text-sm text-text-secondary-light dark:text-text-secondary-dark", children: [
         "Song: ",
-        queue[myQueuePosition]?.song.artist,
-        " - ",
-        queue[myQueuePosition]?.song.title
+        queue[myQueuePosition]?.song.fileName
       ] })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
@@ -31352,7 +31599,7 @@ const SingerPage = () => {
     ] }),
     !hasActiveRequest && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold flex items-center space-x-2 mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "h-5 w-5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "h-5 w-5" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Find Your Song" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
@@ -31364,7 +31611,7 @@ const SingerPage = () => {
             onChange: (e) => setSearchQuery(e.target.value),
             placeholder: "Search by artist or song title...",
             hint: "Start typing to see available songs",
-            leftIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-5 w-5" }),
+            leftIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-5 w-5" }),
             disabled: !isConnected || !singerName.trim(),
             "data-testid": "song-search-input"
           }
@@ -31374,7 +31621,7 @@ const SingerPage = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: "Searching..." })
         ] }),
         !isSearching && searchQuery && songs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 text-text-secondary-light dark:text-text-secondary-dark", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 mx-auto mb-3 opacity-50" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-12 w-12 mx-auto mb-3 opacity-50" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No songs found" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Try a different search term" })
         ] }),
@@ -31385,11 +31632,8 @@ const SingerPage = () => {
             className: "p-4 border border-border-light dark:border-border-dark rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark transition-colors",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-semibold truncate", children: song.title }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-text-secondary-light dark:text-text-secondary-dark truncate", children: [
-                  "by ",
-                  song.artist
-                ] })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "font-semibold truncate", children: song.fileName }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark truncate" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -31422,11 +31666,7 @@ const SingerPage = () => {
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index === 0 ? "bg-brand-yellow text-bg-dark" : "bg-gray-300 dark:bg-border-dark text-text-secondary-light dark:text-text-secondary-dark"}`, children: index + 1 }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium truncate", children: entry.singerName }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark truncate", children: [
-                  entry.song.artist,
-                  " - ",
-                  entry.song.title
-                ] })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark truncate", children: entry.song.fileName })
               ] }),
               index === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-brand-yellow bg-brand-yellow/20 px-2 py-1 rounded", children: "Up Next" })
             ]
@@ -31508,4 +31748,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BGrhthHa.js.map
+//# sourceMappingURL=index-DFmtLpgs.js.map

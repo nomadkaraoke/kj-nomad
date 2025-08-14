@@ -18,8 +18,8 @@ export interface MockWindow extends Window {
 
 export interface Song {
   id: string;
-  artist: string;
-  title: string;
+  artist: string; // legacy, unused
+  title: string;  // mirrors fileName
   fileName: string;
 }
 

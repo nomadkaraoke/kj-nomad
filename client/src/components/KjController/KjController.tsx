@@ -161,7 +161,7 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
           <div className="space-y-4">
             <div className="bg-brand-blue/10 dark:bg-brand-blue/20 p-4 rounded-lg">
               <div className="font-semibold text-lg">
-                {nowPlaying.song.artist} - {nowPlaying.song.title}
+                {nowPlaying.song.fileName}
               </div>
               <div className="text-text-secondary-light dark:text-text-secondary-dark">
                 Singer: {nowPlaying.singerName}
@@ -214,7 +214,7 @@ const KjController: React.FC<KjControllerProps> = ({ socket, queue, sessionState
             if (!socket || entry.source !== 'youtube' || !entry.download?.videoId) return;
             socket.send(JSON.stringify({
               type: 'request_youtube_song',
-              payload: { videoId: entry.download.videoId, title: `${entry.song.artist} - ${entry.song.title}`, singerName: entry.singerName }
+              payload: { videoId: entry.download.videoId, title: entry.song.fileName, singerName: entry.singerName }
             }));
           }}
         />

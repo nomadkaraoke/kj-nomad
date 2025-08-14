@@ -14,6 +14,9 @@ const SetupWizardPage: React.FC = () => {
   const [step, setStep] = useState<WizardStep>('welcome');
   const setIsSetupComplete = useAppStore((state) => state.setIsSetupComplete);
   const [mediaDirectory, setMediaDirectory] = useState<string | null>(null);
+  const [isValidPath, setIsValidPath] = useState<boolean>(false);
+  const [validationMsg, setValidationMsg] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [scanStatus, setScanStatus] = useState<{
     scanning: boolean;
@@ -70,6 +73,17 @@ const SetupWizardPage: React.FC = () => {
     }
   }, [step, mediaDirectory, startScan]);
 
+  useEffect(() => {
+    // Load directory suggestions on mount
+    (async () => {
+      try {
+        const r = await fetch('/api/setup/directory-suggestions');
+        const j = await r.json();
+        if (j?.success && Array.isArray(j.data)) setSuggestions(j.data);
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
   const handleSelectDirectory = async () => {
     setError(null);
     if (window.electronAPI) {
@@ -78,9 +92,24 @@ const SetupWizardPage: React.FC = () => {
         // Here, we would normally validate the directory by calling a backend API
         // For now, we'll just set the path
         setMediaDirectory(path);
+        try {
+          const resp = await fetch('/api/setup/validate-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }) });
+          const json = await resp.json();
+          if (json?.success && json.data?.valid) {
+            setIsValidPath(true);
+            setValidationMsg(null);
+          } else {
+            setIsValidPath(false);
+            setValidationMsg(json?.data?.error || 'Directory is not valid');
+          }
+        } catch {
+          setIsValidPath(false);
+          setValidationMsg('Failed to validate folder');
+        }
       }
     } else {
-      setError('Directory selection is not available in this environment.');
+      // In web dev mode, fall back to manual entry; we keep the UI visible below
+      setError(null);
     }
   };
 
@@ -129,7 +158,7 @@ const SetupWizardPage: React.FC = () => {
               Choose the folder on your computer that contains your karaoke video files.
             </p>
             
-            <div className="mb-6">
+            <div className="mb-6 space-y-3 text-left">
               <button
                 className="btn-secondary w-full"
                 onClick={handleSelectDirectory}
@@ -137,13 +166,47 @@ const SetupWizardPage: React.FC = () => {
                 <FolderOpenIcon className="h-5 w-5 mr-2" />
                 Choose Folder
               </button>
+              {!window.electronAPI && (
+                <p className="text-xs opacity-80">Tip: Running in browser mode. Paste an absolute folder path below and click Validate.</p>
+              )}
+              <input
+                className="input w-full font-mono"
+                placeholder="/absolute/path/to/your/karaoke/library"
+                value={mediaDirectory || ''}
+                onChange={(e) => { setMediaDirectory(e.target.value.trim()); setIsValidPath(false); setValidationMsg(null); }}
+              />
+              <div className="flex gap-2">
+                <button
+                  className="btn-tertiary"
+                  onClick={async () => {
+                    if (!mediaDirectory) { setValidationMsg('Enter a folder path'); setIsValidPath(false); return; }
+                    try {
+                      const resp = await fetch('/api/setup/validate-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: mediaDirectory }) });
+                      const json = await resp.json();
+                      if (json?.success && json.data?.valid) { setIsValidPath(true); setValidationMsg(`Looks good. Videos: ${json.data.stats?.videoCount ?? 0}`); }
+                      else { setIsValidPath(false); setValidationMsg(json?.data?.error || 'Folder is not valid'); }
+                    } catch { setIsValidPath(false); setValidationMsg('Failed to validate folder'); }
+                  }}
+                >Validate</button>
+                {validationMsg && <span className={"text-sm " + (isValidPath ? 'text-green-600' : 'text-red-500')}>{validationMsg}</span>}
+              </div>
+              {suggestions.length > 0 && (
+                <div className="text-xs opacity-80">
+                  <div className="mb-1">Suggestions:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((s) => (
+                      <button key={s} className="btn-tertiary" onClick={() => { setMediaDirectory(s); setIsValidPath(false); setValidationMsg(null); }}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {mediaDirectory && (
-                <div className="mt-4 p-3 bg-bg-light dark:bg-bg-dark rounded-lg text-sm text-left border border-border-light dark:border-border-dark">
+                <div className="p-3 bg-bg-light dark:bg-bg-dark rounded-lg text-sm text-left border border-border-light dark:border-border-dark">
                   <p className="font-mono truncate text-text-secondary-light dark:text-text-secondary-dark">{mediaDirectory}</p>
                 </div>
               )}
               {error && (
-                <p className="text-red-500 text-sm mt-2">{error}</p>
+                <p className="text-red-500 text-sm">{error}</p>
               )}
             </div>
 
@@ -158,7 +221,7 @@ const SetupWizardPage: React.FC = () => {
                 <button
                   className="btn-primary"
                   onClick={() => setStep('scan_media')}
-                  disabled={!mediaDirectory}
+                  disabled={!mediaDirectory || !isValidPath}
                 >
                   Next: Scan Library
                 </button>
@@ -235,7 +298,10 @@ const SetupWizardPage: React.FC = () => {
             </div>
             <button
               className="btn-primary"
-              onClick={() => setIsSetupComplete(true)}
+              onClick={async () => {
+                try { await fetch('/api/setup/complete', { method: 'POST' }); } catch (e) { console.warn('setup complete POST failed', e); }
+                setIsSetupComplete(true);
+              }}
             >
               Finish Setup
             </button>

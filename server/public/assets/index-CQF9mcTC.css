@@ -801,6 +801,10 @@
     width: calc(var(--spacing, .25rem) * 16);
   }
 
+  .w-24 {
+    width: calc(var(--spacing, .25rem) * 24);
+  }
+
   .w-32 {
     width: calc(var(--spacing, .25rem) * 32);
   }
@@ -876,6 +880,14 @@
 
   .resize-none {
     resize: none;
+  }
+
+  .list-inside {
+    list-style-position: inside;
+  }
+
+  .list-decimal {
+    list-style-type: decimal;
   }
 
   .grid-cols-1 {
@@ -1491,6 +1503,10 @@
     padding: calc(var(--spacing, .25rem) * 4);
   }
 
+  .p-5 {
+    padding: calc(var(--spacing, .25rem) * 5);
+  }
+
   .p-6 {
     padding: calc(var(--spacing, .25rem) * 6);
   }
@@ -1661,6 +1677,10 @@
     font-weight: var(--font-weight-semibold, 600);
   }
 
+  .break-all {
+    word-break: break-all;
+  }
+
   .whitespace-pre-wrap {
     white-space: pre-wrap;
   }
@@ -1807,6 +1827,10 @@
     text-transform: capitalize;
   }
 
+  .underline {
+    text-decoration-line: underline;
+  }
+
   .placeholder-text-secondary-light::placeholder {
     color: var(--color-text-secondary-light);
   }
@@ -1843,6 +1867,11 @@
 
   .shadow-sm {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, #0000001a), 0 1px 2px -1px var(--tw-shadow-color, #0000001a);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-xl {
+    --tw-shadow: 0 20px 25px -5px var(--tw-shadow-color, #0000001a), 0 8px 10px -6px var(--tw-shadow-color, #0000001a);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
@@ -1903,6 +1932,16 @@
   @media (hover: hover) {
     .hover\:bg-bg-light:hover {
       background-color: var(--color-bg-light);
+    }
+
+    .hover\:bg-black\/10:hover {
+      background-color: #0000001a;
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-black\/10:hover {
+        background-color: color-mix(in oklab, var(--color-black, #000) 10%, transparent);
+      }
     }
 
     .hover\:bg-blue-700:hover {
@@ -2228,6 +2267,16 @@
 
     .dark\:hover\:bg-slate-600:where(.dark, .dark *):hover {
       background-color: var(--color-slate-600, oklch(44.6% .043 257.281));
+    }
+
+    .dark\:hover\:bg-white\/10:where(.dark, .dark *):hover {
+      background-color: #ffffff1a;
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .dark\:hover\:bg-white\/10:where(.dark, .dark *):hover {
+        background-color: color-mix(in oklab, var(--color-white, #fff) 10%, transparent);
+      }
     }
 
     .dark\:hover\:text-gray-300:where(.dark, .dark *):hover {

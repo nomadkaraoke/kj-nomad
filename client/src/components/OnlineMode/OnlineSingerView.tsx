@@ -193,7 +193,7 @@ const OnlineSingerView: React.FC = () => {
     const message = song.source === 'youtube'
       ? {
           type: 'request_youtube_song',
-          payload: { videoId: song.id, title: `${song.artist} - ${song.title}`, ...basePayload }
+          payload: { videoId: song.id, title: song.fileName, ...basePayload }
         }
       : {
           type: 'request_song',
@@ -324,7 +324,7 @@ const OnlineSingerView: React.FC = () => {
                     {mySongs.map((entry) => (
                       <div key={entry.id} className="flex justify-between items-center">
                         <span>
-                          {entry.song.artist} - {entry.song.title}
+                          {entry.song.fileName}
                         </span>
                         <span className="text-green-400">#{entry.position}</span>
                       </div>
@@ -384,7 +384,7 @@ const OnlineSingerView: React.FC = () => {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">{song.artist} - {song.title}</span>
+                            <span className="font-medium">{song.fileName}</span>
                             {song.source === 'youtube' && (
                               <span className="text-xs bg-red-600 text-white px-2 py-1 rounded">
                                 YouTube
@@ -442,7 +442,7 @@ const OnlineSingerView: React.FC = () => {
                       >
                         <div>
                           <span className="font-medium">
-                            {entry.song.artist} - {entry.song.title}
+                            {entry.song.fileName}
                           </span>
                           <span className="text-text-secondary-dark ml-2">by {entry.singerName}</span>
                         </div>

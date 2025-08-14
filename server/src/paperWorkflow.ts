@@ -87,12 +87,11 @@ export class PaperWorkflowManager extends EventEmitter {
   updateSongLibrary(songs: Song[]): void {
     this.songLibrary = songs;
     this.songFuse = new Fuse(songs, {
-      keys: [
-        { name: 'artist', weight: 0.4 },
-        { name: 'title', weight: 0.6 }
-      ],
+      keys: ['fileName'],
       threshold: 0.3,
-      includeScore: true
+      includeScore: true,
+      ignoreLocation: true,
+      minMatchCharLength: 1,
     });
 
     console.log(`[PaperWorkflow] Updated song library with ${songs.length} songs`);
@@ -155,68 +154,30 @@ export class PaperWorkflowManager extends EventEmitter {
    * Parse a slip to extract artist and title
    */
   private parseSlip(slip: PaperSlip): void {
-    const request = slip.requestedSong.toLowerCase();
+    // Legacy parsing removed; match by filename only
     
     // Try common patterns
-    const patterns = [
-      /(.+?)\s*-\s*(.+)/, // "Artist - Title"
-      /(.+?)\s+by\s+(.+)/, // "Title by Artist"
-      /(.+?)\s*\/\s*(.+)/, // "Artist / Title"
-      /(.+?)\s*\|\s*(.+)/, // "Artist | Title"
-    ];
-
-    let artist = '';
-    let title = '';
+    // New behavior: just search by filename using the entire requested string as a substring/fuzzy
     let bestMatch: { item: Song; score?: number } | null = null;
-
-    for (const pattern of patterns) {
-      const match = request.match(pattern);
-      if (match) {
-        if (pattern.source.includes('by')) {
-          // "Title by Artist" format
-          title = match[1].trim();
-          artist = match[2].trim();
-        } else {
-          // "Artist - Title" format
-          artist = match[1].trim();
-          title = match[2].trim();
-        }
-
-        // Try to match against song library
-        if (this.songFuse) {
-          const searchResults = this.songFuse.search(`${artist} ${title}`);
-          if (searchResults.length > 0) {
-            bestMatch = searchResults[0];
-            break;
-          }
-        }
-      }
-    }
-
-    // If no pattern match, try searching the whole string
-    if (!bestMatch && this.songFuse) {
+    if (this.songFuse) {
       const searchResults = this.songFuse.search(slip.requestedSong);
       if (searchResults.length > 0) {
         bestMatch = searchResults[0];
-        const song = bestMatch.item;
-        artist = song.artist;
-        title = song.title;
       }
     }
 
     if (bestMatch) {
       slip.parsedSong = {
-        artist,
-        title,
-        confidence: 1 - (bestMatch.score || 0) // Convert Fuse score to confidence
+        artist: '',
+        title: bestMatch.item.fileName,
+        confidence: 1 - (bestMatch.score || 0)
       };
       slip.matchedSong = bestMatch.item;
       slip.status = 'matched';
     } else {
-      // No good match found
       slip.parsedSong = {
-        artist: artist || 'Unknown',
-        title: title || slip.requestedSong,
+        artist: '',
+        title: slip.requestedSong,
         confidence: 0
       };
       slip.status = 'unavailable';
@@ -285,11 +246,7 @@ export class PaperWorkflowManager extends EventEmitter {
     if (!slip || !song) return false;
 
     slip.matchedSong = song;
-    slip.parsedSong = {
-      artist: song.artist,
-      title: song.title,
-      confidence: 1.0
-    };
+    slip.parsedSong = { artist: '', title: song.fileName, confidence: 1.0 };
     slip.status = 'matched';
 
     this.emit('slipMatched', slip);

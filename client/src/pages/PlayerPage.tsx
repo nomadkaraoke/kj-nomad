@@ -69,8 +69,12 @@ const PlayerPage: React.FC = () => {
       video.src = `/api/media/${nowPlaying.fileName}`;
       
       const handleCanPlay = () => {
-        // Mark loaded; actual playback is controlled strictly by sync_play schedule
+        // Mark loaded
         setIsVideoLoaded(true);
+        // For filler/background content, auto-play locally
+        if (nowPlaying?.isFiller) {
+          video.play().catch(() => {/* ignore autoplay rejections for filler */});
+        }
       };
       
       const handleError = () => {
@@ -333,7 +337,7 @@ const PlayerPage: React.FC = () => {
             {upcomingSingers.map((entry) => (
               <div key={entry.song.id} className="bg-white/10 p-3 rounded-lg">
                 <p className="font-bold text-lg">{entry.singerName}</p>
-                <p className="text-sm opacity-80">{entry.song.title}</p>
+                <p className="text-sm opacity-80">{entry.song.fileName}</p>
               </div>
             ))}
             {upcomingSingers.length === 0 && <p>Queue is empty</p>}
@@ -409,7 +413,7 @@ const PlayerPage: React.FC = () => {
                             {entry.singerName}
                           </div>
                           <div className="text-white/80">
-                            {entry.song.artist} - {entry.song.title}
+                           {entry.song.fileName}
                           </div>
                         </div>
                       </div>
@@ -491,7 +495,7 @@ const PlayerPage: React.FC = () => {
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-6 py-3 rounded-lg shadow-lg">
           <div className="text-sm opacity-80">Up next...</div>
           <div className="font-semibold">
-            {queue[0].singerName}: {queue[0].song.artist} - {queue[0].song.title}
+           {queue[0].singerName}: {queue[0].song.fileName}
           </div>
         </div>
       )}
