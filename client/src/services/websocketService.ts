@@ -7,7 +7,7 @@ class WebSocketService {
   private clientType: 'player' | 'admin' | 'singer' | 'unknown' = 'unknown';
   private reconnectAttempts = 0;
   private reconnectInterval = 1000;
-  private maxReconnectInterval = 10000; // Try again every 10 seconds max
+  private maxReconnectInterval = 3000; // Cap retries at 3s to avoid long "Connecting..." states
   private reconnectTimer: NodeJS.Timeout | null = null;
 
   connect(type: 'player' | 'admin' | 'singer' | 'unknown' = 'unknown') {
@@ -64,7 +64,7 @@ class WebSocketService {
 
         // Reconnect indefinitely if the disconnection was unexpected
         if (event.code !== 1000 && event.code !== 1001) {
-          this.scheduleReconnect();
+          this.scheduleReconnect(event);
         } else {
           useAppStore.getState().setConnectionStatus('idle');
         }
@@ -122,7 +122,7 @@ class WebSocketService {
     });
   }
   
-  private scheduleReconnect() {
+  private scheduleReconnect(closeEvent?: CloseEvent) {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
@@ -134,17 +134,16 @@ class WebSocketService {
     }
 
     useAppStore.getState().setConnectionStatus('connecting');
-    useAppStore.getState().setError('Disconnected. Reconnecting...');
+    const nextInMs = Math.min(this.maxReconnectInterval, this.reconnectInterval * 2 + Math.random() * 1000);
+    const reason = closeEvent?.reason || `code ${closeEvent?.code ?? 'unknown'}`;
+    useAppStore.getState().setError(`Disconnected (${reason}). Reconnecting in ${Math.round(nextInMs/1000)}s...`);
 
     this.reconnectTimer = setTimeout(() => {
       this.connect(this.clientType); // Reconnect with the same client type
     }, this.reconnectInterval);
 
     // Exponential backoff with jitter
-    this.reconnectInterval = Math.min(
-      this.maxReconnectInterval,
-      this.reconnectInterval * 2 + Math.random() * 1000
-    );
+    this.reconnectInterval = nextInMs;
   }
 
   private handleMessage(message: { type: string; payload?: unknown }) {
@@ -254,32 +253,51 @@ class WebSocketService {
       }
 
       case 'sync_preload': {
-        if (payload && typeof payload === 'object') {
-          const { commandId, videoUrl } = payload as { commandId: string; videoUrl: string };
-          store.setSyncPreload({ commandId, videoUrl });
-          // Let server/log know we got preload and are starting to load media
-          this.send({ type: 'client_preload_received', payload: { commandId, videoUrl, clientNow: Date.now() } });
-          this.send({ type: 'client_video_loaded', payload: { clientReceivedAt: Date.now(), phase: 'preloading' } });
+        {
+          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; videoUrl: string } : (message as { commandId?: string; videoUrl?: string });
+          if (data && data.commandId && data.videoUrl) {
+            const { commandId, videoUrl } = data as { commandId: string; videoUrl: string };
+            try { console.log('[PlayerSync] WS sync_preload', { commandId, videoUrl, now: Date.now() }); } catch { /* noop */ }
+            store.setSyncPreload({ commandId, videoUrl });
+            this.send({ type: 'client_preload_received', payload: { commandId, videoUrl, clientNow: Date.now() } });
+            this.send({ type: 'client_video_loaded', payload: { clientReceivedAt: Date.now(), phase: 'preloading' } });
+          }
         }
         break;
       }
 
       case 'sync_play': {
-        if (payload && typeof payload === 'object') {
-          const { commandId, scheduledTime, videoTime, videoUrl } = payload as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string };
-          // scheduledTime is already adjusted to client local time
-          store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl });
-          this.send({ type: 'client_schedule_received', payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
+        {
+          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' } : (message as { commandId?: string; scheduledTime?: number; videoTime?: number; videoUrl?: string; timeDomain?: 'client' | 'server' });
+          if (data && data.commandId != null && data.scheduledTime != null && data.videoTime != null && data.videoUrl) {
+            const { commandId, scheduledTime, videoTime, videoUrl, timeDomain } = data as { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' };
+            try { console.log('[PlayerSync] WS sync_play', { commandId, scheduledTime, videoTime, videoUrl, timeDomain: timeDomain || 'client', now: Date.now() }); } catch { /* noop */ }
+            store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl, timeDomain });
+            this.send({ type: 'client_schedule_received', payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
+            const video = document.querySelector('video') as HTMLVideoElement | null;
+            if (video) {
+              try {
+                const currentPath = new URL(video.src, window.location.origin).pathname;
+                const targetPath = new URL(videoUrl, window.location.origin).pathname;
+                if (currentPath !== targetPath) {
+                  video.src = videoUrl;
+                }
+              } catch { /* ignore */ }
+            }
+          }
         }
         break;
       }
 
       case 'sync_pause': {
-        if (payload && typeof payload === 'object') {
-          const { commandId, scheduledTime } = payload as { commandId: string; scheduledTime: number };
-          // Use received scheduledTime directly (client-local)
-          store.setSyncPause({ commandId, scheduledTime });
-          this.send({ type: 'client_pause_schedule_received', payload: { commandId, scheduledTime, clientNow: Date.now() } });
+        {
+          const data = (payload && typeof payload === 'object') ? payload as { commandId: string; scheduledTime: number } : (message as { commandId?: string; scheduledTime?: number });
+          if (data && data.commandId != null && data.scheduledTime != null) {
+            const { commandId, scheduledTime } = data as { commandId: string; scheduledTime: number };
+            try { console.log('[PlayerSync] WS sync_pause', { commandId, scheduledTime, now: Date.now() }); } catch { /* noop */ }
+            store.setSyncPause({ commandId, scheduledTime });
+            this.send({ type: 'client_pause_schedule_received', payload: { commandId, scheduledTime, clientNow: Date.now() } });
+          }
         }
         break;
       }

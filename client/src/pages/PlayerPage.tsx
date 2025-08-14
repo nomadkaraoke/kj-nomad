@@ -54,27 +54,22 @@ const PlayerPage: React.FC = () => {
     }
   }, [devices, playerDeviceId]);
   
+  // Fallback-only nowPlaying handler: do NOT auto-play when sync engine is orchestrating
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (nowPlaying) {
+    // If sync protocol is active (preload/play present), skip fallback auto-play
+    const syncActive = Boolean(syncPreload || syncPlay);
+
+    if (nowPlaying && !syncActive) {
       setError(null);
       setIsVideoLoaded(false);
       video.src = `/api/media/${nowPlaying.fileName}`;
       
       const handleCanPlay = () => {
+        // Mark loaded; actual playback is controlled strictly by sync_play schedule
         setIsVideoLoaded(true);
-        video.play().then(() => {
-          setIsPlaying(true);
-        }).catch((err) => {
-          console.error('Failed to play video:', err);
-          if (err.name === 'NotAllowedError') {
-            setError('Click to enable video playback');
-          } else {
-            setError('Failed to play video');
-          }
-        });
       };
       
       const handleError = () => {
@@ -89,23 +84,25 @@ const PlayerPage: React.FC = () => {
         video.removeEventListener('canplay', handleCanPlay);
         video.removeEventListener('error', handleError);
       };
-    } else {
+    } else if (!nowPlaying && !syncActive) {
       video.pause();
       setIsPlaying(false);
       setIsVideoLoaded(false);
     }
-  }, [nowPlaying]);
+  }, [nowPlaying, syncPreload, syncPlay]);
 
   // Handle sync preload: set src and buffer, then report readiness
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !syncPreload) return;
+    console.log('[PlayerSync] sync_preload received', { commandId: syncPreload.commandId, videoUrl: syncPreload.videoUrl, now: Date.now() });
     setError(null);
     setIsVideoLoaded(false);
     video.src = syncPreload.videoUrl;
     const onCanPlay = () => {
       setIsVideoLoaded(true);
       const bufferedSecs = video.buffered.length > 0 ? (video.buffered.end(0) - video.currentTime) : 0;
+      console.log('[PlayerSync] video canplay', { bufferedSecs, duration: isNaN(video.duration) ? null : video.duration, now: Date.now() });
       websocketService.send({ type: 'client_canplay', payload: { readyAt: Date.now(), bufferedSecs, duration: isNaN(video.duration) ? undefined : video.duration } });
       websocketService.send({
         type: 'sync_ready',
@@ -124,19 +121,33 @@ const PlayerPage: React.FC = () => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !syncPlay) return;
-    const { scheduledTime, videoTime } = syncPlay as { scheduledTime: number; videoTime: number };
-    // scheduledTime is in client-local time; schedule directly
-    const delay = Math.max(0, scheduledTime - Date.now());
+    const { scheduledTime, videoTime, timeDomain } = syncPlay as { scheduledTime: number; videoTime: number; timeDomain?: 'client' | 'server' };
+    // Compute delay depending on domain; default to client-local
+    const targetTime = timeDomain === 'server' ? scheduledTime + (useAppStore.getState().lastClockOffsetMs || 0) - (useAppStore.getState().lastClockLatencyMs || 0) : scheduledTime;
+    const delay = Math.max(0, targetTime - Date.now());
+    console.log('[PlayerSync] sync_play schedule received', { timeDomain: timeDomain || 'client', scheduledTime, localTargetTime: targetTime, videoTime, delayMs: delay, now: Date.now() });
     const timer = window.setTimeout(() => {
       try {
+        console.log('[PlayerSync] schedule fired', { now: Date.now() });
         if (!isNaN(videoTime)) {
           video.currentTime = videoTime;
         }
         const before = video.currentTime;
         websocketService.send({ type: 'client_schedule_fired', payload: { firedAt: Date.now(), beforeTime: before } });
+        console.log('[PlayerSync] calling video.play()', { currentTime: video.currentTime, now: Date.now() });
         video.play().then(() => {
+          console.log('[PlayerSync] video started', { currentTime: video.currentTime, now: Date.now() });
           websocketService.send({ type: 'client_started_playback', payload: { startedAt: Date.now(), videoTime: video.currentTime } });
-        }).catch(() => {/* ignore, handled elsewhere */});
+        }).catch((err: unknown) => {
+          const e = err as { name?: string };
+          console.warn('[PlayerSync] video.play() rejected', e);
+          websocketService.send({ type: 'client_play_rejected', payload: { at: Date.now(), name: e?.name } });
+          if (e?.name === 'NotAllowedError') {
+            setError('Click to enable video playback');
+          } else {
+            setError('Failed to play video');
+          }
+        });
       } catch {/* ignore */}
     }, delay);
     return () => window.clearTimeout(timer);
@@ -148,8 +159,10 @@ const PlayerPage: React.FC = () => {
     if (!video || !syncPause) return;
     const { scheduledTime } = syncPause;
     const delay = Math.max(0, scheduledTime - Date.now());
+    console.log('[PlayerSync] sync_pause schedule received', { scheduledTime, delayMs: delay, now: Date.now() });
     const timer = window.setTimeout(() => {
       try {
+        console.log('[PlayerSync] pause schedule fired', { now: Date.now(), currentTime: video.currentTime });
         video.pause();
         websocketService.send({ type: 'client_paused', payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
       } catch {/* ignore */}
@@ -166,21 +179,46 @@ const PlayerPage: React.FC = () => {
         setSelfDriftMs(0);
         return;
       }
-      const expected = (syncPlay as { videoTime: number; scheduledTime: number }).videoTime +
-        Math.max(0, (Date.now() - (syncPlay as { videoTime: number; scheduledTime: number }).scheduledTime) / 1000);
+      const s = (syncPlay as { videoTime: number; scheduledTime: number; timeDomain?: 'client' | 'server' });
+      const baselineMs = s.timeDomain === 'server'
+        ? s.scheduledTime + (useAppStore.getState().lastClockOffsetMs || 0) - (useAppStore.getState().lastClockLatencyMs || 0)
+        : s.scheduledTime;
+      const expected = s.videoTime + Math.max(0, (Date.now() - baselineMs) / 1000);
       const drift = (video.currentTime || 0) - expected;
       setSelfDriftMs(Math.round(drift * 1000));
     }, 250);
     return () => window.clearInterval(id);
   }, [syncPlay]);
 
+  // One-time verbose video event logging to console
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const log = (evt: Event) => {
+      const type = evt.type;
+      // Log only a subset frequently
+      if (type === 'timeupdate' || type === 'progress') return;
+      console.log(`[PlayerSync] video event: ${type}`, { now: Date.now(), currentTime: v.currentTime, paused: v.paused, readyState: v.readyState });
+    };
+    const events = ['loadedmetadata','canplay','playing','pause','seeking','seeked','ended','stalled','suspend','waiting','emptied'];
+    events.forEach(e => v.addEventListener(e, log));
+    return () => { events.forEach(e => v.removeEventListener(e, log)); };
+  }, []);
+
   const onEnded = () => {
-    if (nowPlaying) {
-      // Send song ended event to trigger next song or filler
-      // This should be handled by the WebSocket service
-      console.log('Song ended, should trigger next song');
+    // Notify server and immediately reset the element so we don't freeze on the last frame
+    websocketService.send({ type: 'song_ended' });
+    const video = videoRef.current;
+    if (video) {
+      try {
+        video.pause();
+        // Clear src to release the resource and show the idle UI
+        video.removeAttribute('src');
+        video.load();
+      } catch {/* ignore */}
     }
     setIsPlaying(false);
+    setIsVideoLoaded(false);
   };
   
 
@@ -266,7 +304,7 @@ const PlayerPage: React.FC = () => {
           <div>self drift: {selfDriftMs} ms</div>
           {syncPlay && (
             <div>
-              schedule: t={new Date(syncPlay.scheduledTime).toLocaleTimeString()} ({syncPlay.scheduledTime}) v={syncPlay.videoTime.toFixed(3)}
+              schedule: t={new Date((syncPlay.timeDomain === 'server' ? (syncPlay.scheduledTime + (lastClockOffsetMs||0) - (lastClockLatencyMs||0)) : syncPlay.scheduledTime)).toLocaleTimeString()} ({syncPlay.scheduledTime}) v={syncPlay.videoTime.toFixed(3)} d={syncPlay.timeDomain||'client'}
             </div>
           )}
           <div>clock sync: lat={lastClockLatencyMs ?? 0}ms offset={lastClockOffsetMs ?? 0}ms</div>

@@ -38,8 +38,8 @@ import {
   resetQueue,
   getSessionState,
   playSong,
-  restartCurrentSong,
   getSessionHistory,
+  pausePlayback,
   resumePlayback,
   stopPlayback
 } from './songQueue.js';
@@ -71,7 +71,11 @@ server.on('error', (e: Error & { code?: string }) => {
   }
 });
 
-const wss = new WebSocketServer({ server });
+server.on('listening', () => {
+  console.log(`[Server] HTTP server is listening; active ws clients: ${wss.clients.size}`);
+});
+
+const wss = new WebSocketServer({ server, clientTracking: true });
 
 // Publish the server on the network
 const bonjour = new Bonjour();
@@ -1322,6 +1326,11 @@ wss.on('connection', (ws, req) => {
                         // Use connection/clientId for sync engine id
                         const ok = await videoSyncEngine.catchUpClient(clientId, videoUrl, elapsedSec);
                         if (ok) {
+                            // Update the persistent baseline for this connection so drift uses client clock domain
+                            const baseline = videoSyncEngine.getClientBaseline(clientId);
+                            if (baseline) {
+                              // nothing; baseline is set in catchUpClient
+                            }
                             syncLog('catchup_enqueued', { clientId, elapsedSec, videoUrl, at: Date.now() });
                         }
                     } catch {
@@ -1401,6 +1410,9 @@ wss.on('connection', (ws, req) => {
                 const reportedTimeSec = (payload && typeof payload === 'object' && 'currentTime' in payload)
                     ? Number((payload as { currentTime: number }).currentTime)
                     : NaN;
+                const clientReportedAt = (payload && typeof payload === 'object' && 'reportedAt' in payload)
+                    ? Number((payload as { reportedAt?: number }).reportedAt)
+                    : undefined;
                 if (!isNaN(reportedTimeSec)) {
                     latestPlaybackPositionsSec.set(clientId, reportedTimeSec);
 
@@ -1410,7 +1422,10 @@ wss.on('connection', (ws, req) => {
                     if (clientBaseline || hasGlobal) {
                         const scheduled = clientBaseline?.scheduledTime ?? (syncRefScheduledTimeMs as number);
                         const startSec = clientBaseline?.videoStartSec ?? (syncRefVideoStartSec as number);
-                        const expectedSec = startSec + Math.max(0, (Date.now() - scheduled) / 1000);
+                        const baselineDomain = clientBaseline ? clientBaseline.domain : 'server';
+                        // Decide reference time for expectedSec based on baseline domain
+                        const nowRef = (baselineDomain === 'client' && clientReportedAt) ? clientReportedAt : Date.now();
+                        const expectedSec = startSec + Math.max(0, (nowRef - scheduled) / 1000);
                         const driftMs = Math.round((reportedTimeSec - expectedSec) * 1000);
                         const clientStats = videoSyncEngine.getClientStats(clientId);
                         const mappedId = connectionToDeviceId.get(clientId) || clientId;
@@ -1422,7 +1437,7 @@ wss.on('connection', (ws, req) => {
                             }
                         });
                         broadcast({ type: 'devices_updated', payload: getMappedDevices() });
-                        syncLog('position_report', { clientId, reportedTimeSec, expectedSec, driftMs, baseline: { scheduled, startSec }, clientStats });
+                        syncLog('position_report', { clientId, reportedTimeSec, expectedSec, driftMs, baseline: { scheduled, startSec, domain: baselineDomain, usedOffsetMs: clientBaseline?.usedOffsetMs, usedLatencyMs: clientBaseline?.usedLatencyMs, establishedAt: clientBaseline?.establishedAt }, referenceNow: { type: (baselineDomain === 'client' ? 'clientReportedAt' : 'serverNow'), value: nowRef }, clientStats });
                     }
                 }
             } catch (err) {
@@ -1496,19 +1511,13 @@ wss.on('connection', (ws, req) => {
         }
         case 'restart_song': {
             console.log('[WebSocket] Restart song requested');
-            const currentSong = restartCurrentSong();
-            if (currentSong) {
-              // Reset baseline for new start via legacy path
-              syncRefScheduledTimeMs = null;
-              syncRefVideoStartSec = null;
-              broadcast({ type: 'play', payload: { 
-                  songId: currentSong.song.id, 
-                  fileName: currentSong.song.fileName,
-                  singer: currentSong.singerName,
-                  restart: true
-              }});
-              broadcast({ type: 'session_state_updated', payload: getSessionState() });
+            const s = getSessionState();
+            if (s.nowPlaying?.song?.fileName) {
+              // Use sync engine to schedule a fresh start at t=0
+              videoSyncEngine.syncPlayVideo(`/api/media/${s.nowPlaying.song.fileName}`, 0)
+                .catch((err) => console.error('[Sync] restart error:', err));
             }
+            broadcast({ type: 'session_state_updated', payload: getSessionState() });
             break;
         }
         case 'replay_song': {
@@ -1529,15 +1538,18 @@ wss.on('connection', (ws, req) => {
         case 'pause_playback': {
             // Use sync engine pause so clients pause in lockstep at a scheduled time
             videoSyncEngine.syncPause().catch((err) => console.error('[Sync] pause error:', err));
+            pausePlayback();
             // Do not broadcast legacy 'pause' that resets client state; rely on sync_pause
             broadcast({ type: 'session_state_updated', payload: getSessionState() });
             break;
         }
-        case 'resume_playback':
+        case 'resume_playback': {
+            // Resume with synchronized schedule at current timestamp
+            videoSyncEngine.syncResume().catch((err) => console.error('[Sync] resume error:', err));
             resumePlayback();
-            broadcast({ type: 'resume' });
             broadcast({ type: 'session_state_updated', payload: getSessionState() });
             break;
+        }
         case 'stop_playback':
             stopPlayback();
             syncRefScheduledTimeMs = null;
@@ -1548,6 +1560,9 @@ wss.on('connection', (ws, req) => {
             broadcast({ type: 'history_updated', payload: getSessionHistory() });
             break;
         case 'song_ended': {
+            // Client reports a song finished; end sync engine playback and advance
+            try { syncLog('client_song_ended', { clientId, at: Date.now() }); } catch { void 0; }
+            videoSyncEngine.endPlayback();
             // Mark current song as completed and move to next
             const nextSong = getNextSong();
             if (nextSong) {

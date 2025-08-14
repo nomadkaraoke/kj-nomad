@@ -23985,8 +23985,8 @@ class WebSocketService {
   clientType = "unknown";
   reconnectAttempts = 0;
   reconnectInterval = 1e3;
-  maxReconnectInterval = 1e4;
-  // Try again every 10 seconds max
+  maxReconnectInterval = 3e3;
+  // Cap retries at 3s to avoid long "Connecting..." states
   reconnectTimer = null;
   connect(type = "unknown") {
     this.clientType = type;
@@ -24029,7 +24029,7 @@ class WebSocketService {
         }
         useAppStore.getState().setSocket(null);
         if (event.code !== 1e3 && event.code !== 1001) {
-          this.scheduleReconnect();
+          this.scheduleReconnect(event);
         } else {
           useAppStore.getState().setConnectionStatus("idle");
         }
@@ -24084,7 +24084,7 @@ class WebSocketService {
       }
     });
   }
-  scheduleReconnect() {
+  scheduleReconnect(closeEvent) {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
@@ -24093,14 +24093,13 @@ class WebSocketService {
       console.log("Disconnected from server. Retrying every 10 seconds indefinitely...");
     }
     useAppStore.getState().setConnectionStatus("connecting");
-    useAppStore.getState().setError("Disconnected. Reconnecting...");
+    const nextInMs = Math.min(this.maxReconnectInterval, this.reconnectInterval * 2 + Math.random() * 1e3);
+    const reason = closeEvent?.reason || `code ${closeEvent?.code ?? "unknown"}`;
+    useAppStore.getState().setError(`Disconnected (${reason}). Reconnecting in ${Math.round(nextInMs / 1e3)}s...`);
     this.reconnectTimer = setTimeout(() => {
       this.connect(this.clientType);
     }, this.reconnectInterval);
-    this.reconnectInterval = Math.min(
-      this.maxReconnectInterval,
-      this.reconnectInterval * 2 + Math.random() * 1e3
-    );
+    this.reconnectInterval = nextInMs;
   }
   handleMessage(message) {
     const { type, payload } = message;
@@ -24194,27 +24193,59 @@ class WebSocketService {
         break;
       }
       case "sync_preload": {
-        if (payload && typeof payload === "object") {
-          const { commandId, videoUrl } = payload;
-          store.setSyncPreload({ commandId, videoUrl });
-          this.send({ type: "client_preload_received", payload: { commandId, videoUrl, clientNow: Date.now() } });
-          this.send({ type: "client_video_loaded", payload: { clientReceivedAt: Date.now(), phase: "preloading" } });
+        {
+          const data = payload && typeof payload === "object" ? payload : message;
+          if (data && data.commandId && data.videoUrl) {
+            const { commandId, videoUrl } = data;
+            try {
+              console.log("[PlayerSync] WS sync_preload", { commandId, videoUrl, now: Date.now() });
+            } catch {
+            }
+            store.setSyncPreload({ commandId, videoUrl });
+            this.send({ type: "client_preload_received", payload: { commandId, videoUrl, clientNow: Date.now() } });
+            this.send({ type: "client_video_loaded", payload: { clientReceivedAt: Date.now(), phase: "preloading" } });
+          }
         }
         break;
       }
       case "sync_play": {
-        if (payload && typeof payload === "object") {
-          const { commandId, scheduledTime, videoTime, videoUrl } = payload;
-          store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl });
-          this.send({ type: "client_schedule_received", payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
+        {
+          const data = payload && typeof payload === "object" ? payload : message;
+          if (data && data.commandId != null && data.scheduledTime != null && data.videoTime != null && data.videoUrl) {
+            const { commandId, scheduledTime, videoTime, videoUrl, timeDomain } = data;
+            try {
+              console.log("[PlayerSync] WS sync_play", { commandId, scheduledTime, videoTime, videoUrl, timeDomain: timeDomain || "client", now: Date.now() });
+            } catch {
+            }
+            store.setSyncPlay({ commandId, scheduledTime, videoTime, videoUrl, timeDomain });
+            this.send({ type: "client_schedule_received", payload: { commandId, scheduledTime, videoTime, clientNow: Date.now() } });
+            const video = document.querySelector("video");
+            if (video) {
+              try {
+                const currentPath = new URL(video.src, window.location.origin).pathname;
+                const targetPath = new URL(videoUrl, window.location.origin).pathname;
+                if (currentPath !== targetPath) {
+                  video.src = videoUrl;
+                }
+              } catch {
+              }
+            }
+          }
         }
         break;
       }
       case "sync_pause": {
-        if (payload && typeof payload === "object") {
-          const { commandId, scheduledTime } = payload;
-          store.setSyncPause({ commandId, scheduledTime });
-          this.send({ type: "client_pause_schedule_received", payload: { commandId, scheduledTime, clientNow: Date.now() } });
+        {
+          const data = payload && typeof payload === "object" ? payload : message;
+          if (data && data.commandId != null && data.scheduledTime != null) {
+            const { commandId, scheduledTime } = data;
+            try {
+              console.log("[PlayerSync] WS sync_pause", { commandId, scheduledTime, now: Date.now() });
+            } catch {
+            }
+            store.setSyncPause({ commandId, scheduledTime });
+            this.send({ type: "client_pause_schedule_received", payload: { commandId, scheduledTime, clientNow: Date.now() } });
+          }
         }
         break;
       }
@@ -30503,22 +30534,13 @@ const PlayerPage = () => {
   reactExports.useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (nowPlaying) {
+    const syncActive = Boolean(syncPreload || syncPlay);
+    if (nowPlaying && !syncActive) {
       setError(null);
       setIsVideoLoaded(false);
       video.src = `/api/media/${nowPlaying.fileName}`;
       const handleCanPlay = () => {
         setIsVideoLoaded(true);
-        video.play().then(() => {
-          setIsPlaying(true);
-        }).catch((err) => {
-          console.error("Failed to play video:", err);
-          if (err.name === "NotAllowedError") {
-            setError("Click to enable video playback");
-          } else {
-            setError("Failed to play video");
-          }
-        });
       };
       const handleError = () => {
         setError("Failed to load video");
@@ -30530,21 +30552,23 @@ const PlayerPage = () => {
         video.removeEventListener("canplay", handleCanPlay);
         video.removeEventListener("error", handleError);
       };
-    } else {
+    } else if (!nowPlaying && !syncActive) {
       video.pause();
       setIsPlaying(false);
       setIsVideoLoaded(false);
     }
-  }, [nowPlaying]);
+  }, [nowPlaying, syncPreload, syncPlay]);
   reactExports.useEffect(() => {
     const video = videoRef.current;
     if (!video || !syncPreload) return;
+    console.log("[PlayerSync] sync_preload received", { commandId: syncPreload.commandId, videoUrl: syncPreload.videoUrl, now: Date.now() });
     setError(null);
     setIsVideoLoaded(false);
     video.src = syncPreload.videoUrl;
     const onCanPlay = () => {
       setIsVideoLoaded(true);
       const bufferedSecs = video.buffered.length > 0 ? video.buffered.end(0) - video.currentTime : 0;
+      console.log("[PlayerSync] video canplay", { bufferedSecs, duration: isNaN(video.duration) ? null : video.duration, now: Date.now() });
       websocketService.send({ type: "client_canplay", payload: { readyAt: Date.now(), bufferedSecs, duration: isNaN(video.duration) ? void 0 : video.duration } });
       websocketService.send({
         type: "sync_ready",
@@ -30561,18 +30585,31 @@ const PlayerPage = () => {
   reactExports.useEffect(() => {
     const video = videoRef.current;
     if (!video || !syncPlay) return;
-    const { scheduledTime, videoTime } = syncPlay;
-    const delay = Math.max(0, scheduledTime - Date.now());
+    const { scheduledTime, videoTime, timeDomain } = syncPlay;
+    const targetTime = timeDomain === "server" ? scheduledTime + (useAppStore.getState().lastClockOffsetMs || 0) - (useAppStore.getState().lastClockLatencyMs || 0) : scheduledTime;
+    const delay = Math.max(0, targetTime - Date.now());
+    console.log("[PlayerSync] sync_play schedule received", { timeDomain: timeDomain || "client", scheduledTime, localTargetTime: targetTime, videoTime, delayMs: delay, now: Date.now() });
     const timer = window.setTimeout(() => {
       try {
+        console.log("[PlayerSync] schedule fired", { now: Date.now() });
         if (!isNaN(videoTime)) {
           video.currentTime = videoTime;
         }
         const before = video.currentTime;
         websocketService.send({ type: "client_schedule_fired", payload: { firedAt: Date.now(), beforeTime: before } });
+        console.log("[PlayerSync] calling video.play()", { currentTime: video.currentTime, now: Date.now() });
         video.play().then(() => {
+          console.log("[PlayerSync] video started", { currentTime: video.currentTime, now: Date.now() });
           websocketService.send({ type: "client_started_playback", payload: { startedAt: Date.now(), videoTime: video.currentTime } });
-        }).catch(() => {
+        }).catch((err) => {
+          const e = err;
+          console.warn("[PlayerSync] video.play() rejected", e);
+          websocketService.send({ type: "client_play_rejected", payload: { at: Date.now(), name: e?.name } });
+          if (e?.name === "NotAllowedError") {
+            setError("Click to enable video playback");
+          } else {
+            setError("Failed to play video");
+          }
         });
       } catch {
       }
@@ -30584,8 +30621,10 @@ const PlayerPage = () => {
     if (!video || !syncPause) return;
     const { scheduledTime } = syncPause;
     const delay = Math.max(0, scheduledTime - Date.now());
+    console.log("[PlayerSync] sync_pause schedule received", { scheduledTime, delayMs: delay, now: Date.now() });
     const timer = window.setTimeout(() => {
       try {
+        console.log("[PlayerSync] pause schedule fired", { now: Date.now(), currentTime: video.currentTime });
         video.pause();
         websocketService.send({ type: "client_paused", payload: { pausedAt: Date.now(), currentTime: video.currentTime } });
       } catch {
@@ -30601,17 +30640,41 @@ const PlayerPage = () => {
         setSelfDriftMs(0);
         return;
       }
-      const expected = syncPlay.videoTime + Math.max(0, (Date.now() - syncPlay.scheduledTime) / 1e3);
+      const s = syncPlay;
+      const baselineMs = s.timeDomain === "server" ? s.scheduledTime + (useAppStore.getState().lastClockOffsetMs || 0) - (useAppStore.getState().lastClockLatencyMs || 0) : s.scheduledTime;
+      const expected = s.videoTime + Math.max(0, (Date.now() - baselineMs) / 1e3);
       const drift = (video.currentTime || 0) - expected;
       setSelfDriftMs(Math.round(drift * 1e3));
     }, 250);
     return () => window.clearInterval(id);
   }, [syncPlay]);
+  reactExports.useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const log = (evt) => {
+      const type = evt.type;
+      if (type === "timeupdate" || type === "progress") return;
+      console.log(`[PlayerSync] video event: ${type}`, { now: Date.now(), currentTime: v.currentTime, paused: v.paused, readyState: v.readyState });
+    };
+    const events2 = ["loadedmetadata", "canplay", "playing", "pause", "seeking", "seeked", "ended", "stalled", "suspend", "waiting", "emptied"];
+    events2.forEach((e) => v.addEventListener(e, log));
+    return () => {
+      events2.forEach((e) => v.removeEventListener(e, log));
+    };
+  }, []);
   const onEnded = () => {
-    if (nowPlaying) {
-      console.log("Song ended, should trigger next song");
+    websocketService.send({ type: "song_ended" });
+    const video = videoRef.current;
+    if (video) {
+      try {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      } catch {
+      }
     }
     setIsPlaying(false);
+    setIsVideoLoaded(false);
   };
   const upcomingSingers = queue.slice(0, 3);
   if (playerIsDisconnected) {
@@ -30685,11 +30748,13 @@ const PlayerPage = () => {
       ] }),
       syncPlay && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         "schedule: t=",
-        new Date(syncPlay.scheduledTime).toLocaleTimeString(),
+        new Date(syncPlay.timeDomain === "server" ? syncPlay.scheduledTime + (lastClockOffsetMs || 0) - (lastClockLatencyMs || 0) : syncPlay.scheduledTime).toLocaleTimeString(),
         " (",
         syncPlay.scheduledTime,
         ") v=",
-        syncPlay.videoTime.toFixed(3)
+        syncPlay.videoTime.toFixed(3),
+        " d=",
+        syncPlay.timeDomain || "client"
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         "clock sync: lat=",
@@ -31059,4 +31124,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-CvXUzxdX.js.map
+//# sourceMappingURL=index-CdGAT9qO.js.map

@@ -100,7 +100,7 @@ export interface AppState {
   playerConnectionId?: string | null;
   // Sync commands (from VideoSyncEngine)
   syncPreload: { commandId: string; videoUrl: string } | null;
-  syncPlay: { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string } | null;
+  syncPlay: { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' } | null;
   syncPause: { commandId: string; scheduledTime: number } | null;
   // Last known clock sync stats (client view)
   lastClockLatencyMs?: number;
@@ -142,7 +142,7 @@ export interface AppState {
   setPlayerIsDisconnected: (disconnected: boolean) => void;
   setPlayerDebugOverlay: (visible: boolean) => void;
   setSyncPreload: (cmd: { commandId: string; videoUrl: string } | null) => void;
-  setSyncPlay: (cmd: { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string } | null) => void;
+  setSyncPlay: (cmd: { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' } | null) => void;
   setSyncPause: (cmd: { commandId: string; scheduledTime: number } | null) => void;
   setPlayerConnectionId: (id: string | null) => void;
   setClockSyncStats: (latencyMs: number, offsetMs: number) => void;
