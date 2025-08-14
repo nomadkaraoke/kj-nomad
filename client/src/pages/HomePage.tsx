@@ -1,10 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Input } from '../components/ui/Input';
+import React, { useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
-import SessionHistory from '../components/SessionHistory/SessionHistory';
+// import SessionHistory from '../components/SessionHistory/SessionHistory';
 import DraggableQueue from '../components/QueueManager/DraggableQueue';
 import { ManualRequestForm } from '../components/KjController/ManualRequestForm';
-import PlayerScreenManager from '../components/KjController/PlayerScreenManager';
 import { Navigation } from '../components/Navigation';
 import { 
   PlayIcon, 
@@ -12,7 +10,7 @@ import {
   ForwardIcon,
   Cog6ToothIcon,
   ArrowPathIcon,
-  ClockIcon,
+  // ClockIcon,
   StopIcon
 } from '@heroicons/react/24/outline';
 
@@ -20,7 +18,7 @@ const HomePage: React.FC = () => {
   const { 
     queue, 
     nowPlaying, 
-    tickerText, 
+    // tickerText, 
     connectionStatus,
     sessionState,
     sessionHistory,
@@ -31,23 +29,16 @@ const HomePage: React.FC = () => {
     stopPlayback,
     restartSong,
     skipSong,
-    updateTicker,
+    // updateTicker,
     removeFromQueue,
     reorderQueue,
-    setShowHistory
+    // setShowHistory
   } = useAppStore();
   
-  const [newTickerText, setNewTickerText] = useState(tickerText);
-  // Filler music UI state
-  const [fillerDir, setFillerDir] = useState('');
-  const [fillerVolume, setFillerVolume] = useState(0.4);
-  const [fillerFiles, setFillerFiles] = useState<string[]>([]);
-  const [selectedFiller, setSelectedFiller] = useState<string>('');
-  const [uploading, setUploading] = useState(false);
+  // const [newTickerText] = useState(tickerText);
+  // Settings were moved to dedicated Settings page
   
-  const handleUpdateTicker = () => {
-    updateTicker(newTickerText);
-  };
+  // const handleUpdateTicker = () => {};
   
   const handleRemoveSinger = (songId: string) => {
     removeFromQueue(songId);
@@ -77,31 +68,9 @@ const HomePage: React.FC = () => {
     }
   };
 
-  // Admin: media library management helpers
-  const [newLibraryPath, setNewLibraryPath] = useState('');
-  const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
+  // Admin: settings moved off the home page
 
-  // Load filler settings + list on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch('/api/filler/settings');
-        const j = await r.json();
-        if (j?.success && j.data) {
-          setFillerDir(j.data.directory || '');
-          setFillerVolume(typeof j.data.volume === 'number' ? j.data.volume : 0.4);
-        }
-      } catch { /* ignore */ }
-      try {
-        const r2 = await fetch('/api/filler/list');
-        const j2 = await r2.json();
-        if (j2?.success) {
-          setFillerFiles(j2.data || []);
-          if (j2.data?.length) setSelectedFiller(j2.data[0]);
-        }
-      } catch { /* ignore */ }
-    })();
-  }, []);
+  useEffect(() => { /* settings now live in Settings page */ }, []);
 
   const handlePlaySong = (songId: string, singerName: string) => {
     // Use the existing playNext function or create a custom play function
@@ -133,7 +102,7 @@ const HomePage: React.FC = () => {
           )}
           
           {/* Quick Controls */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <ManualRequestForm />
             <div className="card">
               <h2 className="text-xl font-semibold flex items-center space-x-2 mb-4">
@@ -187,19 +156,7 @@ const HomePage: React.FC = () => {
                   <span className="text-xs">Stop</span>
                 </button>
                 
-                <button
-                  onClick={() => setShowHistory(true)}
-                  disabled={!isConnected}
-                  className="btn flex flex-col items-center space-y-1 h-20 bg-card-light dark:bg-card-dark hover:bg-gray-100 dark:hover:bg-border-dark"
-                >
-                  <ClockIcon className="h-6 w-6" />
-                  <span className="text-xs">History</span>
-                  {sessionHistory.length > 0 && (
-                    <span className="text-xs bg-brand-blue text-white rounded-full w-5 h-5 flex items-center justify-center">
-                      {sessionHistory.length}
-                    </span>
-                  )}
-                </button>
+                {/* History button removed; queue below shows completed items */}
               </div>
             </div>
           </div>
@@ -234,7 +191,7 @@ const HomePage: React.FC = () => {
             </div>
           )}
           
-          {/* Singer Queue */}
+          {/* Singer Queue (shows queued + completed) */}
           <div className="card">
             <DraggableQueue
               queue={queue}
@@ -242,103 +199,29 @@ const HomePage: React.FC = () => {
               onPlay={handlePlaySong}
               onRemove={handleRemoveSinger}
             />
+            {sessionHistory && sessionHistory.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-3">Recently Completed</h3>
+                <ul className="space-y-2">
+                  {sessionHistory.slice(-5).reverse().map((h, i) => (
+                    <li key={`${h.song.id}_${i}`} className="flex items-center justify-between p-3 rounded bg-green-500/10 border border-green-500/20">
+                      <div className="truncate">
+                        <div className="font-semibold truncate">{h.singerName}</div>
+                        <div className="text-sm opacity-80 truncate">{(() => { const p = h.song.fileName; const s = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')); const b = s>=0 ? p.slice(s+1) : p; const d = b.lastIndexOf('.'); return d>0? b.slice(0,d): b; })()}</div>
+                      </div>
+                      <div className="text-xs opacity-70 whitespace-nowrap ml-3">{new Date(h.playedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           
-          {/* Ticker Control */}
-          <div className="card">
-            <h2 className="text-xl font-semibold mb-4">Ticker Message</h2>
-            <div className="space-y-4">
-              <Input
-                label="Current Message"
-                value={newTickerText}
-                onChange={(e) => setNewTickerText(e.target.value)}
-                placeholder="Enter ticker message..."
-                hint="This message will scroll across the bottom of the player screen"
-                data-testid="ticker-input"
-              />
-              <button
-                onClick={handleUpdateTicker}
-                disabled={!isConnected || newTickerText === tickerText}
-                className="btn-primary w-full"
-                data-testid="update-ticker-button"
-              >
-                Update Ticker
-              </button>
-            </div>
-          </div>
+          {/* Ticker moved to Settings */}
 
-          {/* Media Library Management */}
-          <div className="card">
-            <h2 className="text-xl font-semibold mb-4">Media Library</h2>
-            <div className="space-y-3">
-              <div className="flex gap-2 items-center">
-                <input className="input flex-1 font-mono" placeholder="/absolute/path/to/your/karaoke/library" value={newLibraryPath} onChange={(e) => setNewLibraryPath(e.target.value)} />
-                <button className="btn-tertiary" onClick={async () => {
-                  setLibraryMessage(null);
-                  if (!newLibraryPath.trim()) { setLibraryMessage('Enter a folder path'); return; }
-                  try {
-                    const v = await fetch('/api/setup/validate-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: newLibraryPath.trim() }) });
-                    const j = await v.json();
-                    if (!j?.success || !j.data?.valid) { setLibraryMessage(j?.data?.error || 'Folder invalid'); return; }
-                    await fetch('/api/setup/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mediaDirectory: newLibraryPath.trim() }) });
-                    const scan = await fetch('/api/setup/scan', { method: 'POST' });
-                    const sj = await scan.json();
-                    if (sj?.success) setLibraryMessage(`Scan complete. Songs found: ${sj.data?.songCount ?? 0}`);
-                    else setLibraryMessage(sj?.error || 'Scan failed');
-                  } catch {
-                    setLibraryMessage('Failed to update library');
-                  }
-                }}>Set & Rescan</button>
-              </div>
-              <div className="flex gap-2">
-                <button className="btn" onClick={async () => { try { const r = await fetch('/api/setup/scan', { method: 'POST' }); const j = await r.json(); setLibraryMessage(j?.success ? `Rescanned. Songs: ${j.data?.songCount ?? 0}` : (j?.error || 'Scan failed')); } catch { setLibraryMessage('Scan failed'); } }}>Rescan Library</button>
-                <button className="btn-tertiary" onClick={async () => { try { await fetch('/api/setup/reset', { method: 'POST' }); location.reload(); } catch { /* ignore */ } }}>Reset Setup</button>
-              </div>
-              {libraryMessage && <div className="text-sm opacity-80">{libraryMessage}</div>}
-            </div>
-          </div>
+          {/* Settings moved to Settings page to reduce clutter */}
 
-          {/* Filler Music Panel */}
-          <div className="card">
-            <h2 className="text-xl font-semibold mb-4">Filler Music</h2>
-            <div className="space-y-3">
-              <div className="flex gap-2 items-center">
-                <input className="input flex-1" placeholder="Filler directory" value={fillerDir} onChange={(e) => setFillerDir(e.target.value)} />
-                <button className="btn-secondary" onClick={async () => {
-                  await fetch('/api/filler/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) });
-                  const resp = await fetch('/api/filler/list'); const data = await resp.json(); if (data?.success) { setFillerFiles(data.data || []); if (data.data?.length) setSelectedFiller(data.data[0]); }
-                }}>Save</button>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-sm opacity-80">Volume</label>
-                <input type="range" min={0} max={1} step={0.01} value={fillerVolume} onChange={(e) => setFillerVolume(parseFloat(e.target.value))} onMouseUp={() => { fetch('/api/filler/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) }); }} />
-                <span className="text-sm w-10 text-right">{Math.round(fillerVolume*100)}%</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="file" accept="video/*,audio/*" onChange={async (e) => {
-                  if (!e.target.files || e.target.files.length === 0) return;
-                  const file = e.target.files[0];
-                  const form = new FormData(); form.append('file', file);
-                  setUploading(true);
-                  try { await fetch('/api/filler/upload', { method: 'POST', body: form }); const r = await fetch('/api/filler/list'); const j = await r.json(); if (j?.success) { setFillerFiles(j.data || []); if (j.data?.length) setSelectedFiller(j.data[0]); } } finally { setUploading(false); }
-                }} />
-                {uploading && <span className="text-sm opacity-80">Uploading...</span>}
-              </div>
-              {fillerFiles.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <select className="input" value={selectedFiller} onChange={(e) => setSelectedFiller(e.target.value)}>
-                    {fillerFiles.map(f => (<option key={f} value={f}>{f}</option>))}
-                  </select>
-                  <button className="btn-tertiary" onClick={async () => { const r = await fetch('/api/filler/list'); const j = await r.json(); if (j?.success) setFillerFiles(j.data || []); }}>Refresh</button>
-                  <button className="btn" onClick={async () => { if (selectedFiller) await fetch('/api/filler/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileName: selectedFiller }) }); }}>Play Selected</button>
-                  <button className="btn-tertiary" onClick={() => { const ws = useAppStore.getState().socket; ws?.send(JSON.stringify({ type: 'stop_filler_manual' })); }}>Stop</button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Player Screen Management (moved below Queue/Ticker) */}
-          <PlayerScreenManager />
+          {/* Player Screen Management moved to Settings */}
           
           {/* Session Info */}
           {sessionState && (
@@ -373,8 +256,7 @@ const HomePage: React.FC = () => {
             </div>
           )}
           
-          {/* Session History Modal */}
-          <SessionHistory />
+          {/* Session History Modal removed from primary flow */}
         </div>
       </main>
     </div>

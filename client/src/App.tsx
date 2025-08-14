@@ -6,6 +6,7 @@ import { useAppStore } from './store/appStore';
 
 // Import page components
 import HomePage from './pages/HomePage';
+import SettingsPage from './pages/SettingsPage';
 import SetupWizardPage from './pages/SetupWizardPage';
 import OnlineSessionConnectPage from './pages/OnlineSessionConnectPage';
 import OnlineSessionConnectedPage from './pages/OnlineSessionConnectedPage';
@@ -45,6 +46,7 @@ const AppContent: React.FC = () => {
   return (
     <Routes>
       <Route path="/connect-online" element={<OnlineSessionConnectPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
       <Route path="/*" element={<HomePage />} />
     </Routes>
   );

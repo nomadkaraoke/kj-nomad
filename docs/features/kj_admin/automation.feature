@@ -7,6 +7,7 @@ Feature: KJ Automation Engine
   Background:
     Given the KJ is running a session with automation features enabled
     And the singer queue is: 1. Alice, 2. Bob, 3. Charlie
+    And the KJ knows they can adjust media and filler settings from the Settings page
 
   Scenario: Automated singer rotation
     Given "Alice" is currently singing

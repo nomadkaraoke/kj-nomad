@@ -24,6 +24,13 @@ Feature: Player Screen Management
 
   @skip
   Scenario: KJ identifies a specific player screen
+  Scenario: Player screens show Ready overlay during filler music
+    Given no singer performance is currently playing
+    And intermission filler music is playing
+    When a player screen is viewed by the audience
+    Then the screen should display the "KJ-Nomad Ready — Waiting for the next performance..." message and icon
+    And the screen should not look empty during intermission
+
     Given three player screens are connected to the server
     When the KJ clicks the "Identify" button for "Screen 2" in the Admin Interface
     Then a large overlay with the text "Screen 2" should appear on the corresponding physical screen

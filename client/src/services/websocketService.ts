@@ -165,7 +165,8 @@ class WebSocketService {
           // Preserve YouTube source and download progress/status from existing, unless incoming provides it
           const source = entry.source || existing.source;
           const download = entry.download || existing.download;
-          return { ...entry, source, download } as QueueEntry;
+          const meta = entry.meta || existing.meta;
+          return { ...entry, source, download, meta } as QueueEntry;
         });
         store.setQueue(merged);
         break;
@@ -266,7 +267,7 @@ class WebSocketService {
       }
 
       case 'set_volume': {
-        // Per-device volume adjustment
+        // Legacy per-device volume (maps to karaoke)
         const vol = (payload && typeof payload === 'object' && 'volume' in (payload as { volume: number }))
           ? Math.max(0, Math.min(1, Number((payload as { volume: number }).volume)))
           : undefined;
@@ -275,6 +276,32 @@ class WebSocketService {
           if (video) {
             try { video.volume = vol; } catch { /* ignore */ }
           }
+        }
+        break;
+      }
+
+      case 'set_karaoke_volume': {
+        const storeVol = useAppStore.getState().playerKaraokeVolume ?? 1;
+        const override = (payload && typeof payload === 'object' && 'volume' in (payload as { volume: number })) ? Number((payload as { volume: number }).volume) : storeVol;
+        const vol = Math.max(0, Math.min(1, override));
+        try { useAppStore.getState().setPlayerKaraokeVolume?.(vol); } catch { /* ignore */ }
+        const video = document.querySelector('video') as HTMLVideoElement | null;
+        const nowPlaying = useAppStore.getState().nowPlaying;
+        if (video && nowPlaying && !nowPlaying.isFiller) {
+          try { video.volume = vol; } catch { /* ignore */ }
+        }
+        break;
+      }
+
+      case 'set_filler_volume': {
+        const storeVol = useAppStore.getState().playerFillerVolume ?? 0.6;
+        const override = (payload && typeof payload === 'object' && 'volume' in (payload as { volume: number })) ? Number((payload as { volume: number }).volume) : storeVol;
+        const vol = Math.max(0, Math.min(1, override));
+        try { useAppStore.getState().setPlayerFillerVolume?.(vol); } catch { /* ignore */ }
+        const video = document.querySelector('video') as HTMLVideoElement | null;
+        const nowPlaying = useAppStore.getState().nowPlaying;
+        if (video && nowPlaying && nowPlaying.isFiller) {
+          try { video.volume = vol; } catch { /* ignore */ }
         }
         break;
       }
@@ -291,6 +318,22 @@ class WebSocketService {
       case 'ticker_updated':
         store.setTickerText(payload as string);
         break;
+
+      case 'waiting_screen_updated': {
+        if (payload && typeof payload === 'object') {
+          const { title, subtitle, imageUrl } = payload as { title?: string; subtitle?: string; imageUrl?: string | null };
+          try {
+            // Safe direct set via zustand setter
+            const state = useAppStore.getState();
+            (useAppStore.setState as unknown as (partial: Partial<typeof state>) => void)({
+              waitingTitle: title ?? state.waitingTitle,
+              waitingSubtitle: subtitle ?? state.waitingSubtitle,
+              waitingImageUrl: imageUrl ?? state.waitingImageUrl,
+            });
+          } catch { /* ignore */ }
+        }
+        break;
+      }
 
       case 'youtube_download_progress': {
         if (payload && typeof payload === 'object') {

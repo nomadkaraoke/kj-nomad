@@ -1,13 +1,28 @@
 {
-  "mediaDirectory": "/Users/andrew/AB Dropbox/Andrew Beveridge/MediaUnsynced/Karaoke/Tracks-PublicShare/MP4",
-  "fillerMusicDirectory": "/Users/andrew/Projects/kj-nomad/filler",
+  "mediaDirectory": "/Volumes/Nomad4TBOne/HyperMule",
+  "mediaScanExtensions": [
+    ".mp4",
+    ".webm",
+    ".avi",
+    ".mov",
+    ".mp3",
+    ".m4a",
+    ".wav",
+    ".flac",
+    ".ogg",
+    ".mkv"
+  ],
+  "mediaUseCachedIndex": true,
+  "fillerMusicDirectory": "/Users/andrew/Music/KJ-Nomad",
   "fillerMusicVolume": 0.4,
+  "youtubeQualityFormat": "best[height<=720]/best",
+  "youtubeFilenamePattern": "paren",
   "kjName": "Local KJ",
   "venue": "",
   "autoLaunchBrowser": true,
   "defaultPort": 8080,
   "enableNetworkAccess": true,
   "setupComplete": true,
-  "lastModified": "2025-08-14T19:01:19.966Z",
-  "createdAt": "2025-08-14T18:41:29.999Z"
+  "lastModified": "2025-08-14T20:39:59.979Z",
+  "createdAt": "2025-08-14T20:39:55.975Z"
 }

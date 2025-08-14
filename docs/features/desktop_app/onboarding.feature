@@ -50,3 +50,13 @@ Feature: Desktop Application Onboarding and Setup
     When the application detects both servers
     Then it should display a list of discovered servers (e.g., "KJ-Nomad at 192.168.1.100:8080", "KJ-Nomad at 192.168.1.101:8081")
     And prompt the user to select which one to connect to
+
+  Scenario: Setup wizard collects core directories
+    Given the KJ starts the Setup Wizard
+    When the KJ selects a Media Library folder
+    And optionally enters a Filler Music folder
+    And optionally enters a YouTube downloads folder
+    And proceeds to scan the library
+    Then the wizard should save the selected folders
+    And when the KJ finishes setup
+    Then subsequent app launches should not show the setup wizard again unless the KJ resets setup

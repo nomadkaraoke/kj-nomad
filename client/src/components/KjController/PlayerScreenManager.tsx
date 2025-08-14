@@ -70,6 +70,8 @@ const PlayerScreenManager: React.FC = () => {
   }, [fetchDevices, checkServerInfo]);
 
   const playerUrl = serverInfo.localIps.length > 0 ? `http://${serverInfo.localIps[0]}:${serverInfo.port}/player` : '/player';
+  const setKaraokeVol = useAppStore((s) => (s as unknown as { setPlayerKaraokeVolume: (v:number) => void }).setPlayerKaraokeVolume);
+  const setFillerVol = useAppStore((s) => (s as unknown as { setPlayerFillerVolume: (v:number) => void }).setPlayerFillerVolume);
 
   return (
     <div className="card relative">
@@ -161,25 +163,52 @@ const PlayerScreenManager: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-1">
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  defaultValue={1}
-                  onChange={async (e) => {
-                    const vol = parseFloat(e.target.value);
-                    try {
-                      await fetch(`/api/devices/${device.id}/command`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ command: 'set_volume', data: { volume: vol } })
-                      });
-                    } catch { /* ignore */ }
-                  }}
-                  className="w-24 mr-2"
-                  title="Volume"
-                />
+                <div className="flex items-center mr-4">
+                  <span className="text-xs opacity-70 mr-2">Karaoke</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    defaultValue={1}
+                    onChange={async (e) => {
+                      const vol = parseFloat(e.target.value);
+                      setKaraokeVol(vol);
+                      try {
+                        await fetch(`/api/devices/${device.id}/command`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ command: 'set_karaoke_volume', data: { volume: vol } })
+                        });
+                      } catch { /* ignore */ }
+                    }}
+                    className="w-24"
+                    title="Karaoke volume"
+                  />
+                </div>
+                <div className="flex items-center mr-2">
+                  <span className="text-xs opacity-70 mr-2">Filler</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    defaultValue={0.6}
+                    onChange={async (e) => {
+                      const vol = parseFloat(e.target.value);
+                      setFillerVol(vol);
+                      try {
+                        await fetch(`/api/devices/${device.id}/command`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ command: 'set_filler_volume', data: { volume: vol } })
+                        });
+                      } catch { /* ignore */ }
+                    }}
+                    className="w-24"
+                    title="Filler music volume"
+                  />
+                </div>
                 <button
                   onClick={() => identifyDevice(device.id)}
                   className="p-2 rounded-full hover:bg-brand-blue/10"

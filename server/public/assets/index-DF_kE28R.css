@@ -8,9 +8,6 @@
 @layer properties {
   @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {
     *, :before, :after, ::backdrop {
-      --tw-translate-x: 0;
-      --tw-translate-y: 0;
-      --tw-translate-z: 0;
       --tw-rotate-x: initial;
       --tw-rotate-y: initial;
       --tw-rotate-z: initial;
@@ -421,16 +418,8 @@
     bottom: calc(var(--spacing, .25rem) * 0);
   }
 
-  .bottom-20 {
-    bottom: calc(var(--spacing, .25rem) * 20);
-  }
-
   .left-0 {
     left: calc(var(--spacing, .25rem) * 0);
-  }
-
-  .left-1\/2 {
-    left: 50%;
   }
 
   .left-4 {
@@ -557,6 +546,10 @@
 
   .ml-2 {
     margin-left: calc(var(--spacing, .25rem) * 2);
+  }
+
+  .ml-3 {
+    margin-left: calc(var(--spacing, .25rem) * 3);
   }
 
   .ml-4 {
@@ -829,6 +822,10 @@
     max-width: var(--container-7xl, 80rem);
   }
 
+  .max-w-full {
+    max-width: 100%;
+  }
+
   .max-w-lg {
     max-width: var(--container-lg, 32rem);
   }
@@ -851,11 +848,6 @@
 
   .flex-grow {
     flex-grow: 1;
-  }
-
-  .-translate-x-1\/2 {
-    --tw-translate-x: calc(calc(1 / 2 * 100%) * -1);
-    translate: var(--tw-translate-x) var(--tw-translate-y);
   }
 
   .transform {
@@ -924,6 +916,10 @@
 
   .justify-end {
     justify-content: flex-end;
+  }
+
+  .gap-1 {
+    gap: calc(var(--spacing, .25rem) * 1);
   }
 
   .gap-2 {
@@ -1126,6 +1122,16 @@
     border-color: var(--color-green-500, oklch(72.3% .219 149.579));
   }
 
+  .border-green-500\/20 {
+    border-color: #00c75833;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .border-green-500\/20 {
+      border-color: color-mix(in oklab, var(--color-green-500, oklch(72.3% .219 149.579)) 20%, transparent);
+    }
+  }
+
   .border-green-500\/50 {
     border-color: #00c75880;
   }
@@ -1134,6 +1140,10 @@
     .border-green-500\/50 {
       border-color: color-mix(in oklab, var(--color-green-500, oklch(72.3% .219 149.579)) 50%, transparent);
     }
+  }
+
+  .border-red-200 {
+    border-color: var(--color-red-200, oklch(88.5% .062 18.334));
   }
 
   .border-red-300 {
@@ -1215,16 +1225,6 @@
   @supports (color: color-mix(in lab, red, red)) {
     .bg-black\/60 {
       background-color: color-mix(in oklab, var(--color-black, #000) 60%, transparent);
-    }
-  }
-
-  .bg-black\/70 {
-    background-color: #000000b3;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-black\/70 {
-      background-color: color-mix(in oklab, var(--color-black, #000) 70%, transparent);
     }
   }
 
@@ -1382,6 +1382,10 @@
     background-color: var(--color-green-600, oklch(62.7% .194 149.214));
   }
 
+  .bg-red-50 {
+    background-color: var(--color-red-50, oklch(97.1% .013 17.38));
+  }
+
   .bg-red-500 {
     background-color: var(--color-red-500, oklch(63.7% .237 25.331));
   }
@@ -1487,6 +1491,10 @@
     background-clip: text;
   }
 
+  .object-contain {
+    object-fit: contain;
+  }
+
   .p-1 {
     padding: calc(var(--spacing, .25rem) * 1);
   }
@@ -1529,6 +1537,10 @@
 
   .px-6 {
     padding-inline: calc(var(--spacing, .25rem) * 6);
+  }
+
+  .py-0\.5 {
+    padding-block: calc(var(--spacing, .25rem) * .5);
   }
 
   .py-1 {
@@ -1679,6 +1691,10 @@
 
   .break-all {
     word-break: break-all;
+  }
+
+  .whitespace-nowrap {
+    white-space: nowrap;
   }
 
   .whitespace-pre-wrap {
@@ -2117,10 +2133,6 @@
       grid-column: span 2 / span 2;
     }
 
-    .lg\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .lg\:grid-cols-3 {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -2144,6 +2156,10 @@
 
   .dark\:border-red-600:where(.dark, .dark *) {
     border-color: var(--color-red-600, oklch(57.7% .245 27.325));
+  }
+
+  .dark\:border-red-800:where(.dark, .dark *) {
+    border-color: var(--color-red-800, oklch(44.4% .177 26.899));
   }
 
   .dark\:border-slate-600:where(.dark, .dark *) {
@@ -2182,6 +2198,16 @@
 
   .dark\:bg-gray-800:where(.dark, .dark *) {
     background-color: var(--color-gray-800, oklch(27.8% .033 256.848));
+  }
+
+  .dark\:bg-red-900\/30:where(.dark, .dark *) {
+    background-color: #82181a4d;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:bg-red-900\/30:where(.dark, .dark *) {
+      background-color: color-mix(in oklab, var(--color-red-900, oklch(39.6% .141 25.723)) 30%, transparent);
+    }
   }
 
   .dark\:bg-slate-700:where(.dark, .dark *) {
@@ -2226,6 +2252,10 @@
 
   .dark\:text-green-300:where(.dark, .dark *) {
     color: var(--color-green-300, oklch(87.1% .15 154.449));
+  }
+
+  .dark\:text-red-200:where(.dark, .dark *) {
+    color: var(--color-red-200, oklch(88.5% .062 18.334));
   }
 
   .dark\:text-red-300:where(.dark, .dark *) {
@@ -2315,24 +2345,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@property --tw-translate-x {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
-}
-
-@property --tw-translate-y {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
-}
-
-@property --tw-translate-z {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
 }
 
 @property --tw-rotate-x {

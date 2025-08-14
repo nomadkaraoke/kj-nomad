@@ -17,9 +17,9 @@ describe('KjController', () => {
   it('renders the queue and can play the next song', async () => {
     render(<KjController socket={mockSocket} queue={mockQueue} />);
 
-    expect(screen.getByText(/a-ha - Take On Me\.mp4/i)).toBeInTheDocument();
+    expect(screen.getByText(/a-ha - Take On Me$/i)).toBeInTheDocument();
     expect(screen.getByText(/Alice/i)).toBeInTheDocument();
-    expect(screen.getByText(/Queen - Bohemian Rhapsody\.mp4/i)).toBeInTheDocument();
+    expect(screen.getByText(/Queen - Bohemian Rhapsody$/i)).toBeInTheDocument();
     expect(screen.getByText(/Bob/i)).toBeInTheDocument();
 
     const playNextButton = screen.getByText('▶️ Play Next Song');

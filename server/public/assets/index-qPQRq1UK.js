@@ -22006,6 +22006,9 @@ const useAppStore = create()(
       onlineSessionId: null,
       // UI state
       tickerText: "Welcome to KJ-Nomad! 🎤 Professional Karaoke System",
+      waitingTitle: "KJ-Nomad Ready",
+      waitingSubtitle: "Waiting for the next performance...",
+      waitingImageUrl: null,
       currentView: "home",
       isLoading: false,
       showHistory: false,
@@ -22014,6 +22017,8 @@ const useAppStore = create()(
       playerShowIdentify: false,
       playerIsDisconnected: false,
       playerDebugOverlay: false,
+      playerKaraokeVolume: 1,
+      playerFillerVolume: 0.6,
       autoDriftCorrectionEnabled: true,
       playerConnectionId: null,
       // Sync commands
@@ -22067,6 +22072,8 @@ const useAppStore = create()(
       setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
       setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
       setPlayerDebugOverlay: (visible) => set({ playerDebugOverlay: visible }),
+      setPlayerKaraokeVolume: (v) => set({ playerKaraokeVolume: Math.max(0, Math.min(1, v)) }),
+      setPlayerFillerVolume: (v) => set({ playerFillerVolume: Math.max(0, Math.min(1, v)) }),
       // toggle for auto drift correction
       toggleAutoDriftCorrection: () => set((state) => ({ autoDriftCorrectionEnabled: !state.autoDriftCorrectionEnabled })),
       setSyncPreload: (cmd) => set({ syncPreload: cmd }),
@@ -22085,6 +22092,12 @@ const useAppStore = create()(
           }
         } catch (error) {
           console.error("Failed to check server info:", error);
+        }
+        try {
+          const ws = await fetch("/api/waiting-screen");
+          const j = await ws.json();
+          if (j?.success && j.data) set({ waitingTitle: j.data.title, waitingSubtitle: j.data.subtitle, waitingImageUrl: j.data.imageUrl });
+        } catch {
         }
       },
       checkSetupStatus: async () => {
@@ -24124,7 +24137,8 @@ class WebSocketService {
           }
           const source = entry.source || existing.source;
           const download = entry.download || existing.download;
-          return { ...entry, source, download };
+          const meta = entry.meta || existing.meta;
+          return { ...entry, source, download, meta };
         });
         store.setQueue(merged);
         break;
@@ -24247,6 +24261,42 @@ class WebSocketService {
         }
         break;
       }
+      case "set_karaoke_volume": {
+        const storeVol = useAppStore.getState().playerKaraokeVolume ?? 1;
+        const override = payload && typeof payload === "object" && "volume" in payload ? Number(payload.volume) : storeVol;
+        const vol = Math.max(0, Math.min(1, override));
+        try {
+          useAppStore.getState().setPlayerKaraokeVolume?.(vol);
+        } catch {
+        }
+        const video = document.querySelector("video");
+        const nowPlaying = useAppStore.getState().nowPlaying;
+        if (video && nowPlaying && !nowPlaying.isFiller) {
+          try {
+            video.volume = vol;
+          } catch {
+          }
+        }
+        break;
+      }
+      case "set_filler_volume": {
+        const storeVol = useAppStore.getState().playerFillerVolume ?? 0.6;
+        const override = payload && typeof payload === "object" && "volume" in payload ? Number(payload.volume) : storeVol;
+        const vol = Math.max(0, Math.min(1, override));
+        try {
+          useAppStore.getState().setPlayerFillerVolume?.(vol);
+        } catch {
+        }
+        const video = document.querySelector("video");
+        const nowPlaying = useAppStore.getState().nowPlaying;
+        if (video && nowPlaying && nowPlaying.isFiller) {
+          try {
+            video.volume = vol;
+          } catch {
+          }
+        }
+        break;
+      }
       case "pause":
         store.setNowPlaying(null);
         store.setPlaybackState("stopped");
@@ -24257,6 +24307,21 @@ class WebSocketService {
       case "ticker_updated":
         store.setTickerText(payload);
         break;
+      case "waiting_screen_updated": {
+        if (payload && typeof payload === "object") {
+          const { title, subtitle, imageUrl } = payload;
+          try {
+            const state = useAppStore.getState();
+            useAppStore.setState({
+              waitingTitle: title ?? state.waitingTitle,
+              waitingSubtitle: subtitle ?? state.waitingSubtitle,
+              waitingImageUrl: imageUrl ?? state.waitingImageUrl
+            });
+          } catch {
+          }
+        }
+        break;
+      }
       case "youtube_download_progress": {
         if (payload && typeof payload === "object") {
           const { videoId, progress, status, songId, fileName } = payload;
@@ -24465,1066 +24530,6 @@ class WebSocketService {
   }
 }
 const websocketService = new WebSocketService();
-function r(e) {
-  var t, f, n = "";
-  if ("string" == typeof e || "number" == typeof e) n += e;
-  else if ("object" == typeof e) if (Array.isArray(e)) {
-    var o = e.length;
-    for (t = 0; t < o; t++) e[t] && (f = r(e[t])) && (n && (n += " "), n += f);
-  } else for (f in e) e[f] && (n && (n += " "), n += f);
-  return n;
-}
-function clsx() {
-  for (var e, t, f = 0, n = "", o = arguments.length; f < o; f++) (e = arguments[f]) && (t = r(e)) && (n && (n += " "), n += t);
-  return n;
-}
-const Input = ({
-  label,
-  error,
-  hint,
-  leftIcon,
-  rightIcon,
-  className,
-  id,
-  ...props
-}) => {
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full", children: [
-    label && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "label",
-      {
-        htmlFor: inputId,
-        className: "block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2",
-        children: label
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-      leftIcon && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: leftIcon }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          id: inputId,
-          className: clsx(
-            "w-full px-3 py-2 border rounded-lg transition-colors duration-200",
-            "bg-card-light dark:bg-card-dark",
-            "text-text-primary-light dark:text-text-primary-dark",
-            "placeholder-text-secondary-light dark:placeholder-text-secondary-dark",
-            "focus:outline-none focus:ring-2 focus:ring-offset-2",
-            error ? "border-red-300 dark:border-red-600 focus:border-red-500 focus:ring-red-500" : "border-border-light dark:border-border-dark focus:border-brand-pink focus:ring-brand-pink",
-            leftIcon && "pl-10",
-            rightIcon && "pr-10",
-            className
-          ),
-          ...props
-        }
-      ),
-      rightIcon && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: rightIcon }) })
-    ] }),
-    hint && !error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-text-secondary-light dark:text-text-secondary-dark", children: hint }),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-red-600 dark:text-red-400", children: error })
-  ] });
-};
-function ArrowPathIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-  }));
-}
-const ForwardRef$z = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
-function ArrowTopRightOnSquareIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-  }));
-}
-const ForwardRef$y = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
-function Bars3Icon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-  }));
-}
-const ForwardRef$x = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
-function BugAntIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082"
-  }));
-}
-const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(BugAntIcon);
-function CheckCircleIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-  }));
-}
-const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(CheckCircleIcon);
-function ClockIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-  }));
-}
-const ForwardRef$u = /* @__PURE__ */ reactExports.forwardRef(ClockIcon);
-function Cog6ToothIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
-  }), /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-  }));
-}
-const ForwardRef$t = /* @__PURE__ */ reactExports.forwardRef(Cog6ToothIcon);
-function ComputerDesktopIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"
-  }));
-}
-const ForwardRef$s = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
-function ExclamationCircleIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
-  }));
-}
-const ForwardRef$r = /* @__PURE__ */ reactExports.forwardRef(ExclamationCircleIcon);
-function ExclamationTriangleIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-  }));
-}
-const ForwardRef$q = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
-function EyeIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-  }), /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-  }));
-}
-const ForwardRef$p = /* @__PURE__ */ reactExports.forwardRef(EyeIcon);
-function FolderOpenIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"
-  }));
-}
-const ForwardRef$o = /* @__PURE__ */ reactExports.forwardRef(FolderOpenIcon);
-function ForwardIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"
-  }));
-}
-const ForwardRef$n = /* @__PURE__ */ reactExports.forwardRef(ForwardIcon);
-function GlobeAltIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"
-  }));
-}
-const ForwardRef$m = /* @__PURE__ */ reactExports.forwardRef(GlobeAltIcon);
-function MagnifyingGlassIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-  }));
-}
-const ForwardRef$l = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
-function MicrophoneIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
-  }));
-}
-const ForwardRef$k = /* @__PURE__ */ reactExports.forwardRef(MicrophoneIcon);
-function MoonIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
-  }));
-}
-const ForwardRef$j = /* @__PURE__ */ reactExports.forwardRef(MoonIcon);
-function MusicalNoteIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
-  }));
-}
-const ForwardRef$i = /* @__PURE__ */ reactExports.forwardRef(MusicalNoteIcon);
-function PauseIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M15.75 5.25v13.5m-7.5-13.5v13.5"
-  }));
-}
-const ForwardRef$h = /* @__PURE__ */ reactExports.forwardRef(PauseIcon);
-function PlayIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
-  }));
-}
-const ForwardRef$g = /* @__PURE__ */ reactExports.forwardRef(PlayIcon);
-function PlusIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 4.5v15m7.5-7.5h-15"
-  }));
-}
-const ForwardRef$f = /* @__PURE__ */ reactExports.forwardRef(PlusIcon);
-function QrCodeIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"
-  }), /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z"
-  }));
-}
-const ForwardRef$e = /* @__PURE__ */ reactExports.forwardRef(QrCodeIcon);
-function SignalSlashIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m3 3 8.735 8.735m0 0a.374.374 0 1 1 .53.53m-.53-.53.53.53m0 0L21 21M14.652 9.348a3.75 3.75 0 0 1 0 5.304m2.121-7.425a6.75 6.75 0 0 1 0 9.546m2.121-11.667c3.808 3.807 3.808 9.98 0 13.788m-9.546-4.242a3.733 3.733 0 0 1-1.06-2.122m-1.061 4.243a6.75 6.75 0 0 1-1.625-6.929m-.496 9.05c-3.068-3.067-3.664-7.67-1.79-11.334M12 12h.008v.008H12V12Z"
-  }));
-}
-const ForwardRef$d = /* @__PURE__ */ reactExports.forwardRef(SignalSlashIcon);
-function SignalIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
-  }));
-}
-const ForwardRef$c = /* @__PURE__ */ reactExports.forwardRef(SignalIcon);
-function SparklesIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
-  }));
-}
-const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(SparklesIcon);
-function SpeakerWaveIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
-  }));
-}
-const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(SpeakerWaveIcon);
-function SpeakerXMarkIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
-  }));
-}
-const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(SpeakerXMarkIcon);
-function StopIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"
-  }));
-}
-const ForwardRef$8 = /* @__PURE__ */ reactExports.forwardRef(StopIcon);
-function SunIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
-  }));
-}
-const ForwardRef$7 = /* @__PURE__ */ reactExports.forwardRef(SunIcon);
-function TicketIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
-  }));
-}
-const ForwardRef$6 = /* @__PURE__ */ reactExports.forwardRef(TicketIcon);
-function UserGroupIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
-  }));
-}
-const ForwardRef$5 = /* @__PURE__ */ reactExports.forwardRef(UserGroupIcon);
-function UserIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-  }));
-}
-const ForwardRef$4 = /* @__PURE__ */ reactExports.forwardRef(UserIcon);
-function VideoCameraSlashIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M12 18.75H4.5a2.25 2.25 0 0 1-2.25-2.25V9m12.841 9.091L16.5 19.5m-1.409-1.409c.407-.407.659-.97.659-1.591v-9a2.25 2.25 0 0 0-2.25-2.25h-9c-.621 0-1.184.252-1.591.659m12.182 12.182L2.909 5.909M1.5 4.5l1.409 1.409"
-  }));
-}
-const ForwardRef$3 = /* @__PURE__ */ reactExports.forwardRef(VideoCameraSlashIcon);
-function VideoCameraIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"
-  }));
-}
-const ForwardRef$2 = /* @__PURE__ */ reactExports.forwardRef(VideoCameraIcon);
-function WifiIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z"
-  }));
-}
-const ForwardRef$1 = /* @__PURE__ */ reactExports.forwardRef(WifiIcon);
-function XCircleIcon({
-  title,
-  titleId,
-  ...props
-}, svgRef) {
-  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
-    xmlns: "http://www.w3.org/2000/svg",
-    fill: "none",
-    viewBox: "0 0 24 24",
-    strokeWidth: 1.5,
-    stroke: "currentColor",
-    "aria-hidden": "true",
-    "data-slot": "icon",
-    ref: svgRef,
-    "aria-labelledby": titleId
-  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
-    id: titleId
-  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    d: "m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-  }));
-}
-const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(XCircleIcon);
-const SessionHistory = () => {
-  const {
-    sessionHistory,
-    sessionState,
-    showHistory,
-    setShowHistory,
-    replaySong
-  } = useAppStore();
-  if (!showHistory) {
-    return null;
-  }
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-  const formatDuration = (playedAt, completedAt) => {
-    if (!completedAt) return "In Progress";
-    const duration = Math.floor((completedAt - playedAt) / 1e3);
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
-  const handleReplay = (songId, singerName) => {
-    replaySong(songId, singerName);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold mb-2", children: "Session History" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4 text-blue-100", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "w-4 h-4" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              "Started: ",
-              sessionState ? formatTime(sessionState.startedAt) : "Unknown"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "w-4 h-4" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              sessionHistory.length,
-              " songs played"
-            ] })
-          ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setShowHistory(false),
-          className: "text-white hover:text-red-200 transition-colors text-3xl font-bold",
-          children: "×"
-        }
-      )
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 overflow-y-auto max-h-[calc(80vh-200px)]", children: sessionHistory.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-12 text-gray-500 dark:text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "w-16 h-16 mx-auto mb-4 opacity-50" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-medium mb-2", children: "No Songs Played Yet" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Songs will appear here as they are performed during this session." })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: sessionHistory.slice().reverse().map((entry, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "div",
-      {
-        className: "bg-gray-50 dark:bg-slate-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors",
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 mb-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full text-sm font-bold", children: [
-              "#",
-              sessionHistory.length - index
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-semibold text-gray-900 dark:text-gray-100", children: [
-                entry.song.artist,
-                " - ",
-                entry.song.title
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$4, { className: "w-4 h-4" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: entry.singerName })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "w-4 h-4" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatTime(entry.playedAt) })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  "Duration: ",
-                  formatDuration(entry.playedAt, entry.completedAt)
-                ] })
-              ] })
-            ] })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              onClick: () => handleReplay(entry.song.id, entry.singerName),
-              className: "flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors",
-              title: "Replay this song",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "w-4 h-4" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden sm:inline", children: "Replay" })
-              ]
-            }
-          ) })
-        ] })
-      },
-      `${entry.song.id}-${entry.playedAt}`
-    )) }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-50 dark:bg-slate-700 px-6 py-4 border-t border-gray-200 dark:border-slate-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-600 dark:text-gray-400", children: [
-        "Session started ",
-        sessionState ? formatTime(sessionState.startedAt) : "Unknown time"
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setShowHistory(false),
-          className: "bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors",
-          children: "Close"
-        }
-      )
-    ] }) })
-  ] }) });
-};
 function useCombinedRefs() {
   for (var _len = arguments.length, refs = new Array(_len), _key = 0; _key < _len; _key++) {
     refs[_key] = arguments[_key];
@@ -29548,6 +28553,12 @@ const DraggableQueueItem = ({
   const isYouTube = entry.source === "youtube" || (entry.song.id || "").startsWith("yt_");
   const progress = entry.download?.progress;
   const status = entry.download?.status;
+  const displayNameFromPath = (p) => {
+    const lastSlash = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+    const base = lastSlash >= 0 ? p.slice(lastSlash + 1) : p;
+    const dot = base.lastIndexOf(".");
+    return dot > 0 ? base.slice(0, dot) : base;
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -29582,9 +28593,13 @@ const DraggableQueueItem = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full flex items-center justify-center text-sm font-semibold mr-4", children: index + 1 }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-grow min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2", children: [
-            entry.song.fileName,
-            isYouTube && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { title: "YouTube", className: "inline-flex items-center text-red-600", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M23.5 6.2s-.2-1.7-.8-2.5c-.8-.8-1.7-.8-2.1-.9C17.1 2.5 12 2.5 12 2.5h0s-5.1 0-8.6.3c-.5 0-1.4.1-2.1.9-.6.8-.8 2.5-.8 2.5S0 8.2 0 10.2v1.6c0 2 .2 4 0 4s.2 1.7.8 2.5c.8.8 1.9.8 2.4.9 1.8.2 7.7.3 7.7.3s5.1 0 8.6-.3c.5 0 1.4-.1 2.1-.9.6-.8.8-2.5.8-2.5s.2-2 .2-4v-1.6c0-2-.2-4-.2-4zM9.5 13.7V7.9l6.2 2.9-6.2 2.9z" }) }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2", children: displayNameFromPath(entry.song.fileName) }),
+          isYouTube && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs inline-flex items-center gap-1 text-red-600 dark:text-red-400", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M23.5 6.2s-.2-1.7-.8-2.5c-.8-.8-1.7-.8-2.1-.9C17.1 2.5 12 2.5 12 2.5h0s-5.1 0-8.6.3c-.5 0-1.4.1-2.1.9-.6.8-.8 2.5-.8 2.5S0 8.2 0 10.2v1.6c0 2 .2 4 0 4s.2 1.7.8 2.5c.8.8 1.9.8 2.4.9 1.8.2 7.7.3 7.7.3s5.1 0 8.6-.3c.5 0 1.4-.1 2.1-.9.6-.8.8-2.5.8-2.5s.2-2 .2-4v-1.6c0-2-.2-4-.2-4zM9.5 13.7V7.9l6.2 2.9-6.2 2.9z" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-200 border border-red-200 dark:border-red-800 max-w-full truncate", children: [
+              "YouTube",
+              entry.meta?.channel ? ` • ${entry.meta.channel}` : ""
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-600 dark:text-gray-400 truncate", children: [
             "Singer: ",
@@ -29746,7 +28761,7 @@ const ManualRequestForm = () => {
   const [selectedSong, setSelectedSong] = reactExports.useState(null);
   const [ytQuery, setYtQuery] = reactExports.useState("");
   const [ytResults, setYtResults] = reactExports.useState([]);
-  const [ytUrl, setYtUrl] = reactExports.useState("");
+  const [selectedYt, setSelectedYt] = reactExports.useState(null);
   const { requestSong } = useAppStore();
   const debouncedSearch = reactExports.useMemo(
     () => debounce(async (query) => {
@@ -29783,11 +28798,24 @@ const ManualRequestForm = () => {
     setSearchResults([]);
   };
   const handleAddToQueue = () => {
-    if (selectedSong && singerName.trim() !== "") {
+    if (!singerName.trim()) return;
+    if (selectedSong) {
       requestSong(selectedSong, singerName);
       setSingerName("");
       setSearchQuery("");
       setSelectedSong(null);
+      setSelectedYt(null);
+      setYtQuery("");
+      return;
+    }
+    if (selectedYt) {
+      const ws = useAppStore.getState().socket;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "request_youtube_song", payload: { videoId: selectedYt.id, singerName } }));
+      }
+      setSingerName("");
+      setYtQuery("");
+      setSelectedYt(null);
     }
   };
   const searchYouTube = reactExports.useMemo(
@@ -29810,14 +28838,9 @@ const ManualRequestForm = () => {
     }, 300),
     []
   );
-  const requestYouTubeById = (videoId) => {
-    const ws = useAppStore.getState().socket;
-    if (!ws || ws.readyState !== WebSocket.OPEN || !singerName.trim()) return;
-    ws.send(JSON.stringify({ type: "request_youtube_song", payload: { videoId, singerName } }));
+  const selectYouTubeById = (videoId, label) => {
+    setSelectedYt({ id: videoId, title: label?.title, channel: label?.channel });
     setYtResults([]);
-    setYtQuery("");
-    setYtUrl("");
-    setSingerName("");
   };
   const extractYouTubeId = (url) => {
     try {
@@ -29849,7 +28872,11 @@ const ManualRequestForm = () => {
             value: searchQuery,
             onChange: handleSearchChange,
             placeholder: "Search for a song...",
-            className: "input-primary w-full"
+            className: "input-primary w-full",
+            onBlur: () => setTimeout(() => setSearchResults([]), 120),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") handleAddToQueue();
+            }
           }
         ),
         searchResults.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29869,15 +28896,6 @@ const ManualRequestForm = () => {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: handleAddToQueue,
-          disabled: !selectedSong || singerName.trim() === "",
-          className: "btn-primary w-full",
-          children: "Add to Queue"
-        }
-      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx("hr", { className: "my-4 opacity-20" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold", children: "YouTube" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
@@ -29887,45 +28905,1245 @@ const ManualRequestForm = () => {
             type: "text",
             value: ytQuery,
             onChange: (e) => {
-              setYtQuery(e.target.value);
-              searchYouTube(e.target.value);
+              const v = e.target.value;
+              setYtQuery(v);
+              const id = extractYouTubeId(v);
+              if (id) {
+                setSelectedYt({ id });
+                setYtResults([]);
+              } else {
+                searchYouTube(v);
+                setSelectedYt(null);
+              }
             },
-            placeholder: "Search YouTube (channel: title)",
-            className: "input-primary w-full"
+            placeholder: "Search YouTube (channel: title) or paste URL",
+            className: "input-primary w-full",
+            onBlur: () => setTimeout(() => setYtResults([]), 120),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") handleAddToQueue();
+            }
           }
         ),
-        ytResults.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "bg-card-light dark:bg-card-dark rounded border max-h-56 overflow-auto", children: ytResults.map((r2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "px-3 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer", onClick: () => requestYouTubeById(r2.id), children: [
+        ytResults.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "bg-card-light dark:bg-card-dark rounded border max-h-56 overflow-auto", children: ytResults.map((r2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "px-3 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer", onClick: () => selectYouTubeById(r2.id, { title: r2.title, channel: r2.channel }), children: [
           r2.channel,
           ": ",
           r2.title
         ] }, r2.id)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "text",
-              value: ytUrl,
-              onChange: (e) => setYtUrl(e.target.value),
-              placeholder: "Or paste a YouTube link",
-              className: "input-primary flex-1"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              className: "btn-secondary",
-              disabled: !singerName.trim() || !extractYouTubeId(ytUrl),
-              onClick: () => {
-                const id = extractYouTubeId(ytUrl);
-                if (id) requestYouTubeById(id);
-              },
-              children: "Add from Link"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs opacity-70", children: "Assign to singer above, then search or paste a link." })
-      ] })
+        selectedYt && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm opacity-80", children: [
+          "Selected YouTube: ",
+          selectedYt.channel ? `${selectedYt.channel}: ` : "",
+          selectedYt.title || selectedYt.id
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: handleAddToQueue,
+          disabled: singerName.trim() === "" || !selectedSong && !selectedYt,
+          className: "btn-primary w-full",
+          children: "Add to Queue"
+        }
+      )
     ] })
+  ] });
+};
+function r(e) {
+  var t, f, n = "";
+  if ("string" == typeof e || "number" == typeof e) n += e;
+  else if ("object" == typeof e) if (Array.isArray(e)) {
+    var o = e.length;
+    for (t = 0; t < o; t++) e[t] && (f = r(e[t])) && (n && (n += " "), n += f);
+  } else for (f in e) e[f] && (n && (n += " "), n += f);
+  return n;
+}
+function clsx() {
+  for (var e, t, f = 0, n = "", o = arguments.length; f < o; f++) (e = arguments[f]) && (t = r(e)) && (n && (n += " "), n += t);
+  return n;
+}
+const useTheme = () => {
+  const context = reactExports.useContext(ThemeContext);
+  if (context === void 0) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+};
+function ArrowPathIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+  }));
+}
+const ForwardRef$x = /* @__PURE__ */ reactExports.forwardRef(ArrowPathIcon);
+function ArrowTopRightOnSquareIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+  }));
+}
+const ForwardRef$w = /* @__PURE__ */ reactExports.forwardRef(ArrowTopRightOnSquareIcon);
+function Bars3Icon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+  }));
+}
+const ForwardRef$v = /* @__PURE__ */ reactExports.forwardRef(Bars3Icon);
+function BugAntIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152 6.06M12 12.75c-2.883 0-5.647.508-8.208 1.44.125 2.104.52 4.136 1.153 6.06M12 12.75a2.25 2.25 0 0 0 2.248-2.354M12 12.75a2.25 2.25 0 0 1-2.248-2.354M12 8.25c.995 0 1.971-.08 2.922-.236.403-.066.74-.358.795-.762a3.778 3.778 0 0 0-.399-2.25M12 8.25c-.995 0-1.97-.08-2.922-.236-.402-.066-.74-.358-.795-.762a3.734 3.734 0 0 1 .4-2.253M12 8.25a2.25 2.25 0 0 0-2.248 2.146M12 8.25a2.25 2.25 0 0 1 2.248 2.146M8.683 5a6.032 6.032 0 0 1-1.155-1.002c.07-.63.27-1.222.574-1.747m.581 2.749A3.75 3.75 0 0 1 15.318 5m0 0c.427-.283.815-.62 1.155-.999a4.471 4.471 0 0 0-.575-1.752M4.921 6a24.048 24.048 0 0 0-.392 3.314c1.668.546 3.416.914 5.223 1.082M19.08 6c.205 1.08.337 2.187.392 3.314a23.882 23.882 0 0 1-5.223 1.082"
+  }));
+}
+const ForwardRef$u = /* @__PURE__ */ reactExports.forwardRef(BugAntIcon);
+function CheckCircleIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+  }));
+}
+const ForwardRef$t = /* @__PURE__ */ reactExports.forwardRef(CheckCircleIcon);
+function Cog6ToothIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+  }), /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+  }));
+}
+const ForwardRef$s = /* @__PURE__ */ reactExports.forwardRef(Cog6ToothIcon);
+function ComputerDesktopIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"
+  }));
+}
+const ForwardRef$r = /* @__PURE__ */ reactExports.forwardRef(ComputerDesktopIcon);
+function ExclamationCircleIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+  }));
+}
+const ForwardRef$q = /* @__PURE__ */ reactExports.forwardRef(ExclamationCircleIcon);
+function ExclamationTriangleIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+  }));
+}
+const ForwardRef$p = /* @__PURE__ */ reactExports.forwardRef(ExclamationTriangleIcon);
+function EyeIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+  }), /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+  }));
+}
+const ForwardRef$o = /* @__PURE__ */ reactExports.forwardRef(EyeIcon);
+function FolderOpenIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"
+  }));
+}
+const ForwardRef$n = /* @__PURE__ */ reactExports.forwardRef(FolderOpenIcon);
+function ForwardIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"
+  }));
+}
+const ForwardRef$m = /* @__PURE__ */ reactExports.forwardRef(ForwardIcon);
+function GlobeAltIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"
+  }));
+}
+const ForwardRef$l = /* @__PURE__ */ reactExports.forwardRef(GlobeAltIcon);
+function MagnifyingGlassIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+  }));
+}
+const ForwardRef$k = /* @__PURE__ */ reactExports.forwardRef(MagnifyingGlassIcon);
+function MicrophoneIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"
+  }));
+}
+const ForwardRef$j = /* @__PURE__ */ reactExports.forwardRef(MicrophoneIcon);
+function MoonIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
+  }));
+}
+const ForwardRef$i = /* @__PURE__ */ reactExports.forwardRef(MoonIcon);
+function MusicalNoteIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"
+  }));
+}
+const ForwardRef$h = /* @__PURE__ */ reactExports.forwardRef(MusicalNoteIcon);
+function PauseIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M15.75 5.25v13.5m-7.5-13.5v13.5"
+  }));
+}
+const ForwardRef$g = /* @__PURE__ */ reactExports.forwardRef(PauseIcon);
+function PlayIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+  }));
+}
+const ForwardRef$f = /* @__PURE__ */ reactExports.forwardRef(PlayIcon);
+function PlusIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 4.5v15m7.5-7.5h-15"
+  }));
+}
+const ForwardRef$e = /* @__PURE__ */ reactExports.forwardRef(PlusIcon);
+function QrCodeIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"
+  }), /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z"
+  }));
+}
+const ForwardRef$d = /* @__PURE__ */ reactExports.forwardRef(QrCodeIcon);
+function SignalSlashIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m3 3 8.735 8.735m0 0a.374.374 0 1 1 .53.53m-.53-.53.53.53m0 0L21 21M14.652 9.348a3.75 3.75 0 0 1 0 5.304m2.121-7.425a6.75 6.75 0 0 1 0 9.546m2.121-11.667c3.808 3.807 3.808 9.98 0 13.788m-9.546-4.242a3.733 3.733 0 0 1-1.06-2.122m-1.061 4.243a6.75 6.75 0 0 1-1.625-6.929m-.496 9.05c-3.068-3.067-3.664-7.67-1.79-11.334M12 12h.008v.008H12V12Z"
+  }));
+}
+const ForwardRef$c = /* @__PURE__ */ reactExports.forwardRef(SignalSlashIcon);
+function SignalIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+  }));
+}
+const ForwardRef$b = /* @__PURE__ */ reactExports.forwardRef(SignalIcon);
+function SparklesIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+  }));
+}
+const ForwardRef$a = /* @__PURE__ */ reactExports.forwardRef(SparklesIcon);
+function SpeakerWaveIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+  }));
+}
+const ForwardRef$9 = /* @__PURE__ */ reactExports.forwardRef(SpeakerWaveIcon);
+function SpeakerXMarkIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+  }));
+}
+const ForwardRef$8 = /* @__PURE__ */ reactExports.forwardRef(SpeakerXMarkIcon);
+function StopIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z"
+  }));
+}
+const ForwardRef$7 = /* @__PURE__ */ reactExports.forwardRef(StopIcon);
+function SunIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
+  }));
+}
+const ForwardRef$6 = /* @__PURE__ */ reactExports.forwardRef(SunIcon);
+function TicketIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
+  }));
+}
+const ForwardRef$5 = /* @__PURE__ */ reactExports.forwardRef(TicketIcon);
+function UserIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+  }));
+}
+const ForwardRef$4 = /* @__PURE__ */ reactExports.forwardRef(UserIcon);
+function VideoCameraSlashIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M12 18.75H4.5a2.25 2.25 0 0 1-2.25-2.25V9m12.841 9.091L16.5 19.5m-1.409-1.409c.407-.407.659-.97.659-1.591v-9a2.25 2.25 0 0 0-2.25-2.25h-9c-.621 0-1.184.252-1.591.659m12.182 12.182L2.909 5.909M1.5 4.5l1.409 1.409"
+  }));
+}
+const ForwardRef$3 = /* @__PURE__ */ reactExports.forwardRef(VideoCameraSlashIcon);
+function VideoCameraIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"
+  }));
+}
+const ForwardRef$2 = /* @__PURE__ */ reactExports.forwardRef(VideoCameraIcon);
+function WifiIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z"
+  }));
+}
+const ForwardRef$1 = /* @__PURE__ */ reactExports.forwardRef(WifiIcon);
+function XCircleIcon({
+  title,
+  titleId,
+  ...props
+}, svgRef) {
+  return /* @__PURE__ */ reactExports.createElement("svg", Object.assign({
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24",
+    strokeWidth: 1.5,
+    stroke: "currentColor",
+    "aria-hidden": "true",
+    "data-slot": "icon",
+    ref: svgRef,
+    "aria-labelledby": titleId
+  }, props), title ? /* @__PURE__ */ reactExports.createElement("title", {
+    id: titleId
+  }, title) : null, /* @__PURE__ */ reactExports.createElement("path", {
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    d: "m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+  }));
+}
+const ForwardRef = /* @__PURE__ */ reactExports.forwardRef(XCircleIcon);
+const ThemeToggle = () => {
+  const { theme, setTheme } = useTheme();
+  const cycleTheme = () => {
+    const themes = ["light", "dark", "system"];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  };
+  const getIcon = () => {
+    switch (theme) {
+      case "light":
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$6, { className: "h-4 w-4" });
+      case "dark":
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "h-4 w-4" });
+      case "system":
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-4 w-4" });
+    }
+  };
+  const getLabel = () => {
+    switch (theme) {
+      case "light":
+        return "Light";
+      case "dark":
+        return "Dark";
+      case "system":
+        return "Auto";
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "button",
+    {
+      onClick: cycleTheme,
+      className: "btn bg-card-light dark:bg-card-dark hover:bg-bg-light dark:hover:bg-bg-dark text-text-primary-light dark:text-text-primary-dark",
+      title: `Current theme: ${getLabel()}. Click to cycle themes.`,
+      "data-testid": "theme-toggle",
+      children: [
+        getIcon(),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden sm:inline ml-2", children: getLabel() })
+      ]
+    }
+  );
+};
+const Navigation = () => {
+  const location2 = useLocation();
+  const { connectionStatus, error, serverInfo, checkServerInfo } = useAppStore();
+  reactExports.useEffect(() => {
+    if (connectionStatus === "connected") {
+      checkServerInfo();
+    }
+  }, [connectionStatus, checkServerInfo]);
+  const navItems = [
+    {
+      path: "/",
+      label: "KJ Control",
+      icon: ForwardRef$s,
+      description: "Host Interface"
+    },
+    {
+      path: "/settings",
+      label: "Settings",
+      icon: ForwardRef$s,
+      description: "Configure libraries, filler and YouTube"
+    }
+  ];
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("header", { className: "sticky top-0 z-50 glass", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between py-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/", className: "font-display text-2xl text-transparent bg-clip-text bg-gradient-to-r from-brand-pink to-brand-blue", children: "KJ-NOMAD" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: connectionStatus === "connected" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-green-500", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-5 w-5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-start leading-tight", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium", children: "Connected" }),
+          serverInfo.localIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono text-text-secondary-light dark:text-text-secondary-dark", children: [
+            serverInfo.localIps[0],
+            ":",
+            serverInfo.port
+          ] })
+        ] })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 text-red-500", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$p, { className: "h-4 w-4" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium hidden sm:inline", children: error || "Disconnected" })
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "hidden md:flex items-center space-x-1", children: navItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = location2.pathname === item.path;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Link,
+        {
+          to: item.path,
+          className: clsx(
+            "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+            isActive ? "bg-brand-blue/10 text-brand-pink" : "text-text-secondary-dark hover:text-brand-pink hover:bg-brand-blue/10"
+          ),
+          title: item.description,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { className: "h-4 w-4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.label })
+          ]
+        },
+        item.path
+      );
+    }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "select",
+      {
+        value: location2.pathname,
+        onChange: (e) => window.location.hash = `#${e.target.value}`,
+        className: "input-primary py-1",
+        children: navItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item.path, children: item.label }, item.path))
+      }
+    ) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeToggle, {}) })
+  ] }) }) });
+};
+const HomePage = () => {
+  const {
+    queue,
+    nowPlaying,
+    // tickerText, 
+    connectionStatus,
+    sessionState,
+    sessionHistory,
+    playbackState,
+    playNext,
+    pausePlayback,
+    resumePlayback,
+    stopPlayback,
+    restartSong,
+    skipSong,
+    // updateTicker,
+    removeFromQueue,
+    reorderQueue
+    // setShowHistory
+  } = useAppStore();
+  const handleRemoveSinger = (songId) => {
+    removeFromQueue(songId);
+  };
+  const handleReorderQueue = async (fromIndex, toIndex) => {
+    reorderQueue(fromIndex, toIndex);
+    try {
+      const response = await fetch("/api/queue/reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ fromIndex, toIndex })
+      });
+      if (!response.ok) {
+        console.error("Failed to reorder queue:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error reordering queue:", error);
+    }
+  };
+  reactExports.useEffect(() => {
+  }, []);
+  const handlePlaySong = (songId, singerName) => {
+    const { socket } = useAppStore.getState();
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: "play",
+        payload: { songId, singer: singerName }
+      }));
+    }
+  };
+  const currentlyPlaying = nowPlaying && !nowPlaying.isFiller;
+  const isConnected = connectionStatus === "connected";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col min-h-screen bg-bg-light dark:bg-bg-dark", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Navigation, {}),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("main", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6", children: [
+      !isConnected && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card border-red-500/50 bg-red-500/10 text-center text-red-700 dark:text-red-300", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold", children: "Not Connected" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Reconnecting to server..." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ManualRequestForm, {}),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold flex items-center space-x-2 mb-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-5 w-5" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Playback Controls" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: playNext,
+                disabled: !isConnected || queue.length === 0,
+                className: "btn-primary flex flex-col items-center space-y-1 h-20",
+                "data-testid": "play-next-button",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Play Next" })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: playbackState === "paused" ? resumePlayback : pausePlayback,
+                disabled: !isConnected || !nowPlaying,
+                className: "btn-secondary flex flex-col items-center space-y-1 h-20",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: playbackState === "paused" ? "Resume" : "Pause" })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: restartSong,
+                disabled: !isConnected || !nowPlaying,
+                className: "btn-tertiary flex flex-col items-center space-y-1 h-20",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$x, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Restart" })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: skipSong,
+                disabled: !isConnected || !nowPlaying,
+                className: "btn flex flex-col items-center space-y-1 h-20 bg-card-light dark:bg-card-dark hover:bg-gray-100 dark:hover:bg-border-dark",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$m, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Skip" })
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: stopPlayback,
+                disabled: !isConnected || !nowPlaying,
+                className: "btn flex flex-col items-center space-y-1 h-20 text-red-600 hover:bg-red-500/10",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$7, { className: "h-6 w-6" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Stop" })
+                ]
+              }
+            )
+          ] })
+        ] })
+      ] }),
+      nowPlaying && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `card ${currentlyPlaying ? "ring-2 ring-brand-pink bg-brand-pink/10" : "bg-brand-yellow/10"}`, "data-testid": "now-playing", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-lg", children: currentlyPlaying ? "Now Singing" : "Filler Music" }),
+          nowPlaying.singer && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-brand-blue dark:text-brand-pink", children: nowPlaying.singer }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: nowPlaying.fileName })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${currentlyPlaying ? "bg-brand-pink/20 text-brand-pink" : "bg-brand-yellow/20 text-yellow-800 dark:text-brand-yellow"}`, children: currentlyPlaying ? "Live" : "Filler" }) })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DraggableQueue,
+          {
+            queue,
+            onReorder: handleReorderQueue,
+            onPlay: handlePlaySong,
+            onRemove: handleRemoveSinger
+          }
+        ),
+        sessionHistory && sessionHistory.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold mb-3", children: "Recently Completed" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: sessionHistory.slice(-5).reverse().map((h, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 rounded bg-green-500/10 border border-green-500/20", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "truncate", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-semibold truncate", children: h.singerName }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm opacity-80 truncate", children: (() => {
+                const p = h.song.fileName;
+                const s = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+                const b = s >= 0 ? p.slice(s + 1) : p;
+                const d = b.lastIndexOf(".");
+                return d > 0 ? b.slice(0, d) : b;
+              })() })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs opacity-70 whitespace-nowrap ml-3", children: new Date(h.playedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })
+          ] }, `${h.song.id}_${i}`)) })
+        ] })
+      ] }),
+      sessionState && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Session Info" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-4 text-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-brand-blue dark:text-brand-pink", children: sessionState.totalSongsPlayed }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "Songs Played" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-green-500", children: sessionState.queueLength }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "In Queue" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-purple-500", children: sessionHistory.length }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "History" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-orange-500", children: new Date(sessionState.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "Session Started" })
+          ] })
+        ] })
+      ] })
+    ] }) })
+  ] });
+};
+const Input = ({
+  label,
+  error,
+  hint,
+  leftIcon,
+  rightIcon,
+  className,
+  id,
+  ...props
+}) => {
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full", children: [
+    label && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "label",
+      {
+        htmlFor: inputId,
+        className: "block text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+      leftIcon && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: leftIcon }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          id: inputId,
+          className: clsx(
+            "w-full px-3 py-2 border rounded-lg transition-colors duration-200",
+            "bg-card-light dark:bg-card-dark",
+            "text-text-primary-light dark:text-text-primary-dark",
+            "placeholder-text-secondary-light dark:placeholder-text-secondary-dark",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2",
+            error ? "border-red-300 dark:border-red-600 focus:border-red-500 focus:ring-red-500" : "border-border-light dark:border-border-dark focus:border-brand-pink focus:ring-brand-pink",
+            leftIcon && "pl-10",
+            rightIcon && "pr-10",
+            className
+          ),
+          ...props
+        }
+      ),
+      rightIcon && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: rightIcon }) })
+    ] }),
+    hint && !error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-text-secondary-light dark:text-text-secondary-dark", children: hint }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-red-600 dark:text-red-400", children: error })
   ] });
 };
 const PlayerScreenManager = () => {
@@ -29971,6 +30189,8 @@ const PlayerScreenManager = () => {
     return () => clearInterval(interval);
   }, [fetchDevices, checkServerInfo]);
   const playerUrl = serverInfo.localIps.length > 0 ? `http://${serverInfo.localIps[0]}:${serverInfo.port}/player` : "/player";
+  const setKaraokeVol = useAppStore((s) => s.setPlayerKaraokeVolume);
+  const setFillerVol = useAppStore((s) => s.setPlayerFillerVolume);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card relative", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Player Screens" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-3 right-3 flex gap-2", children: [
@@ -29980,7 +30200,7 @@ const PlayerScreenManager = () => {
           onClick: () => setShowAddHelp(true),
           className: "p-2 rounded-full hover:bg-brand-blue/10",
           title: "Add a Player Screen",
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "h-5 w-5" })
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$e, { className: "h-5 w-5" })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29996,7 +30216,7 @@ const PlayerScreenManager = () => {
           },
           className: "p-2 rounded-full hover:bg-brand-blue/10",
           title: "Toggle debug overlay on all player screens",
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: clsx("h-5 w-5", debugAll && "text-brand-pink") })
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: clsx("h-5 w-5", debugAll && "text-brand-pink") })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30010,13 +30230,13 @@ const PlayerScreenManager = () => {
       )
     ] }),
     devices.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 px-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-16 w-16 mx-auto text-text-secondary-light dark:text-text-secondary-dark opacity-50" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-16 w-16 mx-auto text-text-secondary-light dark:text-text-secondary-dark opacity-50" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-4 text-lg font-medium", children: "No Player Screens Connected" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "To show karaoke lyrics and videos, connect a display (like a TV or projector)." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 text-left space-y-4 bg-bg-light dark:bg-bg-dark p-4 rounded-lg border border-border-light dark:border-border-dark", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-semibold flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$y, { className: "h-5 w-5 mr-2" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$w, { className: "h-5 w-5 mr-2" }),
             "Option 1: Use a Web Browser"
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "On any device with a web browser (like a Smart TV, laptop, or tablet), open the browser and go to:" }),
@@ -30025,7 +30245,7 @@ const PlayerScreenManager = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-border-light dark:border-border-dark my-4" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-semibold flex items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$e, { className: "h-5 w-5 mr-2" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-5 w-5 mr-2" }),
             "Option 2: Use the KJ-Nomad App"
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: 'For the best performance, install and run the KJ-Nomad app on another computer, and select "Set up as Player" on launch. It will automatically find and connect to your server.' })
@@ -30034,7 +30254,7 @@ const PlayerScreenManager = () => {
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
       Array.isArray(devices) && devices.map((device, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 bg-bg-light dark:bg-card-dark rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: device.isOnline ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-8 w-8 text-green-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-8 w-8 text-red-500" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: device.isOnline ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-8 w-8 text-green-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-8 w-8 text-red-500" }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-semibold", children: [
               "Screen ",
@@ -30076,36 +30296,67 @@ const PlayerScreenManager = () => {
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "range",
-              min: 0,
-              max: 1,
-              step: 0.01,
-              defaultValue: 1,
-              onChange: async (e) => {
-                const vol = parseFloat(e.target.value);
-                try {
-                  await fetch(`/api/devices/${device.id}/command`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ command: "set_volume", data: { volume: vol } })
-                  });
-                } catch {
-                }
-              },
-              className: "w-24 mr-2",
-              title: "Volume"
-            }
-          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center mr-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs opacity-70 mr-2", children: "Karaoke" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "range",
+                min: 0,
+                max: 1,
+                step: 0.01,
+                defaultValue: 1,
+                onChange: async (e) => {
+                  const vol = parseFloat(e.target.value);
+                  setKaraokeVol(vol);
+                  try {
+                    await fetch(`/api/devices/${device.id}/command`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ command: "set_karaoke_volume", data: { volume: vol } })
+                    });
+                  } catch {
+                  }
+                },
+                className: "w-24",
+                title: "Karaoke volume"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center mr-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs opacity-70 mr-2", children: "Filler" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "range",
+                min: 0,
+                max: 1,
+                step: 0.01,
+                defaultValue: 0.6,
+                onChange: async (e) => {
+                  const vol = parseFloat(e.target.value);
+                  setFillerVol(vol);
+                  try {
+                    await fetch(`/api/devices/${device.id}/command`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ command: "set_filler_volume", data: { volume: vol } })
+                    });
+                  } catch {
+                  }
+                },
+                className: "w-24",
+                title: "Filler music volume"
+              }
+            )
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => identifyDevice(device.id),
               className: "p-2 rounded-full hover:bg-brand-blue/10",
               title: "Identify Screen",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$p, { className: "h-6 w-6" })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-6 w-6" })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30114,7 +30365,7 @@ const PlayerScreenManager = () => {
               onClick: () => toggleDeviceAudio(device.id),
               className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isAudioEnabled }),
               title: device.isAudioEnabled ? "Mute Audio" : "Unmute Audio",
-              children: device.isAudioEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-6 w-6 text-brand-pink" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-6 w-6" })
+              children: device.isAudioEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-6 w-6 text-brand-pink" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$8, { className: "h-6 w-6" })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30123,7 +30374,7 @@ const PlayerScreenManager = () => {
               onClick: () => toggleDeviceTicker(device.id),
               className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isTickerVisible }),
               title: device.isTickerVisible ? "Hide Ticker" : "Show Ticker",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$6, { className: clsx("h-6 w-6", device.isTickerVisible && "text-brand-pink") })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$5, { className: clsx("h-6 w-6", device.isTickerVisible && "text-brand-pink") })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30132,7 +30383,7 @@ const PlayerScreenManager = () => {
               onClick: () => toggleDeviceSidebar(device.id),
               className: clsx("p-2 rounded-full hover:bg-brand-blue/10", { "bg-brand-blue/20": device.isSidebarVisible }),
               title: device.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$x, { className: clsx("h-6 w-6", device.isSidebarVisible && "text-brand-pink") })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: clsx("h-6 w-6", device.isSidebarVisible && "text-brand-pink") })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30211,320 +30462,75 @@ const PlayerScreenManager = () => {
     ] }) })
   ] });
 };
-const useTheme = () => {
-  const context = reactExports.useContext(ThemeContext);
-  if (context === void 0) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
-};
-const ThemeToggle = () => {
-  const { theme, setTheme } = useTheme();
-  const cycleTheme = () => {
-    const themes = ["light", "dark", "system"];
-    const currentIndex = themes.indexOf(theme);
-    const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
-  };
-  const getIcon = () => {
-    switch (theme) {
-      case "light":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$7, { className: "h-4 w-4" });
-      case "dark":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-4 w-4" });
-      case "system":
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$s, { className: "h-4 w-4" });
-    }
-  };
-  const getLabel = () => {
-    switch (theme) {
-      case "light":
-        return "Light";
-      case "dark":
-        return "Dark";
-      case "system":
-        return "Auto";
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    "button",
-    {
-      onClick: cycleTheme,
-      className: "btn bg-card-light dark:bg-card-dark hover:bg-bg-light dark:hover:bg-bg-dark text-text-primary-light dark:text-text-primary-dark",
-      title: `Current theme: ${getLabel()}. Click to cycle themes.`,
-      "data-testid": "theme-toggle",
-      children: [
-        getIcon(),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden sm:inline ml-2", children: getLabel() })
-      ]
-    }
-  );
-};
-const Navigation = () => {
-  const location2 = useLocation();
-  const { connectionStatus, error, serverInfo, checkServerInfo } = useAppStore();
-  reactExports.useEffect(() => {
-    if (connectionStatus === "connected") {
-      checkServerInfo();
-    }
-  }, [connectionStatus, checkServerInfo]);
-  const navItems = [
-    {
-      path: "/",
-      label: "KJ Control",
-      icon: ForwardRef$t,
-      description: "Host Interface"
-    },
-    {
-      path: "/profiles",
-      label: "Profiles",
-      icon: ForwardRef$5,
-      description: "Singer Profiles"
-    }
-  ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("header", { className: "sticky top-0 z-50 glass", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between py-4", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Link, { to: "/", className: "font-display text-2xl text-transparent bg-clip-text bg-gradient-to-r from-brand-pink to-brand-blue", children: "KJ-NOMAD" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: connectionStatus === "connected" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 text-green-500", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-5 w-5" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-start leading-tight", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium", children: "Connected" }),
-          serverInfo.localIps.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-mono text-text-secondary-light dark:text-text-secondary-dark", children: [
-            serverInfo.localIps[0],
-            ":",
-            serverInfo.port
-          ] })
-        ] })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 text-red-500", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-4 w-4" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium hidden sm:inline", children: error || "Disconnected" })
-      ] }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "hidden md:flex items-center space-x-1", children: navItems.map((item) => {
-      const Icon = item.icon;
-      const isActive = location2.pathname === item.path;
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        Link,
-        {
-          to: item.path,
-          className: clsx(
-            "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-            isActive ? "bg-brand-blue/10 text-brand-pink" : "text-text-secondary-dark hover:text-brand-pink hover:bg-brand-blue/10"
-          ),
-          title: item.description,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { className: "h-4 w-4" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.label })
-          ]
-        },
-        item.path
-      );
-    }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
-      {
-        value: location2.pathname,
-        onChange: (e) => window.location.hash = `#${e.target.value}`,
-        className: "input-primary py-1",
-        children: navItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item.path, children: item.label }, item.path))
-      }
-    ) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeToggle, {}) })
-  ] }) }) });
-};
-const HomePage = () => {
-  const {
-    queue,
-    nowPlaying,
-    tickerText,
-    connectionStatus,
-    sessionState,
-    sessionHistory,
-    playbackState,
-    playNext,
-    pausePlayback,
-    resumePlayback,
-    stopPlayback,
-    restartSong,
-    skipSong,
-    updateTicker,
-    removeFromQueue,
-    reorderQueue,
-    setShowHistory
-  } = useAppStore();
-  const [newTickerText, setNewTickerText] = reactExports.useState(tickerText);
+const SettingsPage = () => {
+  const [mediaDir, setMediaDir] = reactExports.useState("");
+  const [mediaExtensions, setMediaExtensions] = reactExports.useState(".mp4,.webm,.avi,.mov,.mp3,.m4a,.wav,.flac,.ogg,.mkv");
+  const [mediaUseCache, setMediaUseCache] = reactExports.useState(true);
+  const [libraryMessage, setLibraryMessage] = reactExports.useState(null);
   const [fillerDir, setFillerDir] = reactExports.useState("");
-  const [fillerVolume, setFillerVolume] = reactExports.useState(0.4);
   const [fillerFiles, setFillerFiles] = reactExports.useState([]);
   const [selectedFiller, setSelectedFiller] = reactExports.useState("");
   const [uploading, setUploading] = reactExports.useState(false);
-  const handleUpdateTicker = () => {
-    updateTicker(newTickerText);
-  };
-  const handleRemoveSinger = (songId) => {
-    removeFromQueue(songId);
-  };
-  const handleReorderQueue = async (fromIndex, toIndex) => {
-    reorderQueue(fromIndex, toIndex);
-    try {
-      const response = await fetch("/api/queue/reorder", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ fromIndex, toIndex })
-      });
-      if (!response.ok) {
-        console.error("Failed to reorder queue:", response.statusText);
-      }
-    } catch (error) {
-      console.error("Error reordering queue:", error);
-    }
-  };
-  const [newLibraryPath, setNewLibraryPath] = reactExports.useState("");
-  const [libraryMessage, setLibraryMessage] = reactExports.useState(null);
+  const [ytCacheDir, setYtCacheDir] = reactExports.useState("");
+  const [ytQuality, setYtQuality] = reactExports.useState("best[height<=720]/best");
+  const [ytFilenamePattern, setYtFilenamePattern] = reactExports.useState("paren");
+  const qualityOptions = [
+    { label: "Auto best ≤720p (default)", value: "best[height<=720]/best" },
+    { label: "Best available", value: "best" },
+    { label: "1080p video + best audio (fallback best)", value: "bestvideo[height<=1080]+bestaudio/best" },
+    { label: "720p video + best audio (fallback best)", value: "bestvideo[height<=720]+bestaudio/best" },
+    { label: "480p or lower (data saver)", value: "best[height<=480]/best" }
+  ];
+  const { tickerText, updateTicker } = useAppStore();
+  const [newTickerText, setNewTickerText] = reactExports.useState(tickerText);
+  const waitingTitle = useAppStore((s) => s.waitingTitle || "KJ-Nomad Ready");
+  const waitingSubtitle = useAppStore((s) => s.waitingSubtitle || "Waiting for the next performance...");
+  const waitingImageUrl = useAppStore((s) => s.waitingImageUrl || null);
+  const [newWaitingTitle, setNewWaitingTitle] = reactExports.useState(waitingTitle);
+  const [newWaitingSubtitle, setNewWaitingSubtitle] = reactExports.useState(waitingSubtitle);
+  const [brandMsg, setBrandMsg] = reactExports.useState(null);
   reactExports.useEffect(() => {
     (async () => {
       try {
-        const r2 = await fetch("/api/filler/settings");
-        const j = await r2.json();
-        if (j?.success && j.data) {
-          setFillerDir(j.data.directory || "");
-          setFillerVolume(typeof j.data.volume === "number" ? j.data.volume : 0.4);
+        const cfg = await fetch("/api/setup/config").then((r2) => r2.json());
+        if (cfg?.success && cfg.data) {
+          setMediaDir(cfg.data.mediaDirectory || "");
+          if (Array.isArray(cfg.data.mediaScanExtensions)) setMediaExtensions(cfg.data.mediaScanExtensions.join(","));
+          if (typeof cfg.data.mediaUseCachedIndex === "boolean") setMediaUseCache(Boolean(cfg.data.mediaUseCachedIndex));
         }
       } catch {
       }
       try {
-        const r2 = await fetch("/api/filler/list");
-        const j2 = await r2.json();
-        if (j2?.success) {
-          setFillerFiles(j2.data || []);
-          if (j2.data?.length) setSelectedFiller(j2.data[0]);
+        const f = await fetch("/api/filler/settings").then((r2) => r2.json());
+        if (f?.success && f.data) {
+          setFillerDir(f.data.directory || "");
+        }
+      } catch {
+      }
+      try {
+        const y = await fetch("/api/youtube/settings").then((r2) => r2.json());
+        if (y?.success && y.data) {
+          setYtCacheDir(y.data.cacheDirectory || "");
+          setYtQuality(y.data.qualityFormat || "best[height<=720]/best");
+          setYtFilenamePattern(y.data.filenamePattern || "paren");
+        }
+      } catch {
+      }
+      try {
+        const l = await fetch("/api/filler/list").then((r2) => r2.json());
+        if (l?.success) {
+          setFillerFiles(l.data || []);
+          if (l.data?.length) setSelectedFiller(l.data[0]);
         }
       } catch {
       }
     })();
   }, []);
-  const handlePlaySong = (songId, singerName) => {
-    const { socket } = useAppStore.getState();
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({
-        type: "play",
-        payload: { songId, singer: singerName }
-      }));
-    }
-  };
-  const currentlyPlaying = nowPlaying && !nowPlaying.isFiller;
-  const isConnected = connectionStatus === "connected";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col min-h-screen bg-bg-light dark:bg-bg-dark", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Navigation, {}),
     /* @__PURE__ */ jsxRuntimeExports.jsx("main", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6", children: [
-      !isConnected && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card border-red-500/50 bg-red-500/10 text-center text-red-700 dark:text-red-300", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold", children: "Not Connected" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Reconnecting to server..." })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ManualRequestForm, {}),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold flex items-center space-x-2 mb-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-5 w-5" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Playback Controls" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: playNext,
-                disabled: !isConnected || queue.length === 0,
-                className: "btn-primary flex flex-col items-center space-y-1 h-20",
-                "data-testid": "play-next-button",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "h-6 w-6" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Play Next" })
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: playbackState === "paused" ? resumePlayback : pausePlayback,
-                disabled: !isConnected || !nowPlaying,
-                className: "btn-secondary flex flex-col items-center space-y-1 h-20",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "h-6 w-6" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: playbackState === "paused" ? "Resume" : "Pause" })
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: restartSong,
-                disabled: !isConnected || !nowPlaying,
-                className: "btn-tertiary flex flex-col items-center space-y-1 h-20",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$z, { className: "h-6 w-6" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Restart" })
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: skipSong,
-                disabled: !isConnected || !nowPlaying,
-                className: "btn flex flex-col items-center space-y-1 h-20 bg-card-light dark:bg-card-dark hover:bg-gray-100 dark:hover:bg-border-dark",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-6 w-6" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Skip" })
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: stopPlayback,
-                disabled: !isConnected || !nowPlaying,
-                className: "btn flex flex-col items-center space-y-1 h-20 text-red-600 hover:bg-red-500/10",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$8, { className: "h-6 w-6" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "Stop" })
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => setShowHistory(true),
-                disabled: !isConnected,
-                className: "btn flex flex-col items-center space-y-1 h-20 bg-card-light dark:bg-card-dark hover:bg-gray-100 dark:hover:bg-border-dark",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$u, { className: "h-6 w-6" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs", children: "History" }),
-                  sessionHistory.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-brand-blue text-white rounded-full w-5 h-5 flex items-center justify-center", children: sessionHistory.length })
-                ]
-              }
-            )
-          ] })
-        ] })
-      ] }),
-      nowPlaying && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `card ${currentlyPlaying ? "ring-2 ring-brand-pink bg-brand-pink/10" : "bg-brand-yellow/10"}`, "data-testid": "now-playing", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold text-lg", children: currentlyPlaying ? "Now Singing" : "Filler Music" }),
-          nowPlaying.singer && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-brand-blue dark:text-brand-pink", children: nowPlaying.singer }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: nowPlaying.fileName })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${currentlyPlaying ? "bg-brand-pink/20 text-brand-pink" : "bg-brand-yellow/20 text-yellow-800 dark:text-brand-yellow"}`, children: currentlyPlaying ? "Live" : "Filler" }) })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        DraggableQueue,
-        {
-          queue,
-          onReorder: handleReorderQueue,
-          onPlay: handlePlaySong,
-          onRemove: handleRemoveSinger
-        }
-      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-semibold", children: "Settings" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerScreenManager, {}),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Ticker Message" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
@@ -30542,8 +30548,7 @@ const HomePage = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: handleUpdateTicker,
-              disabled: !isConnected || newTickerText === tickerText,
+              onClick: () => updateTicker(newTickerText),
               className: "btn-primary w-full",
               "data-testid": "update-ticker-button",
               children: "Update Ticker"
@@ -30555,34 +30560,41 @@ const HomePage = () => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Media Library" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1 font-mono", placeholder: "/absolute/path/to/your/karaoke/library", value: newLibraryPath, onChange: (e) => setNewLibraryPath(e.target.value) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: async () => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1 font-mono", placeholder: "/absolute/path/to/your/karaoke/library", value: mediaDir, onChange: (e) => setMediaDir(e.target.value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn", onClick: async () => {
               setLibraryMessage(null);
-              if (!newLibraryPath.trim()) {
+              if (!mediaDir.trim()) {
                 setLibraryMessage("Enter a folder path");
                 return;
               }
               try {
-                const v = await fetch("/api/setup/validate-media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: newLibraryPath.trim() }) });
+                const v = await fetch("/api/setup/validate-media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: mediaDir.trim() }) });
                 const j = await v.json();
                 if (!j?.success || !j.data?.valid) {
                   setLibraryMessage(j?.data?.error || "Folder invalid");
                   return;
                 }
-                await fetch("/api/setup/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mediaDirectory: newLibraryPath.trim() }) });
-                const scan = await fetch("/api/setup/scan", { method: "POST" });
+                await fetch("/api/setup/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...j.data, mediaDirectory: mediaDir.trim(), mediaScanExtensions: mediaExtensions.split(",").map((s) => s.trim()).filter(Boolean), mediaUseCachedIndex: mediaUseCache }) });
+                const scan = await fetch("/api/setup/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ force: false }) });
                 const sj = await scan.json();
-                if (sj?.success) setLibraryMessage(`Scan complete. Songs found: ${sj.data?.songCount ?? 0}`);
-                else setLibraryMessage(sj?.error || "Scan failed");
+                setLibraryMessage(sj?.success ? `Scan complete. Songs found: ${sj.data?.songCount ?? 0}` : sj?.error || "Scan failed");
               } catch {
                 setLibraryMessage("Failed to update library");
               }
             }, children: "Set & Rescan" })
           ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm opacity-80", children: "Extensions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1 font-mono", placeholder: ".mp4,.mkv,.webm", value: mediaExtensions, onChange: (e) => setMediaExtensions(e.target.value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm opacity-80 flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: mediaUseCache, onChange: (e) => setMediaUseCache(e.target.checked) }),
+              " Use cached index when available"
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn", onClick: async () => {
               try {
-                const r2 = await fetch("/api/setup/scan", { method: "POST" });
+                const r2 = await fetch("/api/setup/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ force: true }) });
                 const j = await r2.json();
                 setLibraryMessage(j?.success ? `Rescanned. Songs: ${j.data?.songCount ?? 0}` : j?.error || "Scan failed");
               } catch {
@@ -30597,7 +30609,46 @@ const HomePage = () => {
               }
             }, children: "Reset Setup" })
           ] }),
-          libraryMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm opacity-80", children: libraryMessage })
+          libraryMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm opacity-80", children: libraryMessage }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs opacity-70", children: "Tip: You can leave this blank to run with YouTube-only requests." })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Waiting Screen" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1", placeholder: "Title", value: newWaitingTitle, onChange: (e) => setNewWaitingTitle(e.target.value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1", placeholder: "Subtitle", value: newWaitingSubtitle, onChange: (e) => setNewWaitingSubtitle(e.target.value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn", onClick: async () => {
+              try {
+                await fetch("/api/waiting-screen", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: newWaitingTitle, subtitle: newWaitingSubtitle }) });
+                setBrandMsg("Saved");
+                setTimeout(() => setBrandMsg(null), 1500);
+              } catch {
+                setBrandMsg("Save failed");
+              }
+            }, children: "Save" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm opacity-80", children: "Custom image (optional)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "file", accept: "image/*", onChange: async (e) => {
+              if (!e.target.files || e.target.files.length === 0) return;
+              const form = new FormData();
+              form.append("file", e.target.files[0]);
+              try {
+                const r2 = await fetch("/api/waiting-screen/upload", { method: "POST", body: form });
+                const j = await r2.json();
+                setBrandMsg(j?.success ? "Uploaded" : j?.error || "Upload failed");
+              } catch {
+                setBrandMsg("Upload failed");
+              }
+            } })
+          ] }),
+          waitingImageUrl && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs opacity-80", children: [
+            "Current image:",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: waitingImageUrl, alt: "waiting", className: "mt-2 h-16 object-contain" })
+          ] }),
+          brandMsg && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm opacity-80", children: brandMsg })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
@@ -30606,7 +30657,7 @@ const HomePage = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1", placeholder: "Filler directory", value: fillerDir, onChange: (e) => setFillerDir(e.target.value) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-secondary", onClick: async () => {
-              await fetch("/api/filler/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) });
+              await fetch("/api/filler/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: fillerDir }) });
               const resp = await fetch("/api/filler/list");
               const data = await resp.json();
               if (data?.success) {
@@ -30614,16 +30665,6 @@ const HomePage = () => {
                 if (data.data?.length) setSelectedFiller(data.data[0]);
               }
             }, children: "Save" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm opacity-80", children: "Volume" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "range", min: 0, max: 1, step: 0.01, value: fillerVolume, onChange: (e) => setFillerVolume(parseFloat(e.target.value)), onMouseUp: () => {
-              fetch("/api/filler/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: fillerDir, volume: fillerVolume }) });
-            } }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm w-10 text-right", children: [
-              Math.round(fillerVolume * 100),
-              "%"
-            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "file", accept: "video/*,audio/*", onChange: async (e) => {
@@ -30657,35 +30698,34 @@ const HomePage = () => {
               if (selectedFiller) await fetch("/api/filler/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileName: selectedFiller }) });
             }, children: "Play Selected" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: () => {
-              const ws = useAppStore.getState().socket;
-              ws?.send(JSON.stringify({ type: "stop_filler_manual" }));
+              fetch("/api/filler/stop", { method: "POST" });
             }, children: "Stop" })
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(PlayerScreenManager, {}),
-      sessionState && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "Session Info" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-4 text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-brand-blue dark:text-brand-pink", children: sessionState.totalSongsPlayed }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "Songs Played" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold mb-4", children: "YouTube Downloads" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "input flex-1 font-mono", placeholder: "/path/to/youtube/cache", value: ytCacheDir, onChange: (e) => setYtCacheDir(e.target.value) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "input", value: ytQuality, onChange: (e) => setYtQuality(e.target.value), children: qualityOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, children: o.label }, o.value)) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-green-500", children: sessionState.queueLength }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "In Queue" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm opacity-80", children: "Filename" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: "input", value: ytFilenamePattern, onChange: (e) => setYtFilenamePattern(e.target.value), children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "paren", children: "Title (Channel).mp4" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "dash", children: "Title - Channel.mp4" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-secondary", onClick: async () => {
+              await fetch("/api/youtube/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cacheDirectory: ytCacheDir, qualityFormat: ytQuality, filenamePattern: ytFilenamePattern }) });
+            }, children: "Save" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-purple-500", children: sessionHistory.length }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "History" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-orange-500", children: new Date(sessionState.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-text-secondary-light dark:text-text-secondary-dark", children: "Session Started" })
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex gap-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: async () => {
+            await fetch("/api/youtube/cache", { method: "DELETE" });
+          }, children: "Delete All Downloads" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs opacity-70", children: "If you don't configure a local media library, KJ‑Nomad will still work by downloading songs from YouTube on demand." })
         ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SessionHistory, {})
+      ] })
     ] }) })
   ] });
 };
@@ -30694,8 +30734,9 @@ const SetupWizardPage = () => {
   const setIsSetupComplete = useAppStore((state) => state.setIsSetupComplete);
   const [mediaDirectory, setMediaDirectory] = reactExports.useState(null);
   const [isValidPath, setIsValidPath] = reactExports.useState(false);
+  const [fillerDirectory, setFillerDirectory] = reactExports.useState("");
+  const [youtubeDirectory, setYoutubeDirectory] = reactExports.useState("");
   const [validationMsg, setValidationMsg] = reactExports.useState(null);
-  const [suggestions, setSuggestions] = reactExports.useState([]);
   const [error, setError] = reactExports.useState(null);
   const [scanStatus, setScanStatus] = reactExports.useState({ scanning: false, progress: 0, total: 0, complete: false, songCount: 0 });
   const startScan = reactExports.useCallback(async () => {
@@ -30703,23 +30744,30 @@ const SetupWizardPage = () => {
     setScanStatus({ scanning: true, progress: 0, total: 0, complete: false, songCount: 0 });
     setError(null);
     try {
-      const response = await fetch("/api/setup/config", {
+      const saveResp = await fetch("/api/setup/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mediaDirectory })
+        body: JSON.stringify({
+          mediaDirectory,
+          ...fillerDirectory ? { fillerMusicDirectory: fillerDirectory } : {},
+          ...youtubeDirectory ? { youtubeCacheDirectory: youtubeDirectory } : {}
+        })
       });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to scan library.");
+      const saveJson = await saveResp.json();
+      if (!saveResp.ok || !saveJson.success) {
+        throw new Error(saveJson.error || "Failed to save configuration.");
       }
-      setScanStatus({
-        scanning: false,
-        progress: 100,
-        total: 100,
-        complete: true,
-        songCount: result.data.songCount || 0
-        // Assuming the backend returns this
+      const scanResp = await fetch("/api/setup/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: false })
       });
+      const scanJson = await scanResp.json();
+      if (!scanResp.ok || !scanJson.success) {
+        throw new Error(scanJson.error || "Failed to scan library.");
+      }
+      const songCount = scanJson?.data?.songCount ?? 0;
+      setScanStatus({ scanning: false, progress: 100, total: 100, complete: true, songCount });
       setTimeout(() => setStep("complete"), 1e3);
     } catch (err) {
       if (err instanceof Error) {
@@ -30729,22 +30777,12 @@ const SetupWizardPage = () => {
       }
       setScanStatus({ scanning: false, progress: 0, total: 0, complete: false, songCount: 0 });
     }
-  }, [mediaDirectory]);
+  }, [mediaDirectory, fillerDirectory, youtubeDirectory]);
   reactExports.useEffect(() => {
     if (step === "scan_media" && mediaDirectory) {
       startScan();
     }
   }, [step, mediaDirectory, startScan]);
-  reactExports.useEffect(() => {
-    (async () => {
-      try {
-        const r2 = await fetch("/api/setup/directory-suggestions");
-        const j = await r2.json();
-        if (j?.success && Array.isArray(j.data)) setSuggestions(j.data);
-      } catch {
-      }
-    })();
-  }, []);
   const handleSelectDirectory = async () => {
     setError(null);
     if (window.electronAPI) {
@@ -30778,7 +30816,7 @@ const SetupWizardPage = () => {
     switch (step) {
       case "welcome":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-5xl mb-4", children: "Welcome to KJ-Nomad" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-8 max-w-md mx-auto", children: "This setup wizard will guide you through configuring your local media library for your karaoke show." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30792,9 +30830,9 @@ const SetupWizardPage = () => {
         ] });
       case "select_media":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Select Media Library" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-6", children: "Choose the folder on your computer that contains your karaoke video files." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Select Media Library (optional)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-6", children: "If you have a local collection of karaoke files, select the folder that contains them. If not, you can still run KJ‑Nomad using YouTube downloads only and add a library later in Settings." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 space-y-3 text-left", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
@@ -30802,7 +30840,7 @@ const SetupWizardPage = () => {
                 className: "btn-secondary w-full",
                 onClick: handleSelectDirectory,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$o, { className: "h-5 w-5 mr-2" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$n, { className: "h-5 w-5 mr-2" }),
                   "Choose Folder"
                 ]
               }
@@ -30837,7 +30875,7 @@ const SetupWizardPage = () => {
                       const json = await resp.json();
                       if (json?.success && json.data?.valid) {
                         setIsValidPath(true);
-                        setValidationMsg(`Looks good. Videos: ${json.data.stats?.videoCount ?? 0}`);
+                        setValidationMsg("Looks good. Directory is readable.");
                       } else {
                         setIsValidPath(false);
                         setValidationMsg(json?.data?.error || "Folder is not valid");
@@ -30852,15 +30890,31 @@ const SetupWizardPage = () => {
               ),
               validationMsg && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm " + (isValidPath ? "text-green-600" : "text-red-500"), children: validationMsg })
             ] }),
-            suggestions.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs opacity-80", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1", children: "Suggestions:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: suggestions.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn-tertiary", onClick: () => {
-                setMediaDirectory(s);
-                setIsValidPath(false);
-                setValidationMsg(null);
-              }, children: s }, s)) })
-            ] }),
             mediaDirectory && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-bg-light dark:bg-bg-dark rounded-lg text-sm text-left border border-border-light dark:border-border-dark", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-mono truncate text-text-secondary-light dark:text-text-secondary-dark", children: mediaDirectory }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm mb-1", children: "Filler Music folder (optional)" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "input w-full font-mono",
+                  placeholder: "/absolute/path/to/filler/music (defaults to Media Library)",
+                  value: fillerDirectory,
+                  onChange: (e) => setFillerDirectory(e.target.value.trim())
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm mb-1", children: "YouTube downloads folder (optional)" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  className: "input w-full font-mono",
+                  placeholder: "/absolute/path/to/youtube/downloads",
+                  value: youtubeDirectory,
+                  onChange: (e) => setYoutubeDirectory(e.target.value.trim())
+                }
+              )
+            ] }),
             error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-500 text-sm", children: error })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
@@ -30881,7 +30935,7 @@ const SetupWizardPage = () => {
         ] });
       case "scan_media":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink animate-pulse" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink animate-pulse" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Scanning Library" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-6", children: "Please wait while we scan your media files..." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-card-dark rounded-full h-2.5 mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30903,7 +30957,7 @@ const SetupWizardPage = () => {
         ] });
       case "complete":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: "h-12 w-12 text-green-500" }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-12 w-12 text-green-500" }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Setup Complete!" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-8", children: mediaDirectory ? /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
             "We found ",
@@ -31007,11 +31061,11 @@ const OnlineSessionConnectPage = () => {
 };
 const OnlineSessionConnectedPage = () => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-screen w-screen bg-bg-light dark:bg-bg-dark flex items-center justify-center font-sans text-text-primary-light dark:text-text-primary-dark", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card w-full max-w-lg text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-8", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: "h-12 w-12 text-green-500" }) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-green-500/10 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-12 w-12 text-green-500" }) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl mb-4", children: "Successfully Connected" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark mb-8", children: "This app is now connected to your online session. You can now manage your show from the web admin interface." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-bg-light dark:bg-bg-dark rounded-lg border border-border-light dark:border-border-dark", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center space-x-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$m, { className: "h-5 w-5 text-brand-blue dark:text-brand-pink" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-5 w-5 text-brand-blue dark:text-brand-pink" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-brand-blue dark:text-brand-pink", children: "kj.nomadkaraoke.com/admin" })
     ] }) })
   ] }) }) });
@@ -31058,6 +31112,8 @@ const PlayerPage = () => {
     isSidebarVisible: false,
     isVideoPlayerVisible: true
   });
+  const karaokeVol = useAppStore((s) => s.playerKaraokeVolume ?? 1);
+  const fillerVol = useAppStore((s) => s.playerFillerVolume ?? 0.6);
   const setFillerFadeRequestedAt = useAppStore((s) => s.setFillerFadeRequestedAt);
   const playerConnectionId = useAppStore((s) => s.playerConnectionId);
   reactExports.useEffect(() => {
@@ -31084,6 +31140,13 @@ const PlayerPage = () => {
       video.src = `/api/media/${nowPlaying.fileName}`;
       const handleCanPlay = () => {
         setIsVideoLoaded(true);
+        try {
+          const kVol = karaokeVol;
+          const fVol = fillerVol;
+          video.volume = nowPlaying?.isFiller ? fVol : kVol;
+          video.muted = !deviceSettings.isAudioEnabled;
+        } catch {
+        }
         if (nowPlaying?.isFiller) {
           video.play().catch(() => {
           });
@@ -31119,7 +31182,7 @@ const PlayerPage = () => {
       setIsPlaying(false);
       setIsVideoLoaded(false);
     }
-  }, [nowPlaying, syncPreload, syncPlay]);
+  }, [nowPlaying, syncPreload, syncPlay, karaokeVol, fillerVol, deviceSettings.isAudioEnabled]);
   reactExports.useEffect(() => {
     const video = videoRef.current;
     if (!video || !syncPreload) return;
@@ -31284,10 +31347,10 @@ const PlayerPage = () => {
   }
   const ConnectionStatusIndicator = () => {
     const statusConfig = {
-      connected: { color: "bg-green-500", text: "Connected", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4" }) },
+      connected: { color: "bg-green-500", text: "Connected", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$b, { className: "h-4 w-4" }) },
       connecting: { color: "bg-yellow-500", text: "Connecting...", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 w-3 rounded-full bg-yellow-500 animate-pulse" }) },
-      error: { color: "bg-red-500", text: "Connection Error", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4" }) },
-      idle: { color: "bg-gray-500", text: "Disconnected", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$d, { className: "h-4 w-4" }) }
+      error: { color: "bg-red-500", text: "Connection Error", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4" }) },
+      idle: { color: "bg-gray-500", text: "Disconnected", icon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$c, { className: "h-4 w-4" }) }
     };
     const currentStatus = statusConfig[connectionStatus];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-lg flex items-center space-x-2 text-sm", children: [
@@ -31307,7 +31370,7 @@ const PlayerPage = () => {
         onPlay: () => setIsPlaying(true),
         onPause: () => setIsPlaying(false),
         playsInline: true,
-        muted: !deviceSettings.isAudioEnabled,
+        muted: false,
         "data-testid": "video"
       }
     ),
@@ -31316,7 +31379,13 @@ const PlayerPage = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
         upcomingSingers.map((entry) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-white/10 p-3 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-bold text-lg", children: entry.singerName }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm opacity-80", children: entry.song.fileName })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm opacity-80", children: (() => {
+            const p = entry.song.fileName;
+            const s = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+            const b = s >= 0 ? p.slice(s + 1) : p;
+            const d = b.lastIndexOf(".");
+            return d > 0 ? b.slice(0, d) : b;
+          })() })
         ] }, entry.song.id)),
         upcomingSingers.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Queue is empty" })
       ] })
@@ -31391,13 +31460,21 @@ const PlayerPage = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         "video.paused: ",
         videoRef.current ? String(videoRef.current.paused) : "n/a"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        "karaokeVol: ",
+        karaokeVol.toFixed(2),
+        " fillerVol: ",
+        fillerVol.toFixed(2),
+        " nowPlaying.isFiller: ",
+        String(nowPlaying?.isFiller)
       ] })
     ] }),
-    (!nowPlaying || !isVideoLoaded || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
+    (!nowPlaying || nowPlaying?.isFiller || !isVideoLoaded || !deviceSettings.isVideoPlayerVisible) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center text-white", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-8", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$g, { className: "w-16 h-16" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl md:text-6xl font-bold mb-4", children: "KJ-Nomad Ready" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl md:text-2xl text-white/80", children: "Waiting for the next performance..." })
+        useAppStore.getState().waitingImageUrl ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: useAppStore.getState().waitingImageUrl, alt: "waiting", className: "w-32 h-32 mx-auto mb-6 object-contain" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$f, { className: "w-16 h-16" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-4xl md:text-6xl font-bold mb-4", children: useAppStore.getState().waitingTitle || "KJ-Nomad Ready" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xl md:text-2xl text-white/80", children: useAppStore.getState().waitingSubtitle || "Waiting for the next performance..." })
       ] }),
       upcomingSingers.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-md mx-auto", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-semibold mb-4", children: "Up Next:" }),
@@ -31456,14 +31533,6 @@ const PlayerPage = () => {
       ] })
     ] }),
     nowPlaying?.isFiller && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-4 right-4 bg-yellow-500/80 backdrop-blur-sm text-slate-900 px-4 py-2 rounded-lg font-semibold", children: "Intermission Music" }),
-    nowPlaying?.isFiller && queue.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-6 py-3 rounded-lg shadow-lg", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm opacity-80", children: "Up next..." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-semibold", children: [
-        queue[0].singerName,
-        ": ",
-        queue[0].song.fileName
-      ] })
-    ] }),
     deviceSettings.isTickerVisible && /* @__PURE__ */ jsxRuntimeExports.jsx(Ticker, { text: tickerText })
   ] });
 };
@@ -31552,19 +31621,19 @@ const SingerPage = () => {
   const hasActiveRequest = myQueuePosition !== -1;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "container mx-auto max-w-2xl px-4 py-6 space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 bg-brand-blue/10 dark:bg-brand-blue/20 rounded-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$j, { className: "h-12 w-12 text-brand-blue dark:text-brand-pink" }) }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-4xl md:text-5xl mb-2", children: "Search for a song" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: "Search for your favorite karaoke songs and add yourself to the queue" })
     ] }),
     !isConnected && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card border-red-500/50 bg-red-500/10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 text-red-700 dark:text-red-300", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-6 w-6" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-6 w-6" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "font-semibold", children: "Connection Issue" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Unable to connect to the karaoke system. Please try again later." })
       ] })
     ] }) }),
     requestStatus.type && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `card ${requestStatus.type === "success" ? "border-green-500/50 bg-green-500/10" : "border-red-500/50 bg-red-500/10"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex items-center space-x-3 ${requestStatus.type === "success" ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"}`, children: [
-      requestStatus.type === "success" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$v, { className: "h-6 w-6" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$r, { className: "h-6 w-6" }),
+      requestStatus.type === "success" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$t, { className: "h-6 w-6" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$q, { className: "h-6 w-6" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-medium", children: requestStatus.message })
     ] }) }),
     hasActiveRequest && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "card border-2 border-brand-yellow bg-brand-yellow/10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
@@ -31599,7 +31668,7 @@ const SingerPage = () => {
     ] }),
     !hasActiveRequest && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "card", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold flex items-center space-x-2 mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$i, { className: "h-5 w-5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$h, { className: "h-5 w-5" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Find Your Song" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
@@ -31611,7 +31680,7 @@ const SingerPage = () => {
             onChange: (e) => setSearchQuery(e.target.value),
             placeholder: "Search by artist or song title...",
             hint: "Start typing to see available songs",
-            leftIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-5 w-5" }),
+            leftIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-5 w-5" }),
             disabled: !isConnected || !singerName.trim(),
             "data-testid": "song-search-input"
           }
@@ -31621,7 +31690,7 @@ const SingerPage = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-text-secondary-light dark:text-text-secondary-dark", children: "Searching..." })
         ] }),
         !isSearching && searchQuery && songs.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 text-text-secondary-light dark:text-text-secondary-dark", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$l, { className: "h-12 w-12 mx-auto mb-3 opacity-50" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$k, { className: "h-12 w-12 mx-auto mb-3 opacity-50" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No songs found" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "Try a different search term" })
         ] }),
@@ -31704,6 +31773,7 @@ const AppContent = () => {
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Routes, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/connect-online", element: /* @__PURE__ */ jsxRuntimeExports.jsx(OnlineSessionConnectPage, {}) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/settings", element: /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsPage, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/*", element: /* @__PURE__ */ jsxRuntimeExports.jsx(HomePage, {}) })
   ] });
 };
@@ -31748,4 +31818,4 @@ function App() {
 clientExports.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DFmtLpgs.js.map
+//# sourceMappingURL=index-qPQRq1UK.js.map

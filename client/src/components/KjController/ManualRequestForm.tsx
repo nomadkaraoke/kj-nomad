@@ -26,7 +26,7 @@ export const ManualRequestForm: React.FC = () => {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [ytQuery, setYtQuery] = useState('');
   const [ytResults, setYtResults] = useState<Array<{ id: string; title: string; channel: string }>>([]);
-  const [ytUrl, setYtUrl] = useState('');
+  const [selectedYt, setSelectedYt] = useState<{ id: string; title?: string; channel?: string } | null>(null);
   const { requestSong } = useAppStore();
 
   // useMemo is used here to ensure that the debounced function is created only once
@@ -72,11 +72,24 @@ export const ManualRequestForm: React.FC = () => {
   };
 
   const handleAddToQueue = () => {
-    if (selectedSong && singerName.trim() !== '') {
+    if (!singerName.trim()) return;
+    if (selectedSong) {
       requestSong(selectedSong, singerName);
       setSingerName('');
       setSearchQuery('');
       setSelectedSong(null);
+      setSelectedYt(null);
+      setYtQuery('');
+      return;
+    }
+    if (selectedYt) {
+      const ws = useAppStore.getState().socket;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'request_youtube_song', payload: { videoId: selectedYt.id, singerName } }));
+      }
+      setSingerName('');
+      setYtQuery('');
+      setSelectedYt(null);
     }
   };
 
@@ -98,14 +111,9 @@ export const ManualRequestForm: React.FC = () => {
     []
   );
 
-  const requestYouTubeById = (videoId: string) => {
-    const ws = useAppStore.getState().socket;
-    if (!ws || ws.readyState !== WebSocket.OPEN || !singerName.trim()) return;
-    ws.send(JSON.stringify({ type: 'request_youtube_song', payload: { videoId, singerName } }));
+  const selectYouTubeById = (videoId: string, label?: { title?: string; channel?: string }) => {
+    setSelectedYt({ id: videoId, title: label?.title, channel: label?.channel });
     setYtResults([]);
-    setYtQuery('');
-    setYtUrl('');
-    setSingerName('');
   };
 
   const extractYouTubeId = (url: string): string | null => {
@@ -135,6 +143,8 @@ export const ManualRequestForm: React.FC = () => {
             onChange={handleSearchChange}
             placeholder="Search for a song..."
             className="input-primary w-full"
+            onBlur={() => setTimeout(() => setSearchResults([]), 120)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddToQueue(); }}
           />
           {searchResults.length > 0 && (
             <ul
@@ -153,51 +163,41 @@ export const ManualRequestForm: React.FC = () => {
             </ul>
           )}
         </div>
-        <button
-          onClick={handleAddToQueue}
-          disabled={!selectedSong || singerName.trim() === ''}
-          className="btn-primary w-full"
-        >
-          Add to Queue
-        </button>
-
         <hr className="my-4 opacity-20" />
         <h3 className="text-lg font-semibold">YouTube</h3>
         <div className="grid gap-2">
           <input
             type="text"
             value={ytQuery}
-            onChange={(e) => { setYtQuery(e.target.value); searchYouTube(e.target.value); }}
-            placeholder="Search YouTube (channel: title)"
+            onChange={(e) => {
+              const v = e.target.value; setYtQuery(v); const id = extractYouTubeId(v); if (id) { setSelectedYt({ id }); setYtResults([]); } else { searchYouTube(v); setSelectedYt(null); }
+            }}
+            placeholder="Search YouTube (channel: title) or paste URL"
             className="input-primary w-full"
+            onBlur={() => setTimeout(() => setYtResults([]), 120)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddToQueue(); }}
           />
           {ytResults.length > 0 && (
             <ul className="bg-card-light dark:bg-card-dark rounded border max-h-56 overflow-auto">
               {ytResults.map(r => (
-                <li key={r.id} className="px-3 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer" onClick={() => requestYouTubeById(r.id)}>
+                <li key={r.id} className="px-3 py-2 hover:bg-bg-light dark:hover:bg-bg-dark cursor-pointer" onClick={() => selectYouTubeById(r.id, { title: r.title, channel: r.channel })}>
                   {r.channel}: {r.title}
                 </li>
               ))}
             </ul>
           )}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={ytUrl}
-              onChange={(e) => setYtUrl(e.target.value)}
-              placeholder="Or paste a YouTube link"
-              className="input-primary flex-1"
-            />
-            <button
-              className="btn-secondary"
-              disabled={!singerName.trim() || !extractYouTubeId(ytUrl)}
-              onClick={() => { const id = extractYouTubeId(ytUrl); if (id) requestYouTubeById(id); }}
-            >
-              Add from Link
-            </button>
-          </div>
-          <p className="text-xs opacity-70">Assign to singer above, then search or paste a link.</p>
+          {selectedYt && (
+            <div className="text-sm opacity-80">Selected YouTube: {selectedYt.channel ? `${selectedYt.channel}: ` : ''}{selectedYt.title || selectedYt.id}</div>
+          )}
         </div>
+
+        <button
+          onClick={handleAddToQueue}
+          disabled={(singerName.trim() === '') || (!selectedSong && !selectedYt)}
+          className="btn-primary w-full"
+        >
+          Add to Queue
+        </button>
       </div>
     </div>
   );

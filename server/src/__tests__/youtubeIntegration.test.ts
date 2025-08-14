@@ -170,13 +170,14 @@ describe('YouTubeIntegration', () => {
       expect(results).toHaveLength(2);
       expect(results[0]).toEqual({
         id: 'abc123',
-        title: 'Test Song',
+        title: 'Test Song (Karaoke)',
         artist: 'Unknown Artist',
         duration: 180,
         thumbnail: 'thumb1.jpg',
         url: 'https://www.youtube.com/watch?v=abc123',
         viewCount: 1000,
-        uploadDate: '20240101'
+        uploadDate: '20240101',
+        channel: ''
       });
       expect(results[1]).toEqual({
         id: 'def456',
@@ -186,7 +187,8 @@ describe('YouTubeIntegration', () => {
         thumbnail: 'thumb2.jpg',
         url: 'https://www.youtube.com/watch?v=def456',
         viewCount: 2000,
-        uploadDate: '20240102'
+        uploadDate: '20240102',
+        channel: ''
       });
     });
 
@@ -301,9 +303,9 @@ describe('YouTubeIntegration', () => {
 
       const fileName = await youtubeIntegration.downloadVideo('abc123', 'Test Video');
 
-      expect(fileName).toBe('youtube_abc123_Test_Video.mp4');
+      expect(fileName).toBe('Test Video.mp4');
       expect(mockConsoleLog).toHaveBeenCalledWith(
-        '[YouTube] Video already cached: youtube_abc123_Test_Video.mp4'
+        '[YouTube] Video already cached: Test Video.mp4'
       );
     });
 
@@ -329,7 +331,7 @@ describe('YouTubeIntegration', () => {
       const progressCallback = vi.fn();
       const fileName = await youtubeIntegration.downloadVideo('abc123', 'Test Video', progressCallback);
 
-      expect(fileName).toBe('youtube_abc123_Test_Video.mp4');
+      expect(fileName).toBe('Test Video.mp4');
       expect(progressCallback).toHaveBeenCalled();
     });
 
@@ -378,11 +380,11 @@ describe('YouTubeIntegration', () => {
 
       // Test with title
       let fileName = await youtubeIntegration.downloadVideo('abc123', 'Test Song (Official)');
-      expect(fileName).toBe('youtube_abc123_Test_Song_Official.mp4');
+      expect(fileName).toBe('Test Song (Official).mp4');
 
       // Test without title
       fileName = await youtubeIntegration.downloadVideo('def456');
-      expect(fileName).toBe('youtube_def456_def456.mp4');
+      expect(fileName).toBe('youtube_def456.mp4');
     });
   });
 
@@ -499,8 +501,8 @@ describe('YouTubeIntegration', () => {
 
       const results = await youtubeIntegration.searchYouTube('test');
 
-      // The regex removes (karaoke) but leaves (Version), and removes [HD]
-      expect(results[0].title).toBe('Test Song ( Version)');
+      // Clean brackets like [HD] but preserve descriptive text
+      expect(results[0].title).toBe('Test Song (Karaoke Version)');
     });
 
     it('should extract artist from various title formats', async () => {

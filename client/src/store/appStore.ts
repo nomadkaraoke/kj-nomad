@@ -20,6 +20,9 @@ export interface QueueEntry {
     downloadId?: string;
     fileName?: string;
   };
+  meta?: {
+    channel?: string;
+  };
 }
 
 export interface NowPlaying {
@@ -91,6 +94,9 @@ export interface AppState {
   
   // UI state
   tickerText: string;
+  waitingTitle?: string;
+  waitingSubtitle?: string;
+  waitingImageUrl?: string | null;
   currentView: 'home' | 'player' | 'controller' | 'singer';
   isLoading: boolean;
   showHistory: boolean;
@@ -104,6 +110,9 @@ export interface AppState {
   playerShowIdentify: boolean;
   playerIsDisconnected: boolean;
   playerDebugOverlay: boolean;
+  // Per-player local volume preferences (applied on the Player client)
+  playerKaraokeVolume?: number;
+  playerFillerVolume?: number;
   // Feature flags
   autoDriftCorrectionEnabled?: boolean;
   // IDs for debugging
@@ -153,6 +162,8 @@ export interface AppState {
   setPlayerShowIdentify: (show: boolean) => void;
   setPlayerIsDisconnected: (disconnected: boolean) => void;
   setPlayerDebugOverlay: (visible: boolean) => void;
+  setPlayerKaraokeVolume?: (v: number) => void;
+  setPlayerFillerVolume?: (v: number) => void;
   setSyncPreload: (cmd: { commandId: string; videoUrl: string } | null) => void;
   setSyncPlay: (cmd: { commandId: string; scheduledTime: number; videoTime: number; videoUrl: string; timeDomain?: 'client' | 'server' } | null) => void;
   setSyncPause: (cmd: { commandId: string; scheduledTime: number } | null) => void;
@@ -204,6 +215,9 @@ export const useAppStore = create<AppState>()(
       
       // UI state
       tickerText: 'Welcome to KJ-Nomad! 🎤 Professional Karaoke System',
+      waitingTitle: 'KJ-Nomad Ready',
+      waitingSubtitle: 'Waiting for the next performance...',
+      waitingImageUrl: null,
       currentView: 'home',
       isLoading: false,
       showHistory: false,
@@ -212,6 +226,8 @@ export const useAppStore = create<AppState>()(
       playerShowIdentify: false,
       playerIsDisconnected: false,
       playerDebugOverlay: false,
+      playerKaraokeVolume: 1,
+      playerFillerVolume: 0.6,
       autoDriftCorrectionEnabled: true,
       playerConnectionId: null,
       // Sync commands
@@ -268,6 +284,8 @@ export const useAppStore = create<AppState>()(
       setPlayerShowIdentify: (show) => set({ playerShowIdentify: show }),
       setPlayerIsDisconnected: (disconnected) => set({ playerIsDisconnected: disconnected }),
       setPlayerDebugOverlay: (visible) => set({ playerDebugOverlay: visible }),
+      setPlayerKaraokeVolume: (v: number) => set({ playerKaraokeVolume: Math.max(0, Math.min(1, v)) }),
+      setPlayerFillerVolume: (v: number) => set({ playerFillerVolume: Math.max(0, Math.min(1, v)) }),
       // toggle for auto drift correction
       toggleAutoDriftCorrection: () => set((state) => ({ autoDriftCorrectionEnabled: !state.autoDriftCorrectionEnabled })),
       setSyncPreload: (cmd) => set({ syncPreload: cmd }),
@@ -288,6 +306,12 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           console.error('Failed to check server info:', error);
         }
+        // Load waiting screen settings
+        try {
+          const ws = await fetch('/api/waiting-screen');
+          const j = await ws.json();
+          if (j?.success && j.data) set({ waitingTitle: j.data.title, waitingSubtitle: j.data.subtitle, waitingImageUrl: j.data.imageUrl });
+        } catch {/* ignore */}
       },
       checkSetupStatus: async () => {
         try {

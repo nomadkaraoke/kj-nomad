@@ -6,6 +6,7 @@ Feature: KJ Queue Management
 
   Background:
     Given the KJ is logged into the Admin Interface
+    And the KJ can access the Settings page to configure libraries as needed
   Scenario: KJ queues a YouTube song from Admin UI using pasted link
     Given the queue is empty
     When the KJ pastes a YouTube URL for singer "Andrew"
@@ -31,9 +32,8 @@ Feature: KJ Queue Management
     Then "Singer B" should no longer be in the queue
     And the queue order should be updated for all subsequent singers
 
-  @skip
-  Scenario: KJ sees a visual distinction for YouTube songs in the queue (Online Mode)
+  Scenario: KJ sees YouTube source and channel on queue entries (Online Mode)
     Given the KJ is running an online session
-    And a singer has requested "Fake YouTube Song" from YouTube
+    And a singer has requested a YouTube song from the channel "Sing King"
     When the KJ views the singer queue
-    Then the entry for "Fake YouTube Song" should have a YouTube icon next to it
+    Then the queue item should display a small badge reading "YouTube • Sing King"

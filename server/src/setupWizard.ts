@@ -14,8 +14,18 @@ import { scanMediaLibrary } from './mediaLibrary.js';
 
 export interface SetupConfig {
   mediaDirectory: string;
+  mediaScanExtensions?: string[]; // extensions like ['.mp4','.mkv'] or ['mp4','mkv']
+  mediaUseCachedIndex?: boolean;  // load from JSON index if available instead of scanning
   fillerMusicDirectory?: string;
   fillerMusicVolume?: number;
+  // YouTube cache/download settings
+  youtubeCacheDirectory?: string;
+  youtubeQualityFormat?: string; // yt-dlp format string
+  youtubeFilenamePattern?: 'paren' | 'dash';
+  // Waiting screen customization
+  waitingTitle?: string;
+  waitingSubtitle?: string;
+  waitingImageFileName?: string;
   kjName: string;
   venue?: string;
   autoLaunchBrowser: boolean;
@@ -48,8 +58,16 @@ const CONFIG_FILE = getDataPath('setup.json');
 const DEFAULT_MEDIA_DIR = getMediaDefaultPath();
 const DEFAULT_CONFIG: SetupConfig = {
   mediaDirectory: DEFAULT_MEDIA_DIR,
+  mediaScanExtensions: ['.mp4', '.webm', '.avi', '.mov', '.mp3', '.m4a', '.wav', '.flac', '.ogg', '.mkv'],
+  mediaUseCachedIndex: true,
   fillerMusicDirectory: DEFAULT_MEDIA_DIR,
   fillerMusicVolume: 0.4,
+  youtubeCacheDirectory: undefined,
+  youtubeQualityFormat: 'best[height<=720]/best',
+  youtubeFilenamePattern: 'paren',
+  waitingTitle: 'KJ-Nomad Ready',
+  waitingSubtitle: 'Waiting for the next performance...',
+  waitingImageFileName: undefined,
   kjName: 'Local KJ',
   venue: '',
   autoLaunchBrowser: true,
@@ -310,22 +328,9 @@ export function getSetupSteps(config?: SetupConfig): SetupStep[] {
  */
 export function isSetupRequired(): boolean {
   const config = loadSetupConfig();
-  
-  // Setup is required if:
-  // 1. Setup has never been completed
-  // 2. Media directory is invalid
-  // 3. No video files found
-  
-  if (!config.setupComplete) {
-    return true;
-  }
-  
-  const mediaValidation = validateMediaDirectory(config.mediaDirectory);
-  if (!mediaValidation.valid || (mediaValidation.stats?.videoCount || 0) === 0) {
-    return true;
-  }
-  
-  return false;
+  // If the user marked setup complete, don't force the wizard again.
+  // Media library is optional; users may rely solely on YouTube.
+  return !config.setupComplete;
 }
 
 /**
@@ -503,7 +508,8 @@ export function applySetupRoutes(app: express.Application): void {
       if (!config.mediaDirectory) {
         return res.status(400).json({ success: false, error: 'Media directory not configured.' });
       }
-      const library = scanMediaLibrary(config.mediaDirectory);
+      const forceRescan = !!(req.body && typeof req.body === 'object' && 'force' in req.body && (req.body as { force: boolean }).force);
+      const library = scanMediaLibrary(config.mediaDirectory, { allowedExtensions: config.mediaScanExtensions, useCache: !forceRescan && (config.mediaUseCachedIndex !== false) });
       res.json({ success: true, data: { songCount: library.length } });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during scan.';

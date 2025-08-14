@@ -36,6 +36,8 @@ const PlayerPage: React.FC = () => {
     isSidebarVisible: false,
     isVideoPlayerVisible: true,
   });
+  const karaokeVol = useAppStore((s) => s.playerKaraokeVolume ?? 1);
+  const fillerVol = useAppStore((s) => s.playerFillerVolume ?? 0.6);
   const setFillerFadeRequestedAt = useAppStore((s) => s.setFillerFadeRequestedAt);
   const playerConnectionId = useAppStore((s) => s.playerConnectionId);
 
@@ -71,6 +73,13 @@ const PlayerPage: React.FC = () => {
       const handleCanPlay = () => {
         // Mark loaded
         setIsVideoLoaded(true);
+        // Ensure correct volume is applied based on content type
+        try {
+          const kVol = karaokeVol;
+          const fVol = fillerVol;
+          video.volume = nowPlaying?.isFiller ? fVol : kVol;
+          video.muted = !deviceSettings.isAudioEnabled;
+        } catch { /* ignore */ }
         // For filler/background content, auto-play locally
         if (nowPlaying?.isFiller) {
           video.play().catch(() => {/* ignore autoplay rejections for filler */});
@@ -106,7 +115,7 @@ const PlayerPage: React.FC = () => {
       setIsPlaying(false);
       setIsVideoLoaded(false);
     }
-  }, [nowPlaying, syncPreload, syncPlay]);
+  }, [nowPlaying, syncPreload, syncPlay, karaokeVol, fillerVol, deviceSettings.isAudioEnabled]);
 
   // Handle sync preload: set src and buffer, then report readiness
   useEffect(() => {
@@ -324,7 +333,7 @@ const PlayerPage: React.FC = () => {
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           playsInline
-          muted={!deviceSettings.isAudioEnabled}
+          muted={false}
           data-testid="video"
         />
       )}
@@ -337,7 +346,7 @@ const PlayerPage: React.FC = () => {
             {upcomingSingers.map((entry) => (
               <div key={entry.song.id} className="bg-white/10 p-3 rounded-lg">
                 <p className="font-bold text-lg">{entry.singerName}</p>
-                <p className="text-sm opacity-80">{entry.song.fileName}</p>
+                <p className="text-sm opacity-80">{(() => { const p = entry.song.fileName; const s = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')); const b = s>=0 ? p.slice(s+1) : p; const d = b.lastIndexOf('.'); return d>0? b.slice(0,d): b; })()}</p>
               </div>
             ))}
             {upcomingSingers.length === 0 && <p>Queue is empty</p>}
@@ -379,22 +388,27 @@ const PlayerPage: React.FC = () => {
           <div>video.readyState: {videoRef.current ? String(videoRef.current.readyState) : 'n/a'}</div>
           <div>video.muted: {videoRef.current ? String(videoRef.current.muted) : 'n/a'}</div>
           <div>video.paused: {videoRef.current ? String(videoRef.current.paused) : 'n/a'}</div>
+          <div>karaokeVol: {karaokeVol.toFixed(2)} fillerVol: {fillerVol.toFixed(2)} nowPlaying.isFiller: {String(nowPlaying?.isFiller)}</div>
         </div>
       )}
 
-      {/* Overlay for when no video is playing */}
-      {((!nowPlaying) || !isVideoLoaded || !deviceSettings.isVideoPlayerVisible) && (
+      {/* Overlay for idle state and during filler music (show Ready UI) */}
+      {((!nowPlaying) || nowPlaying?.isFiller || !isVideoLoaded || !deviceSettings.isVideoPlayerVisible) && (
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center">
           <div className="text-center text-white">
             <div className="mb-8">
-              <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
-                <PlayIcon className="w-16 h-16" />
-              </div>
+              {useAppStore.getState().waitingImageUrl ? (
+                <img src={useAppStore.getState().waitingImageUrl as string} alt="waiting" className="w-32 h-32 mx-auto mb-6 object-contain" />
+              ) : (
+                <div className="w-32 h-32 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
+                  <PlayIcon className="w-16 h-16" />
+                </div>
+              )}
               <h1 className="text-4xl md:text-6xl font-bold mb-4">
-                KJ-Nomad Ready
+                {useAppStore.getState().waitingTitle || 'KJ-Nomad Ready'}
               </h1>
               <p className="text-xl md:text-2xl text-white/80">
-                Waiting for the next performance...
+                {useAppStore.getState().waitingSubtitle || 'Waiting for the next performance...'}
               </p>
             </div>
             
@@ -490,15 +504,7 @@ const PlayerPage: React.FC = () => {
         </div>
       )}
 
-      {/* Up Next Overlay during filler music */}
-      {nowPlaying?.isFiller && queue.length > 0 && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-6 py-3 rounded-lg shadow-lg">
-          <div className="text-sm opacity-80">Up next...</div>
-          <div className="font-semibold">
-           {queue[0].singerName}: {queue[0].song.fileName}
-          </div>
-        </div>
-      )}
+      {/* Up Next overlay is rendered in the central Ready UI; avoid duplicate bottom pill */}
       
       {/* Ticker */}
       {deviceSettings.isTickerVisible && <Ticker text={tickerText} />}

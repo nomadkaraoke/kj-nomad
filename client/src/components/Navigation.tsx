@@ -7,7 +7,6 @@ import {
   Cog6ToothIcon,
   WifiIcon,
   ExclamationTriangleIcon,
-  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 export const Navigation: React.FC = () => {
@@ -27,12 +26,12 @@ export const Navigation: React.FC = () => {
       icon: Cog6ToothIcon,
       description: 'Host Interface'
     },
-    { 
-      path: '/profiles', 
-      label: 'Profiles', 
-      icon: UserGroupIcon,
-      description: 'Singer Profiles'
-    },
+    {
+      path: '/settings',
+      label: 'Settings',
+      icon: Cog6ToothIcon,
+      description: 'Configure libraries, filler and YouTube'
+    }
   ];
   
   return (

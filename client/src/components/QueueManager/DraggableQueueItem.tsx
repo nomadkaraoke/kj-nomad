@@ -21,6 +21,9 @@ interface QueueEntry {
     downloadId?: string;
     fileName?: string;
   };
+  meta?: {
+    channel?: string;
+  };
 }
 
 interface DraggableQueueItemProps {
@@ -56,6 +59,13 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
   const isYouTube = entry.source === 'youtube' || (entry.song.id || '').startsWith('yt_');
   const progress = entry.download?.progress;
   const status = entry.download?.status;
+
+  const displayNameFromPath = (p: string): string => {
+    const lastSlash = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+    const base = lastSlash >= 0 ? p.slice(lastSlash + 1) : p;
+    const dot = base.lastIndexOf('.');
+    return dot > 0 ? base.slice(0, dot) : base;
+  };
 
   return (
     <div
@@ -94,15 +104,18 @@ const DraggableQueueItem: React.FC<DraggableQueueItemProps> = ({
       {/* Song Info */}
       <div className="flex-grow min-w-0">
         <div className="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-2">
-          {entry.song.fileName}
-          {isYouTube && (
-            <span title="YouTube" className="inline-flex items-center text-red-600">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M23.5 6.2s-.2-1.7-.8-2.5c-.8-.8-1.7-.8-2.1-.9C17.1 2.5 12 2.5 12 2.5h0s-5.1 0-8.6.3c-.5 0-1.4.1-2.1.9-.6.8-.8 2.5-.8 2.5S0 8.2 0 10.2v1.6c0 2 .2 4 0 4s.2 1.7.8 2.5c.8.8 1.9.8 2.4.9 1.8.2 7.7.3 7.7.3s5.1 0 8.6-.3c.5 0 1.4-.1 2.1-.9.6-.8.8-2.5.8-2.5s.2-2 .2-4v-1.6c0-2-.2-4-.2-4zM9.5 13.7V7.9l6.2 2.9-6.2 2.9z" />
-              </svg>
-            </span>
-          )}
+          {displayNameFromPath(entry.song.fileName)}
         </div>
+        {isYouTube && (
+          <div className="mt-1 text-xs inline-flex items-center gap-1 text-red-600 dark:text-red-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.5 6.2s-.2-1.7-.8-2.5c-.8-.8-1.7-.8-2.1-.9C17.1 2.5 12 2.5 12 2.5h0s-5.1 0-8.6.3c-.5 0-1.4.1-2.1.9-.6.8-.8 2.5-.8 2.5S0 8.2 0 10.2v1.6c0 2 .2 4 0 4s.2 1.7.8 2.5c.8.8 1.9.8 2.4.9 1.8.2 7.7.3 7.7.3s5.1 0 8.6-.3c.5 0 1.4-.1 2.1-.9.6-.8.8-2.5.8-2.5s.2-2 .2-4v-1.6c0-2-.2-4-.2-4zM9.5 13.7V7.9l6.2 2.9-6.2 2.9z" />
+            </svg>
+            <span className="px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-200 border border-red-200 dark:border-red-800 max-w-full truncate">
+              YouTube{entry.meta?.channel ? ` • ${entry.meta.channel}` : ''}
+            </span>
+          </div>
+        )}
         <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
           Singer: {entry.singerName}
         </div>

@@ -4,6 +4,18 @@ interface QueueEntry {
   song: Song;
   singerName: string;
   queuedAt: number; // timestamp when added to queue
+  // Optional metadata used by clients (e.g., YouTube origin, channel, download status)
+  source?: 'local' | 'youtube';
+  download?: {
+    status?: 'pending' | 'downloading' | 'completed' | 'failed' | 'cancelled';
+    progress?: number;
+    videoId?: string;
+    downloadId?: string;
+    fileName?: string;
+  };
+  meta?: {
+    channel?: string;
+  };
 }
 
 interface PlayedSong extends QueueEntry {
@@ -53,11 +65,18 @@ export const getQueue = (): QueueEntry[] => {
   return session.queue;
 };
 
-export const addSongToQueue = (song: Song, singerName: string): QueueEntry => {
-  const entry: QueueEntry = { 
-    song, 
-    singerName, 
-    queuedAt: Date.now() 
+export const addSongToQueue = (
+  song: Song,
+  singerName: string,
+  options?: { source?: QueueEntry['source']; download?: QueueEntry['download']; meta?: QueueEntry['meta'] }
+): QueueEntry => {
+  const entry: QueueEntry = {
+    song,
+    singerName,
+    queuedAt: Date.now(),
+    ...(options?.source ? { source: options.source } : {}),
+    ...(options?.download ? { download: options.download } : {}),
+    ...(options?.meta ? { meta: options.meta } : {}),
   };
   session.queue.push(entry);
   return entry;

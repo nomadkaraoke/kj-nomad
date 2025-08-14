@@ -118,12 +118,12 @@ describe('DraggableQueue', () => {
     expect(screen.getByText('Song Queue (3)')).toBeInTheDocument();
     expect(screen.getByText('Drag to reorder')).toBeInTheDocument();
     
-    // Check that all queue items are rendered (filenames)
-    expect(screen.getByText('song1.mp4')).toBeInTheDocument();
+    // Check that all queue items are rendered (basenames without extension)
+    expect(screen.getByText('song1')).toBeInTheDocument();
     expect(screen.getByText('Singer: Singer 1')).toBeInTheDocument();
-    expect(screen.getByText('song2.mp4')).toBeInTheDocument();
+    expect(screen.getByText('song2')).toBeInTheDocument();
     expect(screen.getByText('Singer: Singer 2')).toBeInTheDocument();
-    expect(screen.getByText('song3.mp4')).toBeInTheDocument();
+    expect(screen.getByText('song3')).toBeInTheDocument();
     expect(screen.getByText('Singer: Singer 3')).toBeInTheDocument();
   });
 

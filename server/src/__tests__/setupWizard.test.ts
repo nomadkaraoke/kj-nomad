@@ -742,25 +742,18 @@ describe('SetupWizard', () => {
         expect(result).toBe(true);
       });
 
-      it('should return true when media directory is invalid', () => {
+      it('should return false even when media directory is invalid (user may use YouTube only)', () => {
         mockFs.readFileSync.mockReturnValue(JSON.stringify({
           setupComplete: true,
           mediaDirectory: '/nonexistent/media'
         }));
-        
-        // Mock invalid directory
-        mockFs.existsSync.mockImplementation((p) => {
-          if (p && p.toString().includes('/nonexistent/media')) return false;
-          if (p === mockConfigFile) return true;
-          return false;
-        });
 
         const result = isSetupRequired();
 
-        expect(result).toBe(true);
+        expect(result).toBe(false);
       });
 
-      it('should return true when no video files found', () => {
+      it('should return false when no video files found (media library optional)', () => {
         mockFs.readFileSync.mockReturnValue(JSON.stringify({
           setupComplete: true,
           mediaDirectory: '/test/media'
@@ -775,7 +768,7 @@ describe('SetupWizard', () => {
 
         const result = isSetupRequired();
 
-        expect(result).toBe(true);
+        expect(result).toBe(false);
       });
 
       it('should return false when setup is complete and valid', () => {

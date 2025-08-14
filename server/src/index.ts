@@ -187,6 +187,58 @@ app.post('/api/filler/stop', (_req, res) => {
     }
 });
 
+// Waiting screen customization endpoints
+app.get('/api/waiting-screen', (req, res) => {
+    const cfg = loadSetupConfig();
+    res.json({ success: true, data: {
+        title: cfg.waitingTitle || 'KJ-Nomad Ready',
+        subtitle: cfg.waitingSubtitle || 'Waiting for the next performance...',
+        imageUrl: cfg.waitingImageFileName ? `/branding/${cfg.waitingImageFileName}` : null,
+    }});
+});
+
+app.post('/api/waiting-screen', (req, res) => {
+    try {
+        const cfg = loadSetupConfig();
+        const { title, subtitle } = (req.body && typeof req.body === 'object') ? req.body as { title?: string; subtitle?: string } : {};
+        if (typeof title === 'string') cfg.waitingTitle = title;
+        if (typeof subtitle === 'string') cfg.waitingSubtitle = subtitle;
+        const ok = saveSetupConfig(cfg);
+        if (ok) {
+            broadcast({ type: 'waiting_screen_updated', payload: { title: cfg.waitingTitle, subtitle: cfg.waitingSubtitle, imageUrl: cfg.waitingImageFileName ? `/branding/${cfg.waitingImageFileName}` : null } });
+            res.json({ success: true });
+        } else {
+            res.status(500).json({ success: false, error: 'Failed to persist settings' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
+    }
+});
+
+const brandingUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 50 } });
+app.post('/api/waiting-screen/upload', brandingUpload.single('file'), (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, error: 'File required' });
+        const safe = (req.file.originalname || 'image').replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const dir = path.join(__dirname, '../branding');
+        try { fs.mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
+        fs.writeFileSync(path.join(dir, safe), req.file.buffer);
+        const cfg = loadSetupConfig();
+        cfg.waitingImageFileName = safe;
+        const ok = saveSetupConfig(cfg);
+        if (ok) {
+            broadcast({ type: 'waiting_screen_updated', payload: { title: cfg.waitingTitle, subtitle: cfg.waitingSubtitle, imageUrl: `/branding/${safe}` } });
+            res.json({ success: true, fileName: safe, url: `/branding/${safe}` });
+        } else {
+            res.status(500).json({ success: false, error: 'Failed to persist image filename' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
+    }
+});
+
+app.use('/branding', express.static(path.join(__dirname, '../branding')));
+
 // Adjust filler volume on all players
 app.post('/api/filler/volume', (req, res) => {
     try {
@@ -227,6 +279,56 @@ app.get('/api/youtube/search', async (req, res) => {
     } catch (error) {
         console.error('[API] YouTube search error:', error);
         res.json({ success: false, data: [] });
+    }
+});
+
+// YouTube settings endpoints
+app.get('/api/youtube/settings', (req, res) => {
+    try {
+        const cfg = loadSetupConfig();
+        res.json({
+            success: true,
+            data: {
+                cacheDirectory: cfg.youtubeCacheDirectory || youtubeIntegration.getCacheDirectory(),
+                qualityFormat: cfg.youtubeQualityFormat || 'best[height<=720]/best',
+                filenamePattern: cfg.youtubeFilenamePattern || 'paren'
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
+    }
+});
+
+app.post('/api/youtube/settings', (req, res) => {
+    try {
+        const body = (req.body && typeof req.body === 'object') ? req.body as { cacheDirectory?: string; qualityFormat?: string; filenamePattern?: 'paren' | 'dash' } : {};
+        const cfg = loadSetupConfig();
+        if (body.cacheDirectory) {
+            cfg.youtubeCacheDirectory = body.cacheDirectory;
+            youtubeIntegration.setCacheDirectory(body.cacheDirectory);
+        }
+        if (body.qualityFormat) {
+            cfg.youtubeQualityFormat = body.qualityFormat;
+            youtubeIntegration.setDownloadFormat(body.qualityFormat);
+        }
+        if (body.filenamePattern) {
+            cfg.youtubeFilenamePattern = body.filenamePattern;
+            youtubeIntegration.setFilenamePattern(body.filenamePattern);
+        }
+        const ok = saveSetupConfig(cfg);
+        if (ok) res.json({ success: true });
+        else res.status(500).json({ success: false, error: 'Failed to persist settings' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
+    }
+});
+
+app.delete('/api/youtube/cache', (req, res) => {
+    try {
+        const result = youtubeIntegration.deleteAllDownloads();
+        res.json({ success: true, data: result });
+    } catch (err) {
+        res.status(500).json({ success: false, error: String(err) });
     }
 });
 
@@ -654,8 +756,14 @@ app.post('/api/devices/:deviceId/command', (req, res) => {
         return res.status(400).json({ success: false, error: 'Command required' });
     }
 
+    let msgType = command;
+    // Backward-compatible aliases
+    if (command === 'set_volume') {
+        // Map legacy single-slider volume to karaoke volume
+        msgType = 'set_karaoke_volume';
+    }
     const success = deviceManager.sendToDevice(req.params.deviceId, {
-        type: command,
+        type: msgType,
         payload: data || {}
     });
 
@@ -1340,13 +1448,18 @@ function getContentType(fileName: string): string {
     }
 }
 
-// API endpoint to stream video files
-app.get('/api/media/:fileName', (req, res) => {
-    console.log('[API] GET /api/media/:fileName - Media streaming endpoint hit, file:', req.params.fileName);
-    const fileName = req.params.fileName;
+// API endpoint to stream media files (supports nested subpaths)
+app.get(/^\/api\/media\/(.+)/, (req, res) => {
+    const relPathRaw = decodeURIComponent(((req.params as unknown as string[])[0] || ''));
+    console.log('[API] GET /api/media/* - Media streaming endpoint hit, relPath:', relPathRaw);
     const config = loadSetupConfig();
-    const mediaPath = path.join(config.mediaDirectory, fileName);
-    const fillerPath = path.join(config.fillerMusicDirectory || config.mediaDirectory, fileName);
+    // Normalize and prevent path traversal
+    const relPath = path.normalize(relPathRaw).replace(/^([.]{1,2}[\\/])+/u, '');
+    if (relPath.startsWith('..')) {
+        return res.status(400).send('Invalid path');
+    }
+    const mediaPath = path.join(config.mediaDirectory, relPath);
+    const fillerPath = path.join(config.fillerMusicDirectory || config.mediaDirectory, relPath);
 
     try {
         let chosenPath = mediaPath;
@@ -1359,8 +1472,8 @@ app.get('/api/media/:fileName', (req, res) => {
                 stat = fs.statSync(fillerPath);
                 chosenPath = fillerPath;
             } catch {
-                // Fallback: check YouTube cache for this file
-                const ytPath = path.join(youtubeIntegration.getCacheDirectory(), fileName);
+                // Fallback: check YouTube cache for this file (filename only)
+                const ytPath = path.join(youtubeIntegration.getCacheDirectory(), path.basename(relPath));
                 stat = fs.statSync(ytPath);
                 chosenPath = ytPath;
             }
@@ -1381,7 +1494,7 @@ app.get('/api/media/:fileName', (req, res) => {
                     'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                     'Accept-Ranges': 'bytes',
                     'Content-Length': chunksize,
-                    'Content-Type': getContentType(fileName),
+                    'Content-Type': getContentType(path.basename(chosenPath)),
                 };
 
                 res.writeHead(206, head);
@@ -1390,7 +1503,7 @@ app.get('/api/media/:fileName', (req, res) => {
                 // Invalid range, fall back to full content
                 const head = {
                     'Content-Length': fileSize,
-                    'Content-Type': getContentType(fileName),
+                    'Content-Type': getContentType(path.basename(chosenPath)),
                 };
                 res.writeHead(200, head);
                 fs.createReadStream(chosenPath).pipe(res);
@@ -1398,13 +1511,80 @@ app.get('/api/media/:fileName', (req, res) => {
         } else {
             const head = {
                 'Content-Length': fileSize,
-                'Content-Type': getContentType(fileName),
+                'Content-Type': getContentType(path.basename(chosenPath)),
             };
             res.writeHead(200, head);
             fs.createReadStream(chosenPath).pipe(res);
         }
     } catch (error) {
         console.error('Error serving media file:', error);
+        res.status(404).send('File not found');
+    }
+});
+
+// API endpoint: stream media by library ID
+app.get('/api/media/id/:id', (req, res) => {
+    const id = String(req.params.id || '');
+    const song = getSongById(id);
+    if (!song) {
+        return res.status(404).send('Song not found');
+    }
+    const config = loadSetupConfig();
+    const relPath = song.fileName;
+    const mediaPath = path.join(config.mediaDirectory, relPath);
+    const fillerPath = path.join(config.fillerMusicDirectory || config.mediaDirectory, relPath);
+
+    try {
+        let chosenPath = mediaPath;
+        let stat: fs.Stats;
+        try {
+            stat = fs.statSync(chosenPath);
+        } catch {
+            try {
+                stat = fs.statSync(fillerPath);
+                chosenPath = fillerPath;
+            } catch {
+                const ytPath = path.join(youtubeIntegration.getCacheDirectory(), path.basename(relPath));
+                stat = fs.statSync(ytPath);
+                chosenPath = ytPath;
+            }
+        }
+
+        const fileSize = stat.size;
+        const range = req.headers.range;
+        if (range && range.startsWith('bytes=')) {
+            const parts = range.replace(/bytes=/, '').split('-');
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            if (!isNaN(start) && !isNaN(end) && start >= 0 && end >= start && end < fileSize) {
+                const chunksize = (end - start) + 1;
+                const file = fs.createReadStream(chosenPath, { start, end });
+                const head = {
+                    'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': getContentType(path.basename(chosenPath)),
+                };
+                res.writeHead(206, head);
+                file.pipe(res);
+            } else {
+                const head = {
+                    'Content-Length': fileSize,
+                    'Content-Type': getContentType(path.basename(chosenPath)),
+                };
+                res.writeHead(200, head);
+                fs.createReadStream(chosenPath).pipe(res);
+            }
+        } else {
+            const head = {
+                'Content-Length': fileSize,
+                'Content-Type': getContentType(path.basename(chosenPath)),
+            };
+            res.writeHead(200, head);
+            fs.createReadStream(chosenPath).pipe(res);
+        }
+    } catch (error) {
+        console.error('Error serving media by id:', error);
         res.status(404).send('File not found');
     }
 });
@@ -1429,6 +1609,11 @@ app.get('/player', (req, res) => {
     console.log('[ROUTE] GET /player - Player route hit, serving index.html');
     res.sendFile(path.join(clientPath, 'index.html'));
 });
+
+// Client-side routes for SPA
+app.get('/settings', (_req, res) => res.sendFile(path.join(clientPath, 'index.html')));
+app.get('/connect-online', (_req, res) => res.sendFile(path.join(clientPath, 'index.html')));
+app.get('/profiles', (_req, res) => res.sendFile(path.join(clientPath, 'index.html')));
 
 // Types for WebSocket messages  
 interface WebSocketMessage {
@@ -1754,11 +1939,23 @@ wss.on('connection', (ws, req) => {
                     // payload: { videoId: string, title?: string, singerName: string }
                     try {
                         const { videoId, title, singerName } = payload as { videoId: string; title?: string; singerName: string };
-                        const provisionalFile = `youtube_${videoId}_${(title || videoId).replace(/[^a-zA-Z0-9_-]/g, '_')}.mp4`;
+                        // Pre-fetch metadata to construct human-readable provisional filename
+                        let metaTitle = title;
+                        let channel: string | undefined;
+                        try {
+                            const info = await youtubeIntegration.getVideoInfo(videoId);
+                            if (info?.title) metaTitle = info.title;
+                            if (info?.uploader) channel = info.uploader;
+                        } catch { /* ignore */ }
+                        const provisionalFile = youtubeIntegration.buildFileName(videoId, metaTitle, channel);
                         // Insert provisional queue entry so KJ can see progress
-                        const provisionalSong: { id: string; artist: string; title: string; fileName: string } = { id: `yt_${videoId}`, artist: 'YouTube', title: title || videoId, fileName: provisionalFile };
+                        const provisionalSong: { id: string; artist: string; title: string; fileName: string } = { id: `yt_${videoId}`, artist: 'YouTube', title: metaTitle || videoId, fileName: provisionalFile };
                         // Cast to Song-compatible structure is safe due to matching fields
-                        addSongToQueue(provisionalSong as unknown as { id: string; artist: string; title: string; fileName: string }, singerName);
+                        addSongToQueue(
+                            provisionalSong as unknown as { id: string; artist: string; title: string; fileName: string },
+                            singerName,
+                            { source: 'youtube', meta: { channel }, download: { status: 'downloading', videoId } }
+                        );
                         broadcast({ type: 'queue_updated', payload: getQueue() });
                         // Start download and stream progress
                         void youtubeIntegration.downloadVideo(videoId, title, (progress: { progress?: number; status: string; fileName?: string }) => {
@@ -1988,8 +2185,18 @@ server.listen(PORT, async () => {
     // Now scan libraries using configured paths
     console.log('[Server] Initializing media libraries from config...');
     try {
-        const scannedSongs = scanMediaLibrary(config.mediaDirectory);
+        const scannedSongs = scanMediaLibrary(config.mediaDirectory, {
+            allowedExtensions: config.mediaScanExtensions,
+            useCache: config.mediaUseCachedIndex !== false,
+        });
         console.log(`[Server Startup] Media library scanned. Found ${scannedSongs.length} songs.`);
+        // Apply YouTube defaults from config at startup
+        try {
+            if (config.youtubeCacheDirectory) youtubeIntegration.setCacheDirectory(config.youtubeCacheDirectory);
+            if (config.youtubeQualityFormat) youtubeIntegration.setDownloadFormat(config.youtubeQualityFormat);
+            const pattern = config.youtubeFilenamePattern || 'paren';
+            youtubeIntegration.setFilenamePattern(pattern);
+        } catch { /* ignore */ }
         if (config.fillerMusicDirectory) {
             scanFillerMusic(config.fillerMusicDirectory);
         } else {

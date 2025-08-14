@@ -23,14 +23,22 @@ Feature: Offline Session Management
   Scenario: KJ manually rescans the media library
     Given the KJ is on the Admin Interface
     And new songs have been added to the media folder on the filesystem
-    When the KJ navigates to the media library management section
+    When the KJ navigates to the Settings page
+    And chooses the allowed file extensions for scanning
     And clicks the "Rescan Library" button
     Then the system should find and index the new songs
     And the new songs should be available in the song search
 
   Scenario: KJ changes the media library path
     Given the KJ is on the Admin Interface
-    When the KJ navigates to the media library management section
+    When the KJ navigates to the Settings page
     And selects a new, valid media library path
+    And sets extensions to ".mp4,.mkv,.webm"
     Then the system should scan the new directory
     And the song search should now use the new library
+
+  Scenario: KJ loads media library from cached index
+    Given a large media library has previously been scanned and saved as an index file
+    When the KJ enables "Use cached index when available" in Settings
+    And opens the Admin Interface later
+    Then the media library should load from the cached index without rescanning

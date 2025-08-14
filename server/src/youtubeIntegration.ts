@@ -35,6 +35,7 @@ export interface DownloadProgress {
 export interface YouTubeSearchResult {
   id: string;
   title: string;
+  channel?: string;
   artist: string;
   duration: number;
   thumbnail: string;
@@ -56,6 +57,10 @@ class YouTubeIntegration {
   private maxCacheSize: number = 10 * 1024 * 1024 * 1024; // 10GB default
   private maxConcurrentDownloads: number = 3;
   private downloadCallbacks: Map<string, (progress: DownloadProgress) => void> = new Map();
+  // Default format prefers 720p or lower to balance quality and size
+  private downloadFormat: string = 'best[height<=720]/best';
+  // Filename pattern configuration: 'paren' => "Title (Channel)", 'dash' => "Title - Channel"
+  private filenamePattern: 'paren' | 'dash' = 'paren';
 
   constructor(cacheDirectory?: string) {
     this.cacheDirectory = cacheDirectory || path.join(__dirname, '../youtube-cache');
@@ -112,6 +117,7 @@ class YouTubeIntegration {
             results.push({
               id: data.id,
               title: this.cleanTitle(data.title),
+              channel: (data.uploader || data.channel || '').toString(),
               artist: this.extractArtist(data.title),
               duration: data.duration || 0,
               thumbnail: data.thumbnail || '',
@@ -166,7 +172,15 @@ class YouTubeIntegration {
     onProgress?: (progress: DownloadProgress) => void
   ): Promise<string> {
     const downloadId = randomUUID();
-    const fileName = this.generateFileName(videoId, title);
+    // Fetch metadata to build a human-friendly filename "Title (Channel).mp4"
+    let metaTitle = title;
+    let uploader: string | undefined;
+    try {
+      const info = await this.getVideoInfo(videoId);
+      if (info?.title) metaTitle = info.title;
+      if (info?.uploader) uploader = info.uploader;
+    } catch {/* ignore; fall back to provided title */}
+    const fileName = this.buildFileName(videoId, metaTitle, uploader);
     const filePath = path.join(this.cacheDirectory, fileName);
 
     // Check if already downloaded
@@ -381,10 +395,57 @@ class YouTubeIntegration {
   }
 
   /**
+   * Change the cache directory where downloaded videos are stored.
+   * Ensures the directory exists before switching.
+   */
+  public setCacheDirectory(directory: string): void {
+    if (!directory || typeof directory !== 'string') return;
+    this.cacheDirectory = directory;
+    this.ensureCacheDirectory();
+  }
+
+  /**
+   * Set the yt-dlp format string used for downloads.
+   * Example values: 'best', 'best[height<=720]/best', 'bestvideo[height<=1080]+bestaudio/best'.
+   */
+  public setDownloadFormat(format: string): void {
+    if (!format || typeof format !== 'string') return;
+    this.downloadFormat = format;
+  }
+
+  /**
    * Expose cache directory for HTTP serving fallback
    */
   public getCacheDirectory(): string {
     return this.cacheDirectory;
+  }
+
+  /**
+   * Delete all downloaded YouTube video files from the cache directory.
+   * Returns the number of files deleted and total bytes freed.
+   */
+  public deleteAllDownloads(): { filesDeleted: number; bytesFreed: number } {
+    try {
+      const files = fs.readdirSync(this.cacheDirectory);
+      const videoFiles = files.filter(f => f.endsWith('.mp4') || f.endsWith('.webm'));
+      let filesDeleted = 0;
+      let bytesFreed = 0;
+      for (const file of videoFiles) {
+        const filePath = path.join(this.cacheDirectory, file);
+        try {
+          const stats = fs.statSync(filePath);
+          fs.unlinkSync(filePath);
+          filesDeleted += 1;
+          bytesFreed += stats.size;
+        } catch (err) {
+          console.error('[YouTube] Failed to delete', file, err);
+        }
+      }
+      return { filesDeleted, bytesFreed };
+    } catch (error) {
+      console.error('[YouTube] deleteAllDownloads failed:', error);
+      return { filesDeleted: 0, bytesFreed: 0 };
+    }
   }
 
   // Private methods
@@ -453,7 +514,7 @@ class YouTubeIntegration {
 
     return new Promise((resolve, reject) => {
       const args = [
-        '--format', 'best[height<=720]/best', // Prefer 720p or lower
+        '--format', this.downloadFormat,
         '--output', filePath,
         '--no-warnings',
         '--progress',
@@ -544,18 +605,31 @@ class YouTubeIntegration {
     }
   }
 
-  private generateFileName(videoId: string, title?: string): string {
-    const sanitizedTitle = title 
-      ? title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_')
-      : videoId;
-    return `youtube_${videoId}_${sanitizedTitle}.mp4`;
+  public setFilenamePattern(pattern: 'paren' | 'dash'): void {
+    if (pattern === 'paren' || pattern === 'dash') {
+      this.filenamePattern = pattern;
+    }
+  }
+
+  public buildFileName(videoId: string, title?: string, channel?: string): string {
+    // Build a friendly filename using configured pattern; fall back to videoId when missing
+    const sanitize = (s: string) => s
+      .replace(/[\\/:*?"<>|]/g, '') // remove illegal filesystem characters
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, '') // strip most emoji
+      .replace(/\s+/g, ' ') // collapse whitespace
+      .trim();
+    if (!title) return `youtube_${videoId}.mp4`;
+    const safeTitle = sanitize(title);
+    const safeChannel = channel ? sanitize(channel) : '';
+    const name = safeChannel
+      ? (this.filenamePattern === 'dash' ? `${safeTitle} - ${safeChannel}` : `${safeTitle} (${safeChannel})`)
+      : safeTitle;
+    return `${name}.mp4`;
   }
 
   private cleanTitle(title: string): string {
-    // Remove common karaoke-related suffixes and prefixes
+    // Preserve words like "Karaoke Version"; just remove bracketed tags and excess spaces
     return title
-      .replace(/\s*\(karaoke\)/gi, '')
-      .replace(/\s*karaoke\s*/gi, ' ')
       .replace(/\s*\[.*?\]\s*/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
@@ -577,6 +651,24 @@ class YouTubeIntegration {
     }
 
     return 'Unknown Artist';
+  }
+
+  /** Fetch basic metadata (title, uploader) for a single video */
+  public async getVideoInfo(videoId: string): Promise<{ title?: string; uploader?: string } | null> {
+    try {
+      const json = await this.executeYtDlp([
+        '--dump-json',
+        '--no-warnings',
+        `https://www.youtube.com/watch?v=${videoId}`
+      ]);
+      const data = JSON.parse(json);
+      return {
+        title: this.cleanTitle((data.title || '').toString()),
+        uploader: (data.uploader || data.channel || '').toString()
+      };
+    } catch {
+      return null;
+    }
   }
 
   private async cleanupIncompleteDownloads(): Promise<void> {

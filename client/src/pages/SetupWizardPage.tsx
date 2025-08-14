@@ -15,8 +15,9 @@ const SetupWizardPage: React.FC = () => {
   const setIsSetupComplete = useAppStore((state) => state.setIsSetupComplete);
   const [mediaDirectory, setMediaDirectory] = useState<string | null>(null);
   const [isValidPath, setIsValidPath] = useState<boolean>(false);
+  const [fillerDirectory, setFillerDirectory] = useState<string>('');
+  const [youtubeDirectory, setYoutubeDirectory] = useState<string>('');
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [scanStatus, setScanStatus] = useState<{
     scanning: boolean;
@@ -32,28 +33,34 @@ const SetupWizardPage: React.FC = () => {
     setError(null);
 
     try {
-      // Call the single endpoint to set the directory and trigger a scan
-      const response = await fetch('/api/setup/config', {
+      // 1) Save config with selected mediaDirectory and optional filler/YouTube directories
+      const saveResp = await fetch('/api/setup/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mediaDirectory }),
+        body: JSON.stringify({ 
+          mediaDirectory,
+          ...(fillerDirectory ? { fillerMusicDirectory: fillerDirectory } : {}),
+          ...(youtubeDirectory ? { youtubeCacheDirectory: youtubeDirectory } : {})
+        }),
       });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to scan library.');
+      const saveJson = await saveResp.json();
+      if (!saveResp.ok || !saveJson.success) {
+        throw new Error(saveJson.error || 'Failed to save configuration.');
       }
-      
-      // Since the backend doesn't provide progress, we'll just show completion
-      // A more advanced implementation would use WebSockets for progress
-      setScanStatus({
-        scanning: false,
-        progress: 100,
-        total: 100,
-        complete: true,
-        songCount: result.data.songCount || 0, // Assuming the backend returns this
+
+      // 2) Trigger a scan (server returns songCount)
+      const scanResp = await fetch('/api/setup/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: false })
       });
+      const scanJson = await scanResp.json();
+      if (!scanResp.ok || !scanJson.success) {
+        throw new Error(scanJson.error || 'Failed to scan library.');
+      }
+
+      const songCount = (scanJson?.data?.songCount ?? 0) as number;
+      setScanStatus({ scanning: false, progress: 100, total: 100, complete: true, songCount });
 
       setTimeout(() => setStep('complete'), 1000);
 
@@ -65,7 +72,7 @@ const SetupWizardPage: React.FC = () => {
       }
       setScanStatus({ scanning: false, progress: 0, total: 0, complete: false, songCount: 0 });
     }
-  }, [mediaDirectory]);
+  }, [mediaDirectory, fillerDirectory, youtubeDirectory]);
 
   useEffect(() => {
     if (step === 'scan_media' && mediaDirectory) {
@@ -73,16 +80,7 @@ const SetupWizardPage: React.FC = () => {
     }
   }, [step, mediaDirectory, startScan]);
 
-  useEffect(() => {
-    // Load directory suggestions on mount
-    (async () => {
-      try {
-        const r = await fetch('/api/setup/directory-suggestions');
-        const j = await r.json();
-        if (j?.success && Array.isArray(j.data)) setSuggestions(j.data);
-      } catch { /* ignore */ }
-    })();
-  }, []);
+  // No suggestions: external volumes vary widely; user should provide their own absolute path
 
   const handleSelectDirectory = async () => {
     setError(null);
@@ -152,10 +150,11 @@ const SetupWizardPage: React.FC = () => {
               </div>
             </div>
             <h1 className="font-display text-4xl mb-4">
-              Select Media Library
+              Select Media Library (optional)
             </h1>
             <p className="text-text-secondary-light dark:text-text-secondary-dark mb-6">
-              Choose the folder on your computer that contains your karaoke video files.
+              If you have a local collection of karaoke files, select the folder that contains them. If not,
+              you can still run KJ‑Nomad using YouTube downloads only and add a library later in Settings.
             </p>
             
             <div className="mb-6 space-y-3 text-left">
@@ -183,28 +182,47 @@ const SetupWizardPage: React.FC = () => {
                     try {
                       const resp = await fetch('/api/setup/validate-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: mediaDirectory }) });
                       const json = await resp.json();
-                      if (json?.success && json.data?.valid) { setIsValidPath(true); setValidationMsg(`Looks good. Videos: ${json.data.stats?.videoCount ?? 0}`); }
-                      else { setIsValidPath(false); setValidationMsg(json?.data?.error || 'Folder is not valid'); }
+                      if (json?.success && json.data?.valid) {
+                        setIsValidPath(true);
+                        // Directory validation checks readability; counts may be 0 if videos are nested
+                        setValidationMsg('Looks good. Directory is readable.');
+                      } else {
+                        setIsValidPath(false);
+                        setValidationMsg(json?.data?.error || 'Folder is not valid');
+                      }
                     } catch { setIsValidPath(false); setValidationMsg('Failed to validate folder'); }
                   }}
                 >Validate</button>
                 {validationMsg && <span className={"text-sm " + (isValidPath ? 'text-green-600' : 'text-red-500')}>{validationMsg}</span>}
               </div>
-              {suggestions.length > 0 && (
-                <div className="text-xs opacity-80">
-                  <div className="mb-1">Suggestions:</div>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestions.map((s) => (
-                      <button key={s} className="btn-tertiary" onClick={() => { setMediaDirectory(s); setIsValidPath(false); setValidationMsg(null); }}>{s}</button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* suggestions removed intentionally: paths are highly environment-specific */}
               {mediaDirectory && (
                 <div className="p-3 bg-bg-light dark:bg-bg-dark rounded-lg text-sm text-left border border-border-light dark:border-border-dark">
                   <p className="font-mono truncate text-text-secondary-light dark:text-text-secondary-dark">{mediaDirectory}</p>
                 </div>
               )}
+
+              {/* Optional: Filler Music Directory */}
+              <div className="mt-4">
+                <label className="block text-sm mb-1">Filler Music folder (optional)</label>
+                <input
+                  className="input w-full font-mono"
+                  placeholder="/absolute/path/to/filler/music (defaults to Media Library)"
+                  value={fillerDirectory}
+                  onChange={(e) => setFillerDirectory(e.target.value.trim())}
+                />
+              </div>
+
+              {/* Optional: YouTube Downloads Directory */}
+              <div className="mt-4">
+                <label className="block text-sm mb-1">YouTube downloads folder (optional)</label>
+                <input
+                  className="input w-full font-mono"
+                  placeholder="/absolute/path/to/youtube/downloads"
+                  value={youtubeDirectory}
+                  onChange={(e) => setYoutubeDirectory(e.target.value.trim())}
+                />
+              </div>
               {error && (
                 <p className="text-red-500 text-sm">{error}</p>
               )}
